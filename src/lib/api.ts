@@ -56,4 +56,10 @@ export const api = {
   getCircles() {
     return request('/reports/circles')
   },
+
+  createSession(circleId: number, sessionDate: string) {
+    return request(`/sessions/?circle_id=${circleId}&session_date=${sessionDate}`, {
+      method: 'POST',
+    })
+  },
 }

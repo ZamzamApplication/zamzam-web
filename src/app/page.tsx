@@ -1,22 +1,31 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
 import type { Session } from '@/lib/types'
+import CreateSessionModal from '@/components/CreateSessionModal'
 
 export default function Home() {
   const [sessions, setSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
+  const [showModal, setShowModal] = useState(false)
   const router = useRouter()
 
-  useEffect(() => {
+  const load = useCallback(() => {
     api.getUpcomingSessions()
       .then(setSessions)
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => { load() }, [load])
+
+  const handleCreated = (sessionId: number) => {
+    setShowModal(false)
+    router.push(`/sessions/${sessionId}`)
+  }
 
   if (loading) return null
 
@@ -24,9 +33,17 @@ export default function Home() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-aqua-800">الجلسات القادمة</h1>
-        <Link href="/sessions" className="bg-aqua-600 text-white px-4 py-2 rounded-lg hover:bg-aqua-700 transition text-sm">
-          عرض الكل
-        </Link>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowModal(true)}
+            className="bg-aqua-600 text-white px-4 py-2 rounded-lg hover:bg-aqua-700 transition text-sm"
+          >
+            + إضافة جلسة
+          </button>
+          <Link href="/sessions" className="bg-aqua-100 text-aqua-700 px-4 py-2 rounded-lg hover:bg-aqua-200 transition text-sm">
+            عرض الكل
+          </Link>
+        </div>
       </div>
 
       {sessions.length === 0 ? (
@@ -55,6 +72,13 @@ export default function Home() {
             </div>
           ))}
         </div>
+      )}
+
+      {showModal && (
+        <CreateSessionModal
+          onClose={() => setShowModal(false)}
+          onCreated={handleCreated}
+        />
       )}
     </div>
   )

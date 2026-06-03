@@ -1,27 +1,44 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import type { Session } from '@/lib/types'
+import CreateSessionModal from '@/components/CreateSessionModal'
 
 export default function SessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
+  const [showModal, setShowModal] = useState(false)
   const router = useRouter()
 
-  useEffect(() => {
+  const load = useCallback(() => {
     api.getUpcomingSessions()
       .then(setSessions)
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [])
 
+  useEffect(() => { load() }, [load])
+
+  const handleCreated = (sessionId: number) => {
+    setShowModal(false)
+    router.push(`/sessions/${sessionId}`)
+  }
+
   if (loading) return null
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-aqua-800 mb-6">الجلسات غير المؤكدة</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-aqua-800">الجلسات غير المؤكدة</h1>
+        <button
+          onClick={() => setShowModal(true)}
+          className="bg-aqua-600 text-white px-4 py-2 rounded-lg hover:bg-aqua-700 transition text-sm"
+        >
+          + إضافة جلسة
+        </button>
+      </div>
 
       {sessions.length === 0 ? (
         <div className="bg-white rounded-xl shadow-md p-8 text-center text-gray-500 border border-aqua-100">
@@ -47,6 +64,13 @@ export default function SessionsPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {showModal && (
+        <CreateSessionModal
+          onClose={() => setShowModal(false)}
+          onCreated={handleCreated}
+        />
       )}
     </div>
   )
