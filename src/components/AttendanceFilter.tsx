@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { Circle, FilterRule } from '@/lib/types'
+import type { AttendanceGridSession, FilterRule } from '@/lib/types'
 
 const STATUS_OPTIONS = ['حاضر', 'غياب', 'غياب بعذر']
 const OPERATORS = [
@@ -10,16 +10,16 @@ const OPERATORS = [
 ]
 
 interface Props {
-  circles: Circle[]
+  sessions: AttendanceGridSession[]
   initialRules: FilterRule[]
   initialLogic: 'and' | 'or'
   onApply: (rules: FilterRule[], logic: 'and' | 'or') => void
   onCancel: () => void
 }
 
-export default function AttendanceFilter({ circles, initialRules, initialLogic, onApply, onCancel }: Props) {
+export default function AttendanceFilter({ sessions, initialRules, initialLogic, onApply, onCancel }: Props) {
   const [rules, setRules] = useState<FilterRule[]>(initialRules.length > 0 ? initialRules : [{
-    circleId: circles[0]?.id || 0,
+    sessionId: sessions[0]?.id || 0,
     operator: 'is',
     status: 'حاضر',
   }])
@@ -34,10 +34,10 @@ export default function AttendanceFilter({ circles, initialRules, initialLogic, 
   }
 
   const addRule = () => {
-    setRules((prev) => [...prev, { circleId: circles[0]?.id || 0, operator: 'is', status: 'حاضر' }])
+    setRules((prev) => [...prev, { sessionId: sessions[0]?.id || 0, operator: 'is', status: 'حاضر' }])
   }
 
-  const hasActive = rules.length > 0 && rules.some((r) => r.circleId)
+  const hasActive = rules.length > 0 && rules.some((r) => r.sessionId)
 
   return (
     <div className="glass-strong rounded-2xl p-5 space-y-4 border border-water-300/50">
@@ -76,11 +76,11 @@ export default function AttendanceFilter({ circles, initialRules, initialLogic, 
           )}
           <div className="flex items-center gap-2">
             <select
-              value={rule.circleId}
-              onChange={(e) => updateRule(i, 'circleId', Number(e.target.value))}
+              value={rule.sessionId}
+              onChange={(e) => updateRule(i, 'sessionId', Number(e.target.value))}
               className="flex-1 px-3 py-2 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-water-400"
             >
-              {circles.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {sessions.map((s) => <option key={s.id} value={s.id}>{s.date}</option>)}
             </select>
             <select
               value={rule.operator}

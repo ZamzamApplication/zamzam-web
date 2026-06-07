@@ -96,7 +96,7 @@ export interface AttendanceGridSession {
 }
 
 export interface FilterRule {
-  circleId: number
+  sessionId: number
   operator: 'is' | 'is_not'
   status: string
 }

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api } from '@/lib/api'
-import type { SheikhInfo, Circle, AttendanceGrid, FilterRule } from '@/lib/types'
+import type { SheikhInfo, AttendanceGrid, FilterRule } from '@/lib/types'
 import AttendanceFilter from '@/components/AttendanceFilter'
 
 const STATUS_COLORS: Record<string, string> = {
@@ -11,26 +11,22 @@ const STATUS_COLORS: Record<string, string> = {
   'غياب بعذر': 'bg-yellow-200/60 text-yellow-800',
 }
 
-function matchesRule(student: { records: Record<string, string> }, sessions: AttendanceGrid['sessions'], rule: FilterRule): boolean {
-  const circleSessionIds = sessions.filter((s) => s.circle_id === rule.circleId).map((s) => String(s.id))
-  const hasMatch = circleSessionIds.some((sid) => {
-    const status = student.records[sid] || 'غياب'
-    return status === rule.status
-  })
+function matchesRule(student: { records: Record<string, string> }, rule: FilterRule): boolean {
+  const status = student.records[String(rule.sessionId)] || 'غياب'
+  const hasMatch = status === rule.status
   return rule.operator === 'is' ? hasMatch : !hasMatch
 }
 
-function filterByRules(students: AttendanceGrid['students'], sessions: AttendanceGrid['sessions'], rules: FilterRule[], logic: 'and' | 'or'): AttendanceGrid['students'] {
+function filterByRules(students: AttendanceGrid['students'], rules: FilterRule[], logic: 'and' | 'or'): AttendanceGrid['students'] {
   if (rules.length === 0) return students
   return students.filter((st) => {
-    if (logic === 'and') return rules.every((r) => matchesRule(st, sessions, r))
-    return rules.some((r) => matchesRule(st, sessions, r))
+    if (logic === 'and') return rules.every((r) => matchesRule(st, r))
+    return rules.some((r) => matchesRule(st, r))
   })
 }
 
 export default function AttendancePage() {
   const [sheikhs, setSheikhs] = useState<SheikhInfo[]>([])
-  const [circles, setCircles] = useState<Circle[]>([])
   const [selectedSheikh, setSelectedSheikh] = useState<number | ''>('')
   const [grid, setGrid] = useState<AttendanceGrid | null>(null)
   const [loading, setLoading] = useState(false)
@@ -53,9 +49,7 @@ export default function AttendancePage() {
   }, [])
 
   useEffect(() => {
-    Promise.all([api.getSheikhs(), api.getCircles()])
-      .then(([s, c]) => { setSheikhs(s); setCircles(c) })
-      .catch(console.error)
+    api.getSheikhs().then(setSheikhs).catch(console.error)
     loadGrid('')
   }, [loadGrid])
 
@@ -67,14 +61,13 @@ export default function AttendancePage() {
 
   const filteredSessions = useMemo(() => {
     if (!grid || !hasActiveFilter) return grid?.sessions || []
-    const ruleCircleIds = new Set(filterRules.map((r) => r.circleId))
-    return grid.sessions.filter((s) => ruleCircleIds.has(s.circle_id))
+    const ruleSessionIds = new Set(filterRules.map((r) => r.sessionId))
+    return grid.sessions.filter((s) => ruleSessionIds.has(s.id))
   }, [grid, filterRules, hasActiveFilter])
 
   const ruleFilteredStudents = useMemo(() => {
     if (!grid) return []
-    const baseStudents = filterByRules(grid.students, grid.sessions, filterRules, filterLogic)
-    return baseStudents
+    return filterByRules(grid.students, filterRules, filterLogic)
   }, [grid, filterRules, filterLogic])
 
   const searchedStudents = useMemo(() => {
@@ -137,9 +130,9 @@ export default function AttendancePage() {
           )}
         </div>
 
-        {showFilter && (
+        {showFilter && grid && (
           <AttendanceFilter
-            circles={circles}
+            sessions={grid.sessions}
             initialRules={filterRules}
             initialLogic={filterLogic}
             onApply={handleApplyFilter}
