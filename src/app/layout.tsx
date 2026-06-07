@@ -42,6 +42,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   if (pathname === '/login') {
     return (
       <html lang="ar" dir="rtl">
+        <head>
+          <title>دار زمزم</title>
+          <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        </head>
         <body className={`${cairoFont.variable} wave-bg font-cairo`}>{children}</body>
       </html>
     )
@@ -49,12 +53,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <html lang="ar" dir="rtl">
+      <head>
+        <title>دار زمزم</title>
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+      </head>
       <body className={`${cairoFont.variable} wave-bg font-cairo`}>
         {!loading && user && (
           <nav className="nav-glass text-white px-6 py-3 flex justify-between items-center sticky top-0 z-40">
             <div className="flex items-center gap-6">
               <Link href="/" className="text-xl font-bold tracking-wide">
-                <span className="text-water-200">💧</span> زمزم
+                <span className="text-water-200">💧</span> دار زمزم
               </Link>
               <Link href="/sessions" className="text-white/80 hover:text-white transition">الجلسات</Link>
               <Link href="/attendance" className="text-white/80 hover:text-white transition">سجل الحضور</Link>

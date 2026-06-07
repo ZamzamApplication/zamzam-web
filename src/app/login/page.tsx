@@ -31,7 +31,7 @@ export default function LoginPage() {
       <div className="glass-strong rounded-2xl p-8 w-full max-w-md">
         <div className="text-center mb-6">
           <div className="text-5xl mb-2 animate-float inline-block">💧</div>
-          <h1 className="text-3xl font-bold text-deep-700 font-arabic">زمزم</h1>
+          <h1 className="text-3xl font-bold text-deep-700">دار زمزم</h1>
           <p className="text-deep-600/70 mt-1 text-sm">تسجيل الدخول</p>
         </div>
 
