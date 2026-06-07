@@ -8,63 +8,8 @@ html {
 
 body {
   @apply text-gray-800;
-  background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 30%, #80deea 60%, #e0f7fa 100%);
-  background-size: 400% 400%;
-  animation: gradientShift 15s ease infinite;
+  background: #ffffff;
   min-height: 100vh;
-}
-
-@keyframes gradientShift {
-  0% { background-position: 0% 50%; }
-  25% { background-position: 50% 0%; }
-  50% { background-position: 100% 50%; }
-  75% { background-position: 50% 100%; }
-  100% { background-position: 0% 50%; }
-}
-
-.wave-bg {
-  position: relative;
-  overflow-x: hidden;
-}
-
-.wave-bg::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 200%;
-  height: 100%;
-  background: repeating-linear-gradient(
-    90deg,
-    transparent 0px,
-    rgba(34, 211, 238, 0.03) 1px,
-    transparent 2px
-  );
-  pointer-events: none;
-  z-index: 0;
-}
-
-.wave-bg::after {
-  content: '';
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 200%;
-  height: 120px;
-  background: repeating-linear-gradient(
-    -45deg,
-    transparent 0px,
-    rgba(34, 211, 238, 0.04) 20px,
-    transparent 40px
-  );
-  animation: waveSlide 8s linear infinite;
-  pointer-events: none;
-  z-index: 0;
-}
-
-@keyframes waveSlide {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
 }
 
 .glass {
