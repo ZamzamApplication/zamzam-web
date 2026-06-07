@@ -10,14 +10,21 @@ export default function SessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [filter, setFilter] = useState<'all' | 'upcoming' | 'past'>('upcoming')
   const router = useRouter()
 
-  const load = useCallback(() => {
-    api.getUpcomingSessions()
-      .then(setSessions)
-      .catch(console.error)
-      .finally(() => setLoading(false))
-  }, [])
+  const load = useCallback(async () => {
+    try {
+      const data = filter === 'all' ? await api.getAllSessions()
+        : filter === 'past' ? await api.getPastSessions()
+        : await api.getUpcomingSessions()
+      setSessions(data)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }, [filter])
 
   useEffect(() => { load() }, [load])
 
@@ -31,18 +38,37 @@ export default function SessionsPage() {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-aqua-800">الجلسات غير المؤكدة</h1>
+        <h1 className="text-2xl font-bold text-deep-800">الجلسات</h1>
         <button
           onClick={() => setShowModal(true)}
-          className="bg-aqua-600 text-white px-4 py-2 rounded-lg hover:bg-aqua-700 transition text-sm"
+          className="water-btn text-white px-4 py-2 rounded-xl text-sm"
         >
           + إضافة جلسة
         </button>
       </div>
 
+      <div className="flex gap-2 mb-6">
+        {[
+          { key: 'upcoming', label: 'غير مؤكدة' },
+          { key: 'past', label: 'مؤكدة' },
+          { key: 'all', label: 'الكل' },
+        ].map((f) => (
+          <button
+            key={f.key}
+            onClick={() => { setFilter(f.key as typeof filter); setLoading(true) }}
+            className={`px-4 py-1.5 rounded-xl text-sm transition ${
+              filter === f.key ? 'water-btn text-white' : 'water-btn-outline'
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
       {sessions.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-md p-8 text-center text-gray-500 border border-aqua-100">
-          لا توجد جلسات قادمة
+        <div className="glass-card rounded-2xl p-8 text-center text-deep-600/60">
+          <div className="text-4xl mb-3">💧</div>
+          لا توجد جلسات
         </div>
       ) : (
         <div className="grid gap-4">
@@ -50,16 +76,18 @@ export default function SessionsPage() {
             <div
               key={s.id}
               onClick={() => router.push(`/sessions/${s.id}`)}
-              className="bg-white rounded-xl shadow-md p-5 border border-aqua-100 hover:shadow-lg hover:border-aqua-300 transition cursor-pointer"
+              className="glass-card rounded-2xl p-5 cursor-pointer"
             >
               <div className="flex justify-between items-center">
                 <div>
-                  <h3 className="font-semibold text-lg text-aqua-800">{s.circle_name}</h3>
-                  <p className="text-gray-500 text-sm">{s.date}</p>
+                  <h3 className="font-semibold text-lg text-deep-800">جلسة {s.date}</h3>
+                  {s.circle_name && <p className="text-xs text-deep-500 mt-0.5">{s.circle_name}</p>}
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-aqua-600 text-sm">تسجيل الحضور ←</span>
-                </div>
+                <span className={`status-badge px-3 py-1 rounded-full text-xs ${
+                  s.is_confirmed ? 'bg-green-100/60 text-green-700 border-green-300' : 'bg-yellow-100/60 text-yellow-700 border-yellow-300'
+                }`}>
+                  {s.is_confirmed ? 'مؤكدة' : 'قيد الانتظار'}
+                </span>
               </div>
             </div>
           ))}

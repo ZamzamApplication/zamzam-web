@@ -32,22 +32,23 @@ export default function Home() {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-aqua-800">الجلسات القادمة</h1>
+        <h1 className="text-2xl font-bold text-deep-800">الجلسات القادمة</h1>
         <div className="flex gap-3">
           <button
             onClick={() => setShowModal(true)}
-            className="bg-aqua-600 text-white px-4 py-2 rounded-lg hover:bg-aqua-700 transition text-sm"
+            className="water-btn text-white px-4 py-2 rounded-xl text-sm"
           >
             + إضافة جلسة
           </button>
-          <Link href="/sessions" className="bg-aqua-100 text-aqua-700 px-4 py-2 rounded-lg hover:bg-aqua-200 transition text-sm">
+          <Link href="/sessions" className="water-btn-outline px-4 py-2 rounded-xl text-sm">
             عرض الكل
           </Link>
         </div>
       </div>
 
       {sessions.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-md p-8 text-center text-gray-500 border border-aqua-100">
+        <div className="glass-card rounded-2xl p-8 text-center text-deep-600/60">
+          <div className="text-4xl mb-3">💧</div>
           لا توجد جلسات قادمة
         </div>
       ) : (
@@ -56,15 +57,15 @@ export default function Home() {
             <div
               key={s.id}
               onClick={() => router.push(`/sessions/${s.id}`)}
-              className="bg-white rounded-xl shadow-md p-5 border border-aqua-100 hover:shadow-lg hover:border-aqua-300 transition cursor-pointer"
+              className="glass-card rounded-2xl p-5 cursor-pointer"
             >
               <div className="flex justify-between items-center">
                 <div>
-                  <h3 className="font-semibold text-lg text-aqua-800">{s.circle_name}</h3>
-                  <p className="text-gray-500 text-sm">{s.date}</p>
+                  <h3 className="font-semibold text-lg text-deep-800">جلسة {s.date}</h3>
+                  {s.circle_name && <p className="text-xs text-deep-500 mt-0.5">{s.circle_name}</p>}
                 </div>
-                <span className={`px-3 py-1 rounded-full text-xs ${
-                  s.is_confirmed ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                <span className={`status-badge px-3 py-1 rounded-full text-xs ${
+                  s.is_confirmed ? 'bg-green-100/60 text-green-700 border-green-300' : 'bg-yellow-100/60 text-yellow-700 border-yellow-300'
                 }`}>
                   {s.is_confirmed ? 'مؤكدة' : 'قيد الانتظار'}
                 </span>

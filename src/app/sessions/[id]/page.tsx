@@ -3,12 +3,12 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
-import type { SessionAttendance, SheikhGroup, StudentAttendance } from '@/lib/types'
+import type { SessionAttendance, SheikhGroup } from '@/lib/types'
 
-const STATUS_COLORS: Record<string, string> = {
-  'غياب': 'bg-gray-100 text-gray-600 border-gray-300',
-  'حاضر': 'bg-green-100 text-green-700 border-green-400',
-  'غياب بعذر': 'bg-yellow-100 text-yellow-700 border-yellow-400',
+const STATUS_STYLES: Record<string, string> = {
+  'غياب': 'status-badge bg-gray-100/50 text-gray-600 border-gray-200',
+  'حاضر': 'status-badge bg-green-100/60 text-green-700 border-green-300',
+  'غياب بعذر': 'status-badge bg-yellow-100/60 text-yellow-700 border-yellow-300',
 }
 
 const STATUS_ORDER = ['غياب', 'حاضر', 'غياب بعذر']
@@ -22,15 +22,15 @@ function StudentRow({
   student,
   onToggle,
 }: {
-  student: StudentAttendance
+  student: { id: number; name: string; status: string }
   onToggle: () => void
 }) {
   return (
-    <div className="flex items-center justify-between py-2 px-4 hover:bg-aqua-50 rounded-lg transition">
-      <span className="font-medium text-gray-800">{student.name}</span>
+    <div className="flex items-center justify-between py-2.5 px-4 hover:bg-water-100/30 rounded-xl transition">
+      <span className="font-medium text-deep-800">{student.name}</span>
       <button
         onClick={onToggle}
-        className={`px-4 py-1.5 rounded-lg border text-sm font-medium transition ${STATUS_COLORS[student.status] || STATUS_COLORS['غياب']}`}
+        className={`px-4 py-1.5 rounded-lg text-sm font-medium transition ${STATUS_STYLES[student.status] || STATUS_STYLES['غياب']}`}
       >
         {student.status}
       </button>
@@ -48,19 +48,19 @@ function SheikhAccordion({
   const [open, setOpen] = useState(false)
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-aqua-100 overflow-hidden">
+    <div className="glass-card rounded-2xl overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-5 py-4 bg-aqua-50 hover:bg-aqua-100 transition"
+        className="w-full flex items-center justify-between px-5 py-4 bg-water-100/30 hover:bg-water-200/30 transition"
       >
-        <span className="text-lg font-bold text-aqua-800">{group.sheikh.name}</span>
-        <span className="text-aqua-600 text-sm">
+        <span className="text-lg font-bold text-deep-800">{group.sheikh.name}</span>
+        <span className="text-deep-500 text-sm">
           {group.students.filter((s) => s.status !== 'غياب').length}/{group.students.length}
         </span>
       </button>
 
       {open && (
-        <div className="divide-y divide-aqua-50">
+        <div className="divide-y divide-water-200/30">
           {group.students.map((student) => (
             <StudentRow
               key={student.id}
@@ -91,7 +91,6 @@ export default function SessionAttendancePage() {
   const handleUpdate = async (studentId: number, newStatus: string) => {
     if (!data) return
     setSaving((prev) => new Set(prev).add(studentId))
-
     try {
       await api.upsertAttendance(data.session_id, studentId, newStatus)
       setData((prev) => {
@@ -130,7 +129,11 @@ export default function SessionAttendancePage() {
   if (loading) return null
 
   if (!data) {
-    return <div className="text-center text-gray-500 py-12">الجلسة غير موجودة</div>
+    return (
+      <div className="glass-card rounded-2xl p-8 text-center text-deep-600/60">
+        الجلسة غير موجودة
+      </div>
+    )
   }
 
   const presentCount = data.sheikh_groups.reduce(
@@ -143,22 +146,22 @@ export default function SessionAttendancePage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-aqua-800">تسجيل الحضور</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            {data.date} — {presentCount}/{totalCount} حاضر
+          <h1 className="text-2xl font-bold text-deep-800">تسجيل الحضور</h1>
+          <p className="text-deep-600/60 text-sm mt-1">
+            {data.date} — {data.circle_name || `حلقة #${data.circle_id}`} — {presentCount}/{totalCount} حاضر
           </p>
         </div>
         <div className="flex gap-3">
           <button
             onClick={() => router.push('/sessions')}
-            className="px-4 py-2 border border-aqua-300 text-aqua-700 rounded-lg hover:bg-aqua-50 transition text-sm"
+            className="water-btn-outline px-4 py-2 rounded-xl text-sm"
           >
             رجوع
           </button>
           {!data.is_confirmed && (
             <button
               onClick={handleConfirm}
-              className="px-4 py-2 bg-aqua-600 text-white rounded-lg hover:bg-aqua-700 transition text-sm font-medium"
+              className="water-btn text-white px-4 py-2 rounded-xl text-sm font-medium"
             >
               تأكيد الجلسة
             </button>
@@ -177,7 +180,7 @@ export default function SessionAttendancePage() {
       </div>
 
       {data.is_confirmed && (
-        <div className="mt-6 bg-green-50 text-green-700 border border-green-200 rounded-xl p-4 text-center">
+        <div className="mt-6 glass-strong text-green-700 border border-green-200 rounded-2xl p-4 text-center">
           تم تأكيد هذه الجلسة ✅
         </div>
       )}
