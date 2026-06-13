@@ -3,9 +3,12 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 async function request(path: string, options?: RequestInit) {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options?.headers as Record<string, string> || {}),
+  }
+
+  if (!(options?.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json'
   }
 
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers })
@@ -93,17 +96,42 @@ export const api = {
     return request(`/sheikhs/${sheikhId}/students`)
   },
 
-  createStudent(name: string, sheikhId: number, phone?: string) {
+  createStudent(name: string, sheikhId: number, phone?: string, birthday?: string, customStudentId?: string, isEnrolled?: boolean, parentPhones?: { phone_number: string; parent_type: string }[]) {
     return request('/students', {
       method: 'POST',
-      body: JSON.stringify({ name, sheikh_id: sheikhId, phone: phone || null }),
+      body: JSON.stringify({
+        name,
+        sheikh_id: sheikhId,
+        phone: phone || null,
+        student_id: customStudentId || null,
+        birthday: birthday || null,
+        is_enrolled: isEnrolled ?? true,
+        parent_phones: parentPhones || [],
+      }),
     })
   },
 
-  updateStudent(id: number, name?: string, phone?: string) {
+  uploadStudentPic(studentId: number, file: File) {
+    const formData = new FormData()
+    formData.append('file', file)
+    return request(`/students/${studentId}/upload-pic`, {
+      method: 'POST',
+      body: formData,
+    })
+  },
+
+  updateStudent(id: number, name?: string, phone?: string, birthday?: string, customStudentId?: string, profilePic?: string, isEnrolled?: boolean, parentPhones?: { phone_number?: string; parent_type?: string }[]) {
+    const body: Record<string, unknown> = {}
+    if (name !== undefined) body.name = name
+    if (phone !== undefined) body.phone = phone ?? null
+    if (birthday !== undefined) body.birthday = birthday ?? null
+    if (customStudentId !== undefined) body.student_id = customStudentId ?? null
+    if (profilePic !== undefined) body.profile_pic = profilePic ?? null
+    if (isEnrolled !== undefined) body.is_enrolled = isEnrolled
+    if (parentPhones !== undefined) body.parent_phones = parentPhones
     return request(`/students/${id}`, {
       method: 'PUT',
-      body: JSON.stringify({ name, phone: phone ?? null }),
+      body: JSON.stringify(body),
     })
   },
 

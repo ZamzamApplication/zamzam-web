@@ -54,7 +54,7 @@ export default function AttendanceFilter({ sessions, initialRules, initialLogic,
         <div key={i}>
           {i > 0 && (
             <div className="flex justify-center mb-3">
-              <div className="flex bg-white/60 rounded-lg p-0.5 border border-water-200/50">
+              <div className="flex bg-white/60 dark:bg-slate-800/60 rounded-lg p-0.5 border border-water-200/50">
                 <button
                   onClick={() => setLogic('and')}
                   className={`px-3 py-1 text-xs rounded-md transition font-medium ${
@@ -78,27 +78,27 @@ export default function AttendanceFilter({ sessions, initialRules, initialLogic,
             <select
               value={rule.sessionId}
               onChange={(e) => updateRule(i, 'sessionId', Number(e.target.value))}
-              className="flex-1 px-3 py-2 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-water-400"
+              className="flex-1 px-3 py-2 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-water-400"
             >
               {sessions.map((s) => <option key={s.id} value={s.id}>{s.date}</option>)}
             </select>
             <select
               value={rule.operator}
               onChange={(e) => updateRule(i, 'operator', e.target.value)}
-              className="w-28 px-3 py-2 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-water-400"
+              className="w-28 px-3 py-2 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-water-400"
             >
               {OPERATORS.map((op) => <option key={op.value} value={op.value}>{op.label}</option>)}
             </select>
             <select
               value={rule.status}
               onChange={(e) => updateRule(i, 'status', e.target.value)}
-              className="w-28 px-3 py-2 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-water-400"
+              className="w-28 px-3 py-2 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-water-400"
             >
               {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
             <button
               onClick={() => removeRule(i)}
-              className="w-9 h-9 flex items-center justify-center rounded-xl text-red-400 hover:text-red-600 hover:bg-red-50/50 transition text-lg shrink-0"
+              className="w-9 h-9 flex items-center justify-center rounded-xl text-red-400 hover:text-red-600 hover:bg-red-50/50 dark:hover:bg-red-900/30 transition text-lg shrink-0"
             >
               &times;
             </button>

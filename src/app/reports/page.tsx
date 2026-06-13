@@ -69,7 +69,7 @@ export default function ReportsPage() {
         <select
           value={selectedCircle ?? ''}
           onChange={(e) => handleSelectCircle(Number(e.target.value))}
-          className="w-full px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400"
+          className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400"
         >
           <option value="">-- اختر --</option>
           {circles.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -82,24 +82,24 @@ export default function ReportsPage() {
             <h2 className="text-lg font-bold text-deep-800 mb-4">إحصائيات الحضور</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center p-3 bg-water-100/30 rounded-xl">
-                <div className="text-2xl font-bold text-cyan-700">{circleRate.total_attendance_records}</div>
+                <div className="text-2xl font-bold text-cyan-700 dark:text-cyan-400">{circleRate.total_attendance_records}</div>
                 <div className="text-xs text-deep-500 mt-1">إجمالي السجلات</div>
               </div>
-              <div className="text-center p-3 bg-green-100/30 rounded-xl">
-                <div className="text-2xl font-bold text-green-700">{circleRate.present}</div>
+              <div className="text-center p-3 bg-green-100/30 dark:bg-green-900/30 rounded-xl">
+                <div className="text-2xl font-bold text-green-700 dark:text-green-400">{circleRate.present}</div>
                 <div className="text-xs text-deep-500 mt-1">حاضر</div>
               </div>
-              <div className="text-center p-3 bg-red-100/30 rounded-xl">
-                <div className="text-2xl font-bold text-red-600">{circleRate.absent}</div>
+              <div className="text-center p-3 bg-red-100/30 dark:bg-red-900/30 rounded-xl">
+                <div className="text-2xl font-bold text-red-600 dark:text-red-400">{circleRate.absent}</div>
                 <div className="text-xs text-deep-500 mt-1">غائب</div>
               </div>
-              <div className="text-center p-3 bg-yellow-100/30 rounded-xl">
-                <div className="text-2xl font-bold text-yellow-700">{circleRate.excused}</div>
+              <div className="text-center p-3 bg-yellow-100/30 dark:bg-yellow-900/30 rounded-xl">
+                <div className="text-2xl font-bold text-yellow-700 dark:text-yellow-400">{circleRate.excused}</div>
                 <div className="text-xs text-deep-500 mt-1">غياب بعذر</div>
               </div>
             </div>
             <div className="mt-4 text-center">
-              <div className="text-3xl font-bold text-cyan-700">{circleRate.attendance_rate}%</div>
+              <div className="text-3xl font-bold text-cyan-700 dark:text-cyan-400">{circleRate.attendance_rate}%</div>
               <div className="text-xs text-deep-500 mt-1">نسبة الحضور</div>
             </div>
           </div>
@@ -130,9 +130,9 @@ export default function ReportsPage() {
                           <tr key={studentId} className="border-b border-water-200/20 hover:bg-water-100/20">
                             <td className="py-2 px-3 text-deep-800">{student?.name || `#${studentId}`}</td>
                             <td className="py-2 px-3 text-center text-deep-500">{studentSheikhMap[sid] || ''}</td>
-                            <td className="py-2 px-3 text-center text-green-700">{streak.total_attended}</td>
-                            <td className="py-2 px-3 text-center text-red-600">{streak.total_absent}</td>
-                            <td className="py-2 px-3 text-center font-bold text-cyan-700">{streak.attendance_rate}%</td>
+                            <td className="py-2 px-3 text-center text-green-700 dark:text-green-400">{streak.total_attended}</td>
+                            <td className="py-2 px-3 text-center text-red-600 dark:text-red-400">{streak.total_absent}</td>
+                            <td className="py-2 px-3 text-center font-bold text-cyan-700 dark:text-cyan-400">{streak.attendance_rate}%</td>
                           </tr>
                         )
                       })}

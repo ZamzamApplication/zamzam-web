@@ -5,6 +5,14 @@ import { api } from '@/lib/api'
 import type { SheikhInfo, StudentInfo, Circle, UserInfo, CircleSchedule } from '@/lib/types'
 import { DAY_NAMES } from '@/lib/types'
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
+function picUrl(path: string | null | undefined): string | null {
+  if (!path) return null
+  if (path.startsWith('http')) return path
+  return `${API_BASE}${path}`
+}
+
 // ─── Modal Wrapper ─────────────────────────────────────────────────────────
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
@@ -20,7 +28,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 
 function ErrorMsg({ error }: { error: string }) {
   if (!error) return null
-  return <div className="bg-red-50/80 text-red-700 px-4 py-2 rounded-xl mb-4 text-sm text-center border border-red-200">{error}</div>
+  return <div className="bg-red-50/80 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-4 py-2 rounded-xl mb-4 text-sm text-center border border-red-200 dark:border-red-800">{error}</div>
 }
 
 // ─── Circle Modals ──────────────────────────────────────────────────────────
@@ -50,8 +58,8 @@ function AddCircleModal({ onClose, onCreated }: { onClose: () => void; onCreated
     <Modal title="إضافة حلقة جديدة" onClose={onClose}>
       <ErrorMsg error={error} />
       <form onSubmit={handleSubmit} className="space-y-4">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="اسم الحلقة" required className="w-full px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
-        <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="وصف (اختياري)" className="w-full px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="اسم الحلقة" required className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="وصف (اختياري)" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
         <div className="flex gap-3 pt-2">
           <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 water-btn-outline rounded-xl text-sm">إلغاء</button>
           <button type="submit" disabled={loading} className="flex-1 px-4 py-2.5 water-btn text-white rounded-xl text-sm font-medium disabled:opacity-50">{loading ? 'جاري...' : 'إضافة'}</button>
@@ -86,8 +94,8 @@ function EditCircleModal({ circle, onClose, onUpdated }: { circle: Circle; onClo
     <Modal title={`تعديل الحلقة — ${circle.name}`} onClose={onClose}>
       <ErrorMsg error={error} />
       <form onSubmit={handleSubmit} className="space-y-4">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="اسم الحلقة" required className="w-full px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
-        <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="وصف (اختياري)" className="w-full px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="اسم الحلقة" required className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="وصف (اختياري)" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
         <div className="flex gap-3 pt-2">
           <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 water-btn-outline rounded-xl text-sm">إلغاء</button>
           <button type="submit" disabled={loading} className="flex-1 px-4 py-2.5 water-btn text-white rounded-xl text-sm font-medium disabled:opacity-50">{loading ? 'جاري...' : 'حفظ'}</button>
@@ -125,9 +133,9 @@ function AddSheikhModal({ circles, onClose, onCreated }: { circles: Circle[]; on
     <Modal title="إضافة شيخ جديد" onClose={onClose}>
       <ErrorMsg error={error} />
       <form onSubmit={handleSubmit} className="space-y-4">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="الاسم" required className="w-full px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
-        <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="رقم الهاتف (اختياري)" className="w-full px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
-        <select value={circleId} onChange={(e) => setCircleId(Number(e.target.value))} className="w-full px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="الاسم" required className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="رقم الهاتف (اختياري)" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        <select value={circleId} onChange={(e) => setCircleId(Number(e.target.value))} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
           {circles.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         <div className="flex gap-3 pt-2">
@@ -165,9 +173,9 @@ function EditSheikhModal({ sheikh, circles, onClose, onUpdated }: { sheikh: Shei
     <Modal title={`تعديل الشيخ — ${sheikh.name}`} onClose={onClose}>
       <ErrorMsg error={error} />
       <form onSubmit={handleSubmit} className="space-y-4">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="الاسم" required className="w-full px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
-        <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="رقم الهاتف (اختياري)" className="w-full px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
-        <select value={circleId} onChange={(e) => setCircleId(Number(e.target.value))} className="w-full px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="الاسم" required className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="رقم الهاتف (اختياري)" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        <select value={circleId} onChange={(e) => setCircleId(Number(e.target.value))} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
           {circles.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         <div className="flex gap-3 pt-2">
@@ -184,8 +192,36 @@ function EditSheikhModal({ sheikh, circles, onClose, onUpdated }: { sheikh: Shei
 function AddStudentModal({ sheikhId, sheikhName, onClose, onCreated }: { sheikhId: number; sheikhName: string; onClose: () => void; onCreated: () => void }) {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
+  const [studentId, setStudentId] = useState('')
+  const [birthday, setBirthday] = useState('')
+  const [profilePicFile, setProfilePicFile] = useState<File | null>(null)
+  const [profilePicPreview, setProfilePicPreview] = useState('')
+  const [isEnrolled, setIsEnrolled] = useState(true)
+  const [parentPhones, setParentPhones] = useState<{ phone_number: string; parent_type: string }[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const addParentPhone = () => {
+    setParentPhones([...parentPhones, { phone_number: '', parent_type: 'أب' }])
+  }
+
+  const updateParentPhone = (i: number, field: 'phone_number' | 'parent_type', value: string) => {
+    const updated = [...parentPhones]
+    updated[i] = { ...updated[i], [field]: value }
+    setParentPhones(updated)
+  }
+
+  const removeParentPhone = (i: number) => {
+    setParentPhones(parentPhones.filter((_, idx) => idx !== i))
+  }
+
+  const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setProfilePicFile(file)
+      setProfilePicPreview(URL.createObjectURL(file))
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -193,7 +229,11 @@ function AddStudentModal({ sheikhId, sheikhName, onClose, onCreated }: { sheikhI
     setLoading(true)
     setError('')
     try {
-      await api.createStudent(name, sheikhId, phone || undefined)
+      const filteredPhones = parentPhones.filter((p) => p.phone_number)
+      const result = await api.createStudent(name, sheikhId, phone || undefined, birthday || undefined, studentId || undefined, isEnrolled, filteredPhones.length ? filteredPhones : undefined)
+      if (profilePicFile) {
+        await api.uploadStudentPic(result.id, profilePicFile)
+      }
       onCreated()
     } catch (err: any) {
       setError(err.message || 'فشل الإضافة')
@@ -206,8 +246,46 @@ function AddStudentModal({ sheikhId, sheikhName, onClose, onCreated }: { sheikhI
     <Modal title={`إضافة طالب — ${sheikhName}`} onClose={onClose}>
       <ErrorMsg error={error} />
       <form onSubmit={handleSubmit} className="space-y-4">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="الاسم" required className="w-full px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
-        <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="رقم الهاتف (اختياري)" className="w-full px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="الاسم" required className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="رقم هاتف الطالب (اختياري)" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        <input value={studentId} onChange={(e) => setStudentId(e.target.value)} placeholder="رقم الطالب (اختياري)" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        <div>
+          <label className="block text-sm text-deep-600 mb-1">تاريخ الميلاد</label>
+          <input value={birthday} onChange={(e) => setBirthday(e.target.value)} type="date" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        </div>
+        <div>
+          <label className="block text-sm text-deep-600 mb-1">الصورة الشخصية</label>
+          <div className="flex items-center gap-3">
+            {profilePicPreview && (
+              <img src={profilePicPreview} alt="preview" className="w-14 h-14 rounded-full object-cover border border-water-300" />
+            )}
+            <input type="file" accept="image/*" onChange={handleProfilePicChange} className="w-full text-sm text-deep-600 file:ml-0 file:mr-3 file:px-3 file:py-1.5 file:rounded-xl file:border-0 file:text-sm file:water-btn file:text-white file:cursor-pointer" />
+          </div>
+        </div>
+        <label className="flex items-center gap-2 text-deep-700">
+          <input type="checkbox" checked={isEnrolled} onChange={(e) => setIsEnrolled(e.target.checked)} className="rounded" />
+          <span className="text-sm">مقيد</span>
+        </label>
+        <div className="border-t border-water-200/30 pt-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-deep-700">أرقام ولي الأمر</span>
+            <button type="button" onClick={addParentPhone} className="text-xs water-btn-outline px-2 py-1 rounded-lg">+ إضافة</button>
+          </div>
+          {parentPhones.map((pp, i) => (
+            <div key={i} className="flex gap-2 mb-2">
+              <input value={pp.phone_number} onChange={(e) => updateParentPhone(i, 'phone_number', e.target.value)} placeholder="رقم الهاتف" className="flex-1 px-3 py-1.5 text-sm bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+              <select value={pp.parent_type} onChange={(e) => updateParentPhone(i, 'parent_type', e.target.value)} className="px-3 py-1.5 text-sm bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
+                <option value="أب">أب</option>
+                <option value="أم">أم</option>
+                <option value="أخ">أخ</option>
+                <option value="إخت">إخت</option>
+                <option value="جد">جد</option>
+                <option value="جدة">جدة</option>
+              </select>
+              <button type="button" onClick={() => removeParentPhone(i)} className="text-red-400 hover:text-red-600 text-sm px-1">✕</button>
+            </div>
+          ))}
+        </div>
         <div className="flex gap-3 pt-2">
           <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 water-btn-outline rounded-xl text-sm">إلغاء</button>
           <button type="submit" disabled={loading} className="flex-1 px-4 py-2.5 water-btn text-white rounded-xl text-sm font-medium disabled:opacity-50">{loading ? 'جاري...' : 'إضافة'}</button>
@@ -220,8 +298,29 @@ function AddStudentModal({ sheikhId, sheikhName, onClose, onCreated }: { sheikhI
 function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student: StudentInfo; sheikhName: string; onClose: () => void; onUpdated: () => void }) {
   const [name, setName] = useState(student.name)
   const [phone, setPhone] = useState(student.phone || '')
+  const [studentId, setStudentId] = useState(student.student_id || '')
+  const [birthday, setBirthday] = useState(student.birthday || '')
+  const [profilePic, setProfilePic] = useState(student.profile_pic || '')
+  const [isEnrolled, setIsEnrolled] = useState(student.is_enrolled)
+  const [parentPhones, setParentPhones] = useState<{ phone_number?: string; parent_type?: string }[]>(
+    student.parent_phones?.map((p) => ({ phone_number: p.phone_number, parent_type: p.parent_type })) || []
+  )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const addParentPhone = () => {
+    setParentPhones([...parentPhones, { phone_number: '', parent_type: 'أب' }])
+  }
+
+  const updateParentPhone = (i: number, field: 'phone_number' | 'parent_type', value: string) => {
+    const updated = [...parentPhones]
+    updated[i] = { ...updated[i], [field]: value }
+    setParentPhones(updated)
+  }
+
+  const removeParentPhone = (i: number) => {
+    setParentPhones(parentPhones.filter((_, idx) => idx !== i))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -229,7 +328,7 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
     setLoading(true)
     setError('')
     try {
-      await api.updateStudent(student.id, name, phone || undefined)
+      await api.updateStudent(student.id, name, phone || undefined, birthday || undefined, studentId || undefined, profilePic || undefined, isEnrolled, parentPhones)
       onUpdated()
     } catch (err: any) {
       setError(err.message || 'فشل التحديث')
@@ -242,8 +341,46 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
     <Modal title={`تعديل الطالب — ${student.name}`} onClose={onClose}>
       <ErrorMsg error={error} />
       <form onSubmit={handleSubmit} className="space-y-4">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="الاسم" required className="w-full px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
-        <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="رقم الهاتف (اختياري)" className="w-full px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="الاسم" required className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="رقم هاتف الطالب (اختياري)" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        <input value={studentId} onChange={(e) => setStudentId(e.target.value)} placeholder="رقم الطالب (اختياري)" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        <div>
+          <label className="block text-sm text-deep-600 mb-1">تاريخ الميلاد</label>
+          <input value={birthday} onChange={(e) => setBirthday(e.target.value)} type="date" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        </div>
+        <div>
+          <label className="block text-sm text-deep-600 mb-1">الصورة الشخصية</label>
+          <div className="flex items-center gap-3">
+            {(student.profile_pic || profilePic) && (
+              <img src={picUrl(profilePic) || profilePic} alt="preview" className="w-14 h-14 rounded-full object-cover border border-water-300" />
+            )}
+            <input value={profilePic} onChange={(e) => setProfilePic(e.target.value)} placeholder="رابط الصورة الشخصية (اختياري)" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+          </div>
+        </div>
+        <label className="flex items-center gap-2 text-deep-700">
+          <input type="checkbox" checked={isEnrolled} onChange={(e) => setIsEnrolled(e.target.checked)} className="rounded" />
+          <span className="text-sm">مقيد</span>
+        </label>
+        <div className="border-t border-water-200/30 pt-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-deep-700">أرقام ولي الأمر</span>
+            <button type="button" onClick={addParentPhone} className="text-xs water-btn-outline px-2 py-1 rounded-lg">+ إضافة</button>
+          </div>
+          {parentPhones.map((pp, i) => (
+            <div key={i} className="flex gap-2 mb-2">
+              <input value={pp.phone_number || ''} onChange={(e) => updateParentPhone(i, 'phone_number', e.target.value)} placeholder="رقم الهاتف" className="flex-1 px-3 py-1.5 text-sm bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+              <select value={pp.parent_type || 'أب'} onChange={(e) => updateParentPhone(i, 'parent_type', e.target.value)} className="px-3 py-1.5 text-sm bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
+                <option value="أب">أب</option>
+                <option value="أم">أم</option>
+                <option value="أخ">أخ</option>
+                <option value="إخت">إخت</option>
+                <option value="جد">جد</option>
+                <option value="جدة">جدة</option>
+              </select>
+              <button type="button" onClick={() => removeParentPhone(i)} className="text-red-400 hover:text-red-600 text-sm px-1">✕</button>
+            </div>
+          ))}
+        </div>
         <div className="flex gap-3 pt-2">
           <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 water-btn-outline rounded-xl text-sm">إلغاء</button>
           <button type="submit" disabled={loading} className="flex-1 px-4 py-2.5 water-btn text-white rounded-xl text-sm font-medium disabled:opacity-50">{loading ? 'جاري...' : 'حفظ'}</button>
@@ -282,14 +419,14 @@ function AddUserModal({ sheikhs, onClose, onCreated }: { sheikhs: SheikhInfo[]; 
     <Modal title="إضافة مستخدم جديد" onClose={onClose}>
       <ErrorMsg error={error} />
       <form onSubmit={handleSubmit} className="space-y-4">
-        <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="اسم المستخدم" required className="w-full px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
-        <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="كلمة المرور" required className="w-full px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
-        <select value={role} onChange={(e) => setRole(e.target.value)} className="w-full px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
+        <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="اسم المستخدم" required className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="كلمة المرور" required className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        <select value={role} onChange={(e) => setRole(e.target.value)} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
           <option value="sheikh">شيخ</option>
           <option value="admin">مدير</option>
         </select>
         {role === 'sheikh' && (
-          <select value={sheikhId} onChange={(e) => setSheikhId(e.target.value ? Number(e.target.value) : '')} className="w-full px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
+          <select value={sheikhId} onChange={(e) => setSheikhId(e.target.value ? Number(e.target.value) : '')} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
             <option value="">-- اختر شيخاً --</option>
             {sheikhs.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
@@ -334,13 +471,13 @@ function EditUserModal({ user, sheikhs, onClose, onUpdated }: { user: UserInfo; 
     <Modal title={`تعديل المستخدم — ${user.username}`} onClose={onClose}>
       <ErrorMsg error={error} />
       <form onSubmit={handleSubmit} className="space-y-4">
-        <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="اسم المستخدم" required className="w-full px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
-        <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="كلمة المرور (اتركه فارغاً إذا لم ترد تغييره)" className="w-full px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
-        <select value={role} onChange={(e) => setRole(e.target.value)} className="w-full px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
+        <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="اسم المستخدم" required className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="كلمة المرور (اتركه فارغاً إذا لم ترد تغييره)" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        <select value={role} onChange={(e) => setRole(e.target.value)} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
           <option value="sheikh">شيخ</option>
           <option value="admin">مدير</option>
         </select>
-        <select value={sheikhId} onChange={(e) => setSheikhId(e.target.value ? Number(e.target.value) : '')} className="w-full px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
+        <select value={sheikhId} onChange={(e) => setSheikhId(e.target.value ? Number(e.target.value) : '')} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
           <option value="">-- اختر شيخاً --</option>
           {sheikhs.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
@@ -379,16 +516,96 @@ function AddScheduleModal({ circleId, onClose, onCreated }: { circleId: number; 
     <Modal title="إضافة موعد للحلقة" onClose={onClose}>
       <ErrorMsg error={error} />
       <form onSubmit={handleSubmit} className="space-y-4">
-        <select value={dayOfWeek} onChange={(e) => setDayOfWeek(Number(e.target.value))} className="w-full px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
+        <select value={dayOfWeek} onChange={(e) => setDayOfWeek(Number(e.target.value))} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
           {DAY_NAMES.map((name, i) => <option key={i} value={i}>{name}</option>)}
         </select>
-        <input value={time} onChange={(e) => setTime(e.target.value)} type="time" required className="w-full px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        <input value={time} onChange={(e) => setTime(e.target.value)} type="time" required className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
         <div className="flex gap-3 pt-2">
           <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 water-btn-outline rounded-xl text-sm">إلغاء</button>
           <button type="submit" disabled={loading} className="flex-1 px-4 py-2.5 water-btn text-white rounded-xl text-sm font-medium disabled:opacity-50">{loading ? 'جاري...' : 'إضافة'}</button>
         </div>
       </form>
     </Modal>
+  )
+}
+
+// ─── Image Preview Modal ─────────────────────────────────────────────────────
+
+function ImagePreviewModal({ src, onClose }: { src: string; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <img src={src} alt="صورة الطالب" className="max-w-[90vw] max-h-[90vh] rounded-2xl shadow-2xl" onClick={(e) => e.stopPropagation()} />
+    </div>
+  )
+}
+
+// ─── Student Profile Overlay ─────────────────────────────────────────────────
+
+function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete }: {
+  student: StudentInfo
+  sheikhName: string
+  onClose: () => void
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={onClose}>
+      <div className="glass-strong rounded-2xl p-6 w-full max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
+        <div className="flex flex-col items-center mb-4">
+          {student.profile_pic ? (
+            <img src={picUrl(student.profile_pic)!} alt="" className="w-20 h-20 rounded-full object-cover border-2 border-water-300 mb-3" />
+          ) : (
+            <div className="w-20 h-20 rounded-full bg-water-200/50 flex items-center justify-center text-deep-400 text-2xl border-2 border-water-300 mb-3">
+              {student.name.charAt(0)}
+            </div>
+          )}
+          <h2 className="text-xl font-bold text-deep-800">{student.name}</h2>
+          <span className="text-deep-500 text-sm">{student.student_id ? `#${student.student_id}` : `#${student.id}`}</span>
+        </div>
+
+        <div className="space-y-3 text-sm">
+          {student.phone && (
+            <div className="flex justify-between items-center py-1 border-b border-water-100/50">
+              <span className="text-deep-500">الهاتف</span>
+              <span className="text-deep-800 font-medium" dir="ltr">{student.phone}</span>
+            </div>
+          )}
+          {student.birthday && (
+            <div className="flex justify-between items-center py-1 border-b border-water-100/50">
+              <span className="text-deep-500">تاريخ الميلاد</span>
+              <span className="text-deep-800 font-medium">{student.birthday}</span>
+            </div>
+          )}
+          <div className="flex justify-between items-center py-1 border-b border-water-100/50">
+            <span className="text-deep-500">الشيخ</span>
+            <span className="text-deep-800 font-medium">{sheikhName}</span>
+          </div>
+          <div className="flex justify-between items-center py-1 border-b border-water-100/50">
+            <span className="text-deep-500">مقيد</span>
+            <span className={`font-medium ${student.is_enrolled ? 'text-emerald-600' : 'text-red-500'}`}>
+              {student.is_enrolled ? 'نعم' : 'لا'}
+            </span>
+          </div>
+
+          {student.parent_phones && student.parent_phones.length > 0 && (
+            <div className="pt-1">
+              <span className="text-deep-500 text-xs block mb-2">أرقام ولي الأمر</span>
+              {student.parent_phones.map((p, i) => (
+                <div key={i} className="flex justify-between items-center py-1 text-sm">
+                  <span className="text-deep-600 bg-water-100/50 px-2 py-0.5 rounded-lg text-xs">{p.parent_type}</span>
+                  <span className="text-deep-800 font-medium" dir="ltr">{p.phone_number}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-3 pt-4 mt-4 border-t border-water-200/30">
+          <button onClick={onEdit} className="flex-1 px-4 py-2.5 water-btn text-white rounded-xl text-sm font-medium">تعديل</button>
+          <button onClick={onDelete} className="flex-1 px-4 py-2.5 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-xl text-sm font-medium hover:bg-red-50/50 dark:hover:bg-red-900/30 transition">حذف</button>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -401,6 +618,18 @@ export default function ManagePage() {
   const [schedules, setSchedules] = useState<Record<number, CircleSchedule[]>>({})
   const [activeTab, setActiveTab] = useState<'sheikhs' | 'users' | 'circles'>('sheikhs')
   const [loading, setLoading] = useState(true)
+  const [expandedSheikhs, setExpandedSheikhs] = useState<Set<number>>(new Set())
+
+  const toggleSheikh = (id: number) => {
+    setExpandedSheikhs((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+  const [previewPic, setPreviewPic] = useState<string | null>(null)
+  const [viewStudent, setViewStudent] = useState<{ student: StudentInfo; sheikhName: string } | null>(null)
 
   const [showAddCircle, setShowAddCircle] = useState(false)
   const [editCircle, setEditCircle] = useState<Circle | null>(null)
@@ -456,7 +685,7 @@ export default function ManagePage() {
   }
 
   const handleDeleteCircle = async (id: number) => {
-    if (!confirm('حذف الحلقة؟ (سيتم حذف جميع الشيوخ والطلاب المرتبطين بها)')) return
+    if (!confirm('تحذير: سيتم حذف الحلقة وجميع ما فيها بما في ذلك الجلسات وسجلات الحضور والشيوخ والمواعيد. هل أنت متأكد؟')) return
     await api.deleteCircle(id)
     load()
   }
@@ -484,7 +713,7 @@ export default function ManagePage() {
             key={t.key}
             onClick={() => setActiveTab(t.key)}
             className={`px-4 py-2 text-sm font-medium transition border-b-2 -mb-px ${
-              activeTab === t.key ? 'text-cyan-700 border-cyan-500' : 'text-deep-500 border-transparent hover:text-deep-700'
+              activeTab === t.key ? 'text-cyan-700 dark:text-cyan-400 border-cyan-500' : 'text-deep-500 border-transparent hover:text-deep-700'
             }`}
           >
             {t.label}
@@ -506,36 +735,57 @@ export default function ManagePage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {sheikhs.map((sheikh) => (
+              {sheikhs.map((sheikh) => {
+                const isExpanded = expandedSheikhs.has(sheikh.id)
+                return (
                 <div key={sheikh.id} className="glass-card rounded-2xl overflow-hidden">
-                  <div className="flex items-center justify-between px-5 py-4 bg-water-100/30">
+                  <div className="flex items-center justify-between px-5 py-4 bg-water-100/30 cursor-pointer" onClick={() => toggleSheikh(sheikh.id)}>
                     <div className="flex items-center gap-3">
+                      <span className={`text-deep-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}>{'<'}</span>
                       <span className="text-lg font-bold text-deep-800">{sheikh.name}</span>
                       <span className="text-deep-500 text-sm">{sheikh.circle_name}</span>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                       <button onClick={() => setAddingStudent({ id: sheikh.id, name: sheikh.name })} className="water-btn-outline px-3 py-1.5 rounded-xl text-xs">+ إضافة طالب</button>
                       <button onClick={() => setEditSheikh(sheikh)} className="water-btn-outline px-3 py-1.5 rounded-xl text-xs">تعديل</button>
-                      <button onClick={() => handleDeleteSheikh(sheikh.id)} className="px-3 py-1.5 rounded-xl text-xs border border-red-200 text-red-600 hover:bg-red-50/50 transition">حذف</button>
+                      <button onClick={() => handleDeleteSheikh(sheikh.id)} className="px-3 py-1.5 rounded-xl text-xs border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50/50 dark:hover:bg-red-900/30 transition">حذف</button>
                     </div>
                   </div>
-                  {sheikh.students.length > 0 ? (
-                    <div className="divide-y divide-water-200/30">
-                      {sheikh.students.map((s) => (
-                        <div key={s.id} className="flex items-center justify-between px-5 py-2.5 hover:bg-water-100/30">
-                          <span className="text-deep-800">{s.name}</span>
-                          <div className="flex gap-2">
-                            <button onClick={() => setEditStudent({ student: s, sheikhName: sheikh.name })} className="text-xs text-cyan-600 hover:text-cyan-800 transition">تعديل</button>
-                            <button onClick={() => handleDeleteStudent(s.id)} className="text-xs text-red-400 hover:text-red-600 transition">حذف</button>
+                  {isExpanded && (
+                    sheikh.students.length > 0 ? (
+                      <div className="divide-y divide-water-200/30">
+                        {sheikh.students.map((s) => (
+                          <div key={s.id} className="flex items-center justify-between px-5 py-2.5 hover:bg-water-100/30">
+                            <div className="flex items-center gap-3 cursor-pointer" onClick={() => setViewStudent({ student: s, sheikhName: sheikh.name })}>
+                              {s.profile_pic ? (
+                                <img
+                                  src={picUrl(s.profile_pic)!}
+                                  alt=""
+                                  className="w-8 h-8 rounded-full object-cover border border-water-300"
+                                  onClick={(e) => { e.stopPropagation(); setPreviewPic(picUrl(s.profile_pic)!) }}
+                                />
+                              ) : (
+                                <div className="w-8 h-8 rounded-full bg-water-200/50 flex items-center justify-center text-deep-400 text-xs border border-water-300">
+                                  {s.name.charAt(0)}
+                                </div>
+                              )}
+                              <span className="text-deep-600 text-xs ml-1">{s.student_id ? `#${s.student_id}` : `#${s.id}`}</span>
+                              <span className="text-deep-800">{s.name}</span>
+                            </div>
+                            <div className="flex gap-2">
+                              <button onClick={() => setEditStudent({ student: s, sheikhName: sheikh.name })} className="text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-800 dark:hover:text-cyan-300 transition">تعديل</button>
+                              <button onClick={() => handleDeleteStudent(s.id)} className="text-xs text-red-400 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition">حذف</button>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="px-5 py-3 text-deep-400 text-sm text-center">لا يوجد طلاب</div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="px-5 py-3 text-deep-400 text-sm text-center">لا يوجد طلاب</div>
+                    )
                   )}
                 </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
@@ -560,14 +810,14 @@ export default function ManagePage() {
                     <div className="flex items-center gap-3">
                       <span className="font-medium text-deep-800">{u.username}</span>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        u.role === 'admin' ? 'bg-purple-100/60 text-purple-700' : 'bg-water-100/60 text-cyan-700'
+                        u.role === 'admin' ? 'bg-purple-100/60 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300' : 'bg-water-100/60 text-cyan-700'
                       }`}>
                         {u.role === 'admin' ? 'مدير' : 'شيخ'}
                       </span>
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={() => setEditUser(u)} className="text-xs text-cyan-600 hover:text-cyan-800 transition">تعديل</button>
-                      <button onClick={() => handleDeleteUser(u.id)} className="text-xs text-red-400 hover:text-red-600 transition">حذف</button>
+                      <button onClick={() => setEditUser(u)} className="text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-800 dark:hover:text-cyan-300 transition">تعديل</button>
+                      <button onClick={() => handleDeleteUser(u.id)} className="text-xs text-red-400 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition">حذف</button>
                     </div>
                   </div>
                 ))}
@@ -600,7 +850,7 @@ export default function ManagePage() {
                     <div className="flex gap-2">
                       <button onClick={() => { setShowAddSchedule(c.id); loadSchedules(c.id) }} className="water-btn-outline px-3 py-1.5 rounded-xl text-xs">+ إضافة موعد</button>
                       <button onClick={() => setEditCircle(c)} className="water-btn-outline px-3 py-1.5 rounded-xl text-xs">تعديل</button>
-                      <button onClick={() => handleDeleteCircle(c.id)} className="px-3 py-1.5 rounded-xl text-xs border border-red-200 text-red-600 hover:bg-red-50/50 transition">حذف</button>
+                      <button onClick={() => handleDeleteCircle(c.id)} className="px-3 py-1.5 rounded-xl text-xs border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50/50 dark:hover:bg-red-900/30 transition">حذف</button>
                     </div>
                   </div>
                   {(schedules[c.id]?.length ?? 0) > 0 && (
@@ -608,7 +858,7 @@ export default function ManagePage() {
                       {schedules[c.id]?.map((sch) => (
                         <div key={sch.id} className="flex items-center justify-between py-1.5">
                           <span className="text-deep-700 text-sm">{DAY_NAMES[sch.day_of_week]} — {sch.time}</span>
-                          <button onClick={() => handleDeleteSchedule(sch.id)} className="text-xs text-red-400 hover:text-red-600 transition">حذف</button>
+                          <button onClick={() => handleDeleteSchedule(sch.id)} className="text-xs text-red-400 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition">حذف</button>
                         </div>
                       ))}
                     </div>
@@ -630,6 +880,24 @@ export default function ManagePage() {
       {showAddUser && <AddUserModal sheikhs={sheikhs} onClose={() => setShowAddUser(false)} onCreated={() => { setShowAddUser(false); load() }} />}
       {editUser && <EditUserModal user={editUser} sheikhs={sheikhs} onClose={() => setEditUser(null)} onUpdated={() => { setEditUser(null); load() }} />}
       {showAddSchedule && <AddScheduleModal circleId={showAddSchedule} onClose={() => setShowAddSchedule(null)} onCreated={() => { loadSchedules(showAddSchedule); setShowAddSchedule(null) }} />}
+      {previewPic && <ImagePreviewModal src={previewPic} onClose={() => setPreviewPic(null)} />}
+      {viewStudent && (
+        <ViewStudentModal
+          student={viewStudent.student}
+          sheikhName={viewStudent.sheikhName}
+          onClose={() => setViewStudent(null)}
+          onEdit={() => {
+            const s = viewStudent.student
+            setViewStudent(null)
+            setEditStudent({ student: s, sheikhName: viewStudent.sheikhName })
+          }}
+          onDelete={() => {
+            const id = viewStudent.student.id
+            setViewStudent(null)
+            handleDeleteStudent(id)
+          }}
+        />
+      )}
     </div>
   )
 }

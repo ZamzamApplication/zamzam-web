@@ -18,7 +18,7 @@ export default function LoginPage() {
     try {
       const res = await api.login(username, password)
       localStorage.setItem('token', res.access_token)
-      router.push('/')
+      router.push('/dashboard')
     } catch (err: any) {
       setError(err.message || 'فشل تسجيل الدخول')
     } finally {
@@ -36,7 +36,7 @@ export default function LoginPage() {
         </div>
 
         {error && (
-          <div className="bg-red-50/80 backdrop-blur-sm text-red-700 px-4 py-3 rounded-xl mb-4 text-sm text-center border border-red-200">
+          <div className="bg-red-50/80 dark:bg-red-900/30 backdrop-blur-sm text-red-700 dark:text-red-300 px-4 py-3 rounded-xl mb-4 text-sm text-center border border-red-200 dark:border-red-800">
             {error}
           </div>
         )}
@@ -48,7 +48,7 @@ export default function LoginPage() {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400 focus:border-transparent transition"
+              className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400 focus:border-transparent transition"
               required
               dir="ltr"
             />
@@ -59,7 +59,7 @@ export default function LoginPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400 focus:border-transparent transition"
+              className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400 focus:border-transparent transition"
               required
               dir="ltr"
             />

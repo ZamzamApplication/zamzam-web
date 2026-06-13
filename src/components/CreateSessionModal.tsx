@@ -42,7 +42,7 @@ export default function CreateSessionModal({
         <h2 className="text-xl font-bold text-deep-800 mb-4">إضافة جلسة جديدة</h2>
 
         {error && (
-          <div className="bg-red-50/80 backdrop-blur-sm text-red-700 px-4 py-2 rounded-xl mb-4 text-sm text-center border border-red-200">
+          <div className="bg-red-50/80 dark:bg-red-900/30 backdrop-blur-sm text-red-700 dark:text-red-300 px-4 py-2 rounded-xl mb-4 text-sm text-center border border-red-200 dark:border-red-800">
             {error}
           </div>
         )}
@@ -53,7 +53,7 @@ export default function CreateSessionModal({
             <select
               value={circleId}
               onChange={(e) => setCircleId(e.target.value ? Number(e.target.value) : '')}
-              className="w-full px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400"
+              className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400"
               required
             >
               <option value="">-- اختر الحلقة --</option>
@@ -66,7 +66,7 @@ export default function CreateSessionModal({
               type="date"
               value={sessionDate}
               onChange={(e) => setSessionDate(e.target.value)}
-              className="w-full px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400"
+              className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400"
               required
             />
           </div>

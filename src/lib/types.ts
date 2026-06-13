@@ -49,11 +49,22 @@ export interface SheikhInfo {
   circle_name: string
 }
 
+export interface ParentPhone {
+  id: number
+  phone_number: string
+  parent_type: string
+}
+
 export interface StudentInfo {
   id: number
   name: string
   phone?: string
+  student_id?: string
+  birthday?: string
+  profile_pic?: string
+  is_enrolled: boolean
   sheikh?: { id: number; name: string }
+  parent_phones?: ParentPhone[]
 }
 
 export interface UserInfo {

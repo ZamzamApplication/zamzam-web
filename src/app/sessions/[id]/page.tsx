@@ -6,9 +6,9 @@ import { api } from '@/lib/api'
 import type { SessionAttendance, SheikhGroup } from '@/lib/types'
 
 const STATUS_STYLES: Record<string, string> = {
-  'غياب': 'status-badge bg-gray-100/50 text-gray-600 border-gray-200',
-  'حاضر': 'status-badge bg-green-100/60 text-green-700 border-green-300',
-  'غياب بعذر': 'status-badge bg-yellow-100/60 text-yellow-700 border-yellow-300',
+  'غياب': 'status-badge bg-gray-100/50 text-gray-600 border-gray-200 dark:bg-gray-700/40 dark:text-gray-400 dark:border-gray-700',
+  'حاضر': 'status-badge bg-green-100/60 text-green-700 border-green-300 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700',
+  'غياب بعذر': 'status-badge bg-yellow-100/60 text-yellow-700 border-yellow-300 dark:bg-yellow-900/40 dark:text-yellow-300 dark:border-yellow-700',
 }
 
 const STATUS_ORDER = ['غياب', 'حاضر', 'غياب بعذر']
@@ -180,7 +180,7 @@ export default function SessionAttendancePage() {
       </div>
 
       {data.is_confirmed && (
-        <div className="mt-6 glass-strong text-green-700 border border-green-200 rounded-2xl p-4 text-center">
+        <div className="mt-6 glass-strong text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800 rounded-2xl p-4 text-center">
           تم تأكيد هذه الجلسة ✅
         </div>
       )}

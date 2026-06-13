@@ -6,9 +6,9 @@ import type { SheikhInfo, AttendanceGrid, FilterRule } from '@/lib/types'
 import AttendanceFilter from '@/components/AttendanceFilter'
 
 const STATUS_COLORS: Record<string, string> = {
-  'حاضر': 'bg-green-200/60 text-green-800',
-  'غياب': 'bg-gray-200/50 text-gray-600',
-  'غياب بعذر': 'bg-yellow-200/60 text-yellow-800',
+  'حاضر': 'bg-green-200/60 text-green-800 dark:bg-green-900/40 dark:text-green-300',
+  'غياب': 'bg-gray-200/50 text-gray-600 dark:bg-gray-700/40 dark:text-gray-400',
+  'غياب بعذر': 'bg-yellow-200/60 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300',
 }
 
 function matchesRule(student: { records: Record<string, string> }, rule: FilterRule): boolean {
@@ -102,7 +102,7 @@ export default function AttendancePage() {
           <select
             value={selectedSheikh}
             onChange={(e) => setSelectedSheikh(e.target.value ? Number(e.target.value) : '')}
-            className="w-full px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400"
+            className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400"
           >
             <option value="">كل الشيوخ</option>
             {sheikhs.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -114,7 +114,7 @@ export default function AttendancePage() {
             onClick={() => setShowFilter(!showFilter)}
             className={`px-4 py-2 rounded-xl text-sm font-medium transition ${
               hasActiveFilter
-                ? 'bg-cyan-600 text-white shadow-md'
+                ? 'bg-cyan-600 text-white shadow-md dark:bg-cyan-700'
                 : 'water-btn-outline'
             }`}
           >
@@ -123,7 +123,7 @@ export default function AttendancePage() {
           {hasActiveFilter && (
             <button
               onClick={clearFilter}
-              className="px-3 py-2 rounded-xl text-sm border border-red-200 text-red-600 hover:bg-red-50/50 transition"
+              className="px-3 py-2 rounded-xl text-sm border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50/50 dark:hover:bg-red-900/30 transition"
             >
               إلغاء التصفية
             </button>
@@ -145,7 +145,7 @@ export default function AttendancePage() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="بحث عن طالب..."
-          className="w-full px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400 text-sm"
+          className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400 text-sm"
         />
       </div>
 
@@ -164,7 +164,7 @@ export default function AttendancePage() {
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="border-b border-water-200/30">
-                <th className="text-right py-3 px-3 text-deep-700 sticky right-0 bg-white/60 backdrop-blur-sm z-10 min-w-[120px]">الطالب</th>
+                <th className="text-right py-3 px-3 text-deep-700 sticky right-0 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm z-10 min-w-[120px]">الطالب</th>
                 {displaySessions.map((s) => (
                   <th key={s.id} className="text-center py-3 px-2 text-deep-600 text-xs whitespace-nowrap min-w-[70px]">{s.date}</th>
                 ))}
@@ -173,7 +173,7 @@ export default function AttendancePage() {
             <tbody>
               {displayStudents.map((student) => (
                 <tr key={student.id} className="border-b border-water-200/20 hover:bg-water-100/20">
-                  <td className="py-2.5 px-3 text-deep-800 font-medium sticky right-0 bg-white/40 backdrop-blur-sm z-10">{student.name}</td>
+                  <td className="py-2.5 px-3 text-deep-800 font-medium sticky right-0 bg-white/40 dark:bg-slate-800/40 backdrop-blur-sm z-10">{student.name}</td>
                   {displaySessions.map((s) => {
                     const status = student.records[String(s.id)] || 'غياب'
                     return (
