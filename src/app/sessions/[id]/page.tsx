@@ -9,9 +9,10 @@ const STATUS_STYLES: Record<string, string> = {
   'غياب': 'status-badge bg-gray-100/50 text-gray-600 border-gray-200 dark:bg-gray-700/40 dark:text-gray-400 dark:border-gray-700',
   'حاضر': 'status-badge bg-green-100/60 text-green-700 border-green-300 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700',
   'غياب بعذر': 'status-badge bg-yellow-100/60 text-yellow-700 border-yellow-300 dark:bg-yellow-900/40 dark:text-yellow-300 dark:border-yellow-700',
+  'لا ينطبق': 'status-badge bg-blue-100/60 text-blue-700 border-blue-300 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700',
 }
 
-const STATUS_ORDER = ['غياب', 'حاضر', 'غياب بعذر']
+const STATUS_ORDER = ['غياب', 'حاضر', 'غياب بعذر', 'لا ينطبق']
 
 function cycleStatus(current: string): string {
   const idx = STATUS_ORDER.indexOf(current)

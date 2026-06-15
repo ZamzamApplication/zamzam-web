@@ -278,9 +278,13 @@ function AddStudentModal({ sheikhId, sheikhName, onClose, onCreated }: { sheikhI
                 <option value="أب">أب</option>
                 <option value="أم">أم</option>
                 <option value="أخ">أخ</option>
-                <option value="إخت">إخت</option>
+                <option value="أب">أب</option>
+                <option value="أم">أم</option>
+                <option value="أخ">أخ</option>
+                <option value="أخت">أخت</option>
                 <option value="جد">جد</option>
                 <option value="جدة">جدة</option>
+                <option value="أرضي">أرضي</option>
               </select>
               <button type="button" onClick={() => removeParentPhone(i)} className="text-red-400 hover:text-red-600 text-sm px-1">✕</button>
             </div>
@@ -418,9 +422,13 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
                 <option value="أب">أب</option>
                 <option value="أم">أم</option>
                 <option value="أخ">أخ</option>
-                <option value="إخت">إخت</option>
+                <option value="أب">أب</option>
+                <option value="أم">أم</option>
+                <option value="أخ">أخ</option>
+                <option value="أخت">أخت</option>
                 <option value="جد">جد</option>
                 <option value="جدة">جدة</option>
+                <option value="أرضي">أرضي</option>
               </select>
               <button type="button" onClick={() => removeParentPhone(i)} className="text-red-400 hover:text-red-600 text-sm px-1">✕</button>
             </div>
@@ -769,7 +777,8 @@ export default function ManagePage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-deep-800 mb-6">الإدارة</h1>
+      <h1 className="text-2xl font-bold text-deep-800 mb-1">الإدارة</h1>
+      <p className="text-deep-500 text-sm mb-4">إجمالي الطلاب: {sheikhs.reduce((sum, s) => sum + s.students.length, 0)}</p>
 
       <div className="flex gap-2 mb-6 border-b border-water-200/30">
         {tabs.map((t) => (

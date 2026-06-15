@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import type { AttendanceGridSession, FilterRule } from '@/lib/types'
 
-const STATUS_OPTIONS = ['حاضر', 'غياب', 'غياب بعذر']
+const STATUS_OPTIONS = ['حاضر', 'غياب', 'غياب بعذر', 'لا ينطبق']
 const OPERATORS = [
   { value: 'is', label: 'يساوي' },
   { value: 'is_not', label: 'لا يساوي' },

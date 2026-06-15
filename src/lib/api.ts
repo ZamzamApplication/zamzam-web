@@ -63,6 +63,10 @@ export const api = {
     return request(`/sessions/${sessionId}/confirm`, { method: 'POST' })
   },
 
+  deleteSession(sessionId: number) {
+    return request(`/sessions/${sessionId}`, { method: 'DELETE' })
+  },
+
   createSession(sessionDate: string, circleId: number) {
     return request('/sessions/', {
       method: 'POST',
