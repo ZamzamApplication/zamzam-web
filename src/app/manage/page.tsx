@@ -197,6 +197,7 @@ function AddStudentModal({ sheikhId, sheikhName, onClose, onCreated }: { sheikhI
   const [profilePicFile, setProfilePicFile] = useState<File | null>(null)
   const [profilePicPreview, setProfilePicPreview] = useState('')
   const [isEnrolled, setIsEnrolled] = useState(true)
+  const [warnings, setWarnings] = useState(0)
   const [parentPhones, setParentPhones] = useState<{ phone_number: string; parent_type: string }[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -230,7 +231,7 @@ function AddStudentModal({ sheikhId, sheikhName, onClose, onCreated }: { sheikhI
     setError('')
     try {
       const filteredPhones = parentPhones.filter((p) => p.phone_number)
-      const result = await api.createStudent(name, sheikhId, phone || undefined, birthday || undefined, studentId || undefined, isEnrolled, filteredPhones.length ? filteredPhones : undefined)
+      const result = await api.createStudent(name, sheikhId, phone || undefined, birthday || undefined, studentId || undefined, isEnrolled, warnings, filteredPhones.length ? filteredPhones : undefined)
       if (profilePicFile) {
         await api.uploadStudentPic(result.id, profilePicFile)
       }
@@ -266,6 +267,10 @@ function AddStudentModal({ sheikhId, sheikhName, onClose, onCreated }: { sheikhI
           <input type="checkbox" checked={isEnrolled} onChange={(e) => setIsEnrolled(e.target.checked)} className="rounded" />
           <span className="text-sm">مقيد</span>
         </label>
+        <div>
+          <label className="block text-sm text-deep-600 mb-1">عدد الإنذارات</label>
+          <input value={warnings} onChange={(e) => setWarnings(Number(e.target.value))} type="number" min="0" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        </div>
         <div className="border-t border-water-200/30 pt-3">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-deep-700">أرقام ولي الأمر</span>
@@ -302,6 +307,7 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
   const [birthday, setBirthday] = useState(student.birthday || '')
   const [profilePic, setProfilePic] = useState(student.profile_pic || '')
   const [isEnrolled, setIsEnrolled] = useState(student.is_enrolled)
+  const [warnings, setWarnings] = useState(student.warnings)
   const [parentPhones, setParentPhones] = useState<{ phone_number?: string; parent_type?: string }[]>(
     student.parent_phones?.map((p) => ({ phone_number: p.phone_number, parent_type: p.parent_type })) || []
   )
@@ -328,7 +334,7 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
     setLoading(true)
     setError('')
     try {
-      await api.updateStudent(student.id, name, phone || undefined, birthday || undefined, studentId || undefined, profilePic || undefined, isEnrolled, parentPhones)
+      await api.updateStudent(student.id, name, phone || undefined, birthday || undefined, studentId || undefined, profilePic || undefined, isEnrolled, warnings, parentPhones)
       onUpdated()
     } catch (err: any) {
       setError(err.message || 'فشل التحديث')
@@ -361,6 +367,10 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
           <input type="checkbox" checked={isEnrolled} onChange={(e) => setIsEnrolled(e.target.checked)} className="rounded" />
           <span className="text-sm">مقيد</span>
         </label>
+        <div>
+          <label className="block text-sm text-deep-600 mb-1">عدد الإنذارات</label>
+          <input value={warnings} onChange={(e) => setWarnings(Number(e.target.value))} type="number" min="0" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        </div>
         <div className="border-t border-water-200/30 pt-3">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-deep-700">أرقام ولي الأمر</span>
@@ -586,6 +596,10 @@ function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete }: {
               {student.is_enrolled ? 'نعم' : 'لا'}
             </span>
           </div>
+          <div className="flex justify-between items-center py-1 border-b border-water-100/50">
+            <span className="text-deep-500">الإنذارات</span>
+            <span className={`font-medium ${student.warnings > 0 ? 'text-red-500' : 'text-deep-800'}`}>{student.warnings}</span>
+          </div>
 
           {student.parent_phones && student.parent_phones.length > 0 && (
             <div className="pt-1">
@@ -744,6 +758,7 @@ export default function ManagePage() {
                       <span className={`text-deep-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}>{'<'}</span>
                       <span className="text-lg font-bold text-deep-800">{sheikh.name}</span>
                       <span className="text-deep-500 text-sm">{sheikh.circle_name}</span>
+                      <span className="text-xs bg-water-200/50 text-deep-600 px-2 py-0.5 rounded-full">{sheikh.students.length} طالب</span>
                     </div>
                     <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                       <button onClick={() => setAddingStudent({ id: sheikh.id, name: sheikh.name })} className="water-btn-outline px-3 py-1.5 rounded-xl text-xs">+ إضافة طالب</button>

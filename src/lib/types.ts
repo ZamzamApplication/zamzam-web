@@ -63,6 +63,7 @@ export interface StudentInfo {
   birthday?: string
   profile_pic?: string
   is_enrolled: boolean
+  warnings: number
   sheikh?: { id: number; name: string }
   parent_phones?: ParentPhone[]
 }
