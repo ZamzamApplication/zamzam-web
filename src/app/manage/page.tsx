@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/api'
-import type { SheikhInfo, StudentInfo, Circle, UserInfo, CircleSchedule } from '@/lib/types'
+import type { SheikhInfo, StudentInfo, WarningInfo, Circle, UserInfo, CircleSchedule } from '@/lib/types'
 import { DAY_NAMES } from '@/lib/types'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
@@ -197,7 +197,6 @@ function AddStudentModal({ sheikhId, sheikhName, onClose, onCreated }: { sheikhI
   const [profilePicFile, setProfilePicFile] = useState<File | null>(null)
   const [profilePicPreview, setProfilePicPreview] = useState('')
   const [isEnrolled, setIsEnrolled] = useState(true)
-  const [warnings, setWarnings] = useState(0)
   const [parentPhones, setParentPhones] = useState<{ phone_number: string; parent_type: string }[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -231,7 +230,7 @@ function AddStudentModal({ sheikhId, sheikhName, onClose, onCreated }: { sheikhI
     setError('')
     try {
       const filteredPhones = parentPhones.filter((p) => p.phone_number)
-      const result = await api.createStudent(name, sheikhId, phone || undefined, birthday || undefined, studentId || undefined, isEnrolled, warnings, filteredPhones.length ? filteredPhones : undefined)
+      const result = await api.createStudent(name, sheikhId, phone || undefined, birthday || undefined, studentId || undefined, isEnrolled, filteredPhones.length ? filteredPhones : undefined)
       if (profilePicFile) {
         await api.uploadStudentPic(result.id, profilePicFile)
       }
@@ -267,10 +266,6 @@ function AddStudentModal({ sheikhId, sheikhName, onClose, onCreated }: { sheikhI
           <input type="checkbox" checked={isEnrolled} onChange={(e) => setIsEnrolled(e.target.checked)} className="rounded" />
           <span className="text-sm">مقيد</span>
         </label>
-        <div>
-          <label className="block text-sm text-deep-600 mb-1">عدد الإنذارات</label>
-          <input value={warnings} onChange={(e) => setWarnings(Number(e.target.value))} type="number" min="0" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
-        </div>
         <div className="border-t border-water-200/30 pt-3">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-deep-700">أرقام ولي الأمر</span>
@@ -307,7 +302,9 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
   const [birthday, setBirthday] = useState(student.birthday || '')
   const [profilePic, setProfilePic] = useState(student.profile_pic || '')
   const [isEnrolled, setIsEnrolled] = useState(student.is_enrolled)
-  const [warnings, setWarnings] = useState(student.warnings)
+  const [warnings, setWarnings] = useState<WarningInfo[]>(student.warnings)
+  const [newWarningReason, setNewWarningReason] = useState('')
+  const [addingWarning, setAddingWarning] = useState(false)
   const [parentPhones, setParentPhones] = useState<{ phone_number?: string; parent_type?: string }[]>(
     student.parent_phones?.map((p) => ({ phone_number: p.phone_number, parent_type: p.parent_type })) || []
   )
@@ -328,13 +325,28 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
     setParentPhones(parentPhones.filter((_, idx) => idx !== i))
   }
 
+  const handleAddWarning = async () => {
+    if (!newWarningReason.trim()) return
+    setAddingWarning(true)
+    setError('')
+    try {
+      const result = await api.addWarning(student.id, newWarningReason)
+      setWarnings([{ id: result.id, reason: result.reason, created_at: result.created_at }, ...warnings])
+      setNewWarningReason('')
+    } catch (err: any) {
+      setError(err.message || 'فشل إضافة الإنذار')
+    } finally {
+      setAddingWarning(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name) return
     setLoading(true)
     setError('')
     try {
-      await api.updateStudent(student.id, name, phone || undefined, birthday || undefined, studentId || undefined, profilePic || undefined, isEnrolled, warnings, parentPhones)
+      await api.updateStudent(student.id, name, phone || undefined, birthday || undefined, studentId || undefined, profilePic || undefined, isEnrolled, parentPhones)
       onUpdated()
     } catch (err: any) {
       setError(err.message || 'فشل التحديث')
@@ -367,10 +379,33 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
           <input type="checkbox" checked={isEnrolled} onChange={(e) => setIsEnrolled(e.target.checked)} className="rounded" />
           <span className="text-sm">مقيد</span>
         </label>
-        <div>
-          <label className="block text-sm text-deep-600 mb-1">عدد الإنذارات</label>
-          <input value={warnings} onChange={(e) => setWarnings(Number(e.target.value))} type="number" min="0" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+
+        {/* Warning history */}
+        <div className="border-t border-water-200/30 pt-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-deep-700">الإنذارات ({warnings.length})</span>
+          </div>
+          <div className="flex gap-2 mb-3">
+            <input value={newWarningReason} onChange={(e) => setNewWarningReason(e.target.value)} placeholder="سبب الإنذار" className="flex-1 px-3 py-1.5 text-sm bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+            <button type="button" onClick={handleAddWarning} disabled={addingWarning || !newWarningReason.trim()} className="water-btn text-white px-3 py-1.5 rounded-xl text-sm font-medium disabled:opacity-50 whitespace-nowrap">{addingWarning ? 'جاري...' : '+ إنذار'}</button>
+          </div>
+          {warnings.length === 0 ? (
+            <p className="text-xs text-deep-400 text-center py-2">لا يوجد إنذارات</p>
+          ) : (
+            <div className="space-y-1.5 max-h-40 overflow-y-auto">
+              {warnings.map((w) => (
+                <div key={w.id} className="flex items-start gap-2 bg-red-50/40 dark:bg-red-900/20 rounded-xl px-3 py-2">
+                  <span className="text-red-500 text-sm mt-0.5">⚠</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-deep-800">{w.reason}</p>
+                    <p className="text-[10px] text-deep-400">{new Date(w.created_at).toLocaleDateString('ar-SA')}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
+
         <div className="border-t border-water-200/30 pt-3">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-deep-700">أرقام ولي الأمر</span>
@@ -596,9 +631,24 @@ function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete }: {
               {student.is_enrolled ? 'نعم' : 'لا'}
             </span>
           </div>
-          <div className="flex justify-between items-center py-1 border-b border-water-100/50">
-            <span className="text-deep-500">الإنذارات</span>
-            <span className={`font-medium ${student.warnings > 0 ? 'text-red-500' : 'text-deep-800'}`}>{student.warnings}</span>
+          <div className="py-1 border-b border-water-100/50">
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-deep-500">الإنذارات</span>
+              <span className={`font-medium ${student.warnings.length > 0 ? 'text-red-500' : 'text-deep-800'}`}>{student.warnings.length}</span>
+            </div>
+            {student.warnings.length > 0 && (
+              <div className="space-y-1 mt-1 mb-1">
+                {student.warnings.map((w) => (
+                  <div key={w.id} className="flex items-start gap-1.5 bg-red-50/40 dark:bg-red-900/20 rounded-lg px-2 py-1.5">
+                    <span className="text-red-500 text-xs mt-0.5">⚠</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-deep-700">{w.reason}</p>
+                      <p className="text-[10px] text-deep-400">{new Date(w.created_at).toLocaleDateString('ar-SA')}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {student.parent_phones && student.parent_phones.length > 0 && (

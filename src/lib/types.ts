@@ -55,6 +55,12 @@ export interface ParentPhone {
   parent_type: string
 }
 
+export interface WarningInfo {
+  id: number
+  reason: string
+  created_at: string
+}
+
 export interface StudentInfo {
   id: number
   name: string
@@ -63,7 +69,7 @@ export interface StudentInfo {
   birthday?: string
   profile_pic?: string
   is_enrolled: boolean
-  warnings: number
+  warnings: WarningInfo[]
   sheikh?: { id: number; name: string }
   parent_phones?: ParentPhone[]
 }
