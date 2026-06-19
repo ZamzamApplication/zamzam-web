@@ -100,7 +100,9 @@ export default function ReportsPage() {
               </div>
             </div>
             <div className="mt-4 text-center">
-              <div className="text-3xl font-bold text-cyan-700 dark:text-cyan-400">{circleRate.attendance_rate}%</div>
+              <button onClick={() => setSortAsc(!sortAsc)} className="text-3xl font-bold text-cyan-700 dark:text-cyan-400 hover:underline cursor-pointer">
+                {circleRate.attendance_rate}% {sortAsc ? '↑' : '↓'}
+              </button>
               <div className="text-xs text-deep-500 mt-1">نسبة الحضور</div>
             </div>
           </div>
@@ -119,7 +121,11 @@ export default function ReportsPage() {
                       <th className="text-center py-2 px-3">حضر</th>
                       <th className="text-center py-2 px-3">بعذر</th>
                       <th className="text-center py-2 px-3">غاب</th>
-                      <th className="text-center py-2 px-3">النسبة</th>
+                      <th className="text-center py-2 px-3">
+                        <button onClick={() => setSortAsc(!sortAsc)} className="hover:text-cyan-700 transition cursor-pointer">
+                          النسبة {sortAsc ? '↑' : '↓'}
+                        </button>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -135,10 +141,8 @@ export default function ReportsPage() {
                             <td className="py-2 px-3 text-center text-green-700 dark:text-green-400">{streak.total_attended}</td>
                             <td className="py-2 px-3 text-center text-yellow-700 dark:text-yellow-400">{streak.total_excused}</td>
                             <td className="py-2 px-3 text-center text-red-600 dark:text-red-400">{streak.total_absent}</td>
-                            <td className="py-2 px-3 text-center">
-                              <button onClick={() => setSortAsc(!sortAsc)} className="font-bold text-cyan-700 dark:text-cyan-400 hover:underline cursor-pointer">
-                                {streak.attendance_rate}% {sortAsc ? '↑' : '↓'}
-                              </button>
+                            <td className="py-2 px-3 text-center font-bold text-cyan-700 dark:text-cyan-400">
+                              {streak.attendance_rate}%
                             </td>
                           </tr>
                         )
