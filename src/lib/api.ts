@@ -52,10 +52,10 @@ export const api = {
     return request(`/sessions/${sessionId}/attendance`)
   },
 
-  upsertAttendance(sessionId: number, studentId: number, status: string) {
+  upsertAttendance(sessionId: number, studentId: number, status: string, notes?: string) {
     return request('/attendance/upsert', {
       method: 'POST',
-      body: JSON.stringify({ session_id: sessionId, student_id: studentId, status }),
+      body: JSON.stringify({ session_id: sessionId, student_id: studentId, status, notes: notes || null }),
     })
   },
 

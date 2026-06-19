@@ -25,6 +25,7 @@ export interface StudentAttendance {
   phone?: string
   attendance_id: number | null
   status: string
+  notes?: string
 }
 
 export interface SheikhGroup {

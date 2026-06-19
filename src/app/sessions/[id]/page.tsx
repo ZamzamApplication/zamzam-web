@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import type { SessionAttendance, SheikhGroup } from '@/lib/types'
@@ -19,32 +19,67 @@ function cycleStatus(current: string): string {
   return STATUS_ORDER[(idx + 1) % STATUS_ORDER.length]
 }
 
+function useDebounce(callback: (...args: any[]) => void, delay: number) {
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  return useCallback((...args: any[]) => {
+    if (timer.current) clearTimeout(timer.current)
+    timer.current = setTimeout(() => callback(...args), delay)
+  }, [callback, delay])
+}
+
 function StudentRow({
   student,
   onToggle,
+  onNotesChange,
+  saving,
 }: {
-  student: { id: number; name: string; status: string }
+  student: { id: number; name: string; status: string; notes?: string }
   onToggle: () => void
+  onNotesChange: (notes: string) => void
+  saving: boolean
 }) {
+  const [notes, setNotes] = useState(student.notes || '')
+  const debouncedSave = useDebounce(onNotesChange, 600)
+
+  const handleNotesChange = (value: string) => {
+    setNotes(value)
+    debouncedSave(value)
+  }
+
+  useEffect(() => {
+    setNotes(student.notes || '')
+  }, [student.notes])
+
   return (
-    <div className="flex items-center justify-between py-2.5 px-4 hover:bg-water-100/30 rounded-xl transition">
-      <span className="font-medium text-deep-800">{student.name}</span>
+    <div className="flex items-center gap-3 py-2.5 px-4 hover:bg-water-100/30 rounded-xl transition">
+      <span className="font-medium text-deep-800 min-w-[100px]">{student.name}</span>
       <button
         onClick={onToggle}
-        className={`px-4 py-1.5 rounded-lg text-sm font-medium transition ${STATUS_STYLES[student.status] || STATUS_STYLES['غياب']}`}
+        className={`px-4 py-1.5 rounded-lg text-sm font-medium transition ${STATUS_STYLES[student.status] || STATUS_STYLES['غياب']} ${saving ? 'opacity-60' : ''}`}
       >
         {student.status}
       </button>
+      <input
+        value={notes}
+        onChange={(e) => handleNotesChange(e.target.value)}
+        placeholder="ملاحظات..."
+        className="flex-1 min-w-0 px-3 py-1.5 text-xs bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400"
+      />
     </div>
   )
 }
 
 function SheikhAccordion({
   group,
-  onUpdate,
+  onUpdateStatus,
+  onUpdateNotes,
+  savingIds,
 }: {
   group: SheikhGroup
-  onUpdate: (studentId: number, newStatus: string) => void
+  onUpdateStatus: (studentId: number, newStatus: string) => void
+  onUpdateNotes: (studentId: number, notes: string) => void
+  savingIds: Set<number>
 }) {
   const [open, setOpen] = useState(false)
 
@@ -66,7 +101,9 @@ function SheikhAccordion({
             <StudentRow
               key={student.id}
               student={student}
-              onToggle={() => onUpdate(student.id, cycleStatus(student.status))}
+              onToggle={() => onUpdateStatus(student.id, cycleStatus(student.status))}
+              onNotesChange={(notes) => onUpdateNotes(student.id, notes)}
+              saving={savingIds.has(student.id)}
             />
           ))}
         </div>
@@ -79,8 +116,10 @@ export default function SessionAttendancePage() {
   const params = useParams()
   const router = useRouter()
   const [data, setData] = useState<SessionAttendance | null>(null)
-  const [saving, setSaving] = useState<Set<number>>(new Set())
+  const [savingIds, setSavingIds] = useState<Set<number>>(new Set())
   const [loading, setLoading] = useState(true)
+  const pendingUpdates = useRef<Map<number, { status?: string; notes?: string }>>(new Map())
+  const flushTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     api.getSessionAttendance(Number(params.id))
@@ -89,33 +128,66 @@ export default function SessionAttendancePage() {
       .finally(() => setLoading(false))
   }, [params.id])
 
-  const handleUpdate = async (studentId: number, newStatus: string) => {
-    if (!data) return
-    setSaving((prev) => new Set(prev).add(studentId))
+  const flushUpdates = useCallback(async () => {
+    const updates = pendingUpdates.current
+    if (updates.size === 0) return
+
+    pendingUpdates.current = new Map()
+    const ids = new Set(updates.keys())
+    setSavingIds((prev) => {
+      const next = new Set(prev)
+      ids.forEach((id) => next.add(id))
+      return next
+    })
+
     try {
-      await api.upsertAttendance(data.session_id, studentId, newStatus)
-      setData((prev) => {
-        if (!prev) return prev
-        return {
-          ...prev,
-          sheikh_groups: prev.sheikh_groups.map((g) => ({
-            ...g,
-            students: g.students.map((s) =>
-              s.id === studentId ? { ...s, status: newStatus } : s
-            ),
-          })),
-        }
+      const promises: Promise<any>[] = []
+      updates.forEach((update, studentId) => {
+        if (!data) return
+        promises.push(api.upsertAttendance(data.session_id, studentId, update.status || 'غياب', update.notes))
       })
+      await Promise.all(promises)
     } catch (err) {
       console.error(err)
     } finally {
-      setSaving((prev) => {
+      setSavingIds((prev) => {
         const next = new Set(prev)
-        next.delete(studentId)
+        ids.forEach((id) => next.delete(id))
         return next
       })
     }
-  }
+  }, [data])
+
+  const scheduleFlush = useCallback(() => {
+    if (flushTimer.current) clearTimeout(flushTimer.current)
+    flushTimer.current = setTimeout(flushUpdates, 400)
+  }, [flushUpdates])
+
+  const queueUpdate = useCallback((studentId: number, update: { status?: string; notes?: string }) => {
+    const existing = pendingUpdates.current.get(studentId) || {}
+    pendingUpdates.current.set(studentId, { ...existing, ...update })
+    scheduleFlush()
+  }, [scheduleFlush])
+
+  const handleUpdateStatus = useCallback((studentId: number, newStatus: string) => {
+    setData((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        sheikh_groups: prev.sheikh_groups.map((g) => ({
+          ...g,
+          students: g.students.map((s) =>
+            s.id === studentId ? { ...s, status: newStatus } : s
+          ),
+        })),
+      }
+    })
+    queueUpdate(studentId, { status: newStatus })
+  }, [queueUpdate])
+
+  const handleUpdateNotes = useCallback((studentId: number, notes: string) => {
+    queueUpdate(studentId, { notes })
+  }, [queueUpdate])
 
   const handleConfirm = async () => {
     if (!data) return
@@ -175,7 +247,9 @@ export default function SessionAttendancePage() {
           <SheikhAccordion
             key={group.sheikh.id}
             group={group}
-            onUpdate={handleUpdate}
+            onUpdateStatus={handleUpdateStatus}
+            onUpdateNotes={handleUpdateNotes}
+            savingIds={savingIds}
           />
         ))}
       </div>
