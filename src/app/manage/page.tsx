@@ -626,14 +626,65 @@ function DeleteStudentModal({ onClose, onConfirm }: { onClose: () => void; onCon
   )
 }
 
+// ─── Move Sheikh Modal ───────────────────────────────────────────────────────
+
+function MoveSheikhModal({ student, currentSheikhName, sheikhs, onClose, onMoved }: {
+  student: StudentInfo
+  currentSheikhName: string
+  sheikhs: { id: number; name: string; circle_name: string }[]
+  onClose: () => void
+  onMoved: () => void
+}) {
+  const [selectedSheikhId, setSelectedSheikhId] = useState<number | ''>('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedSheikhId) return
+    setLoading(true)
+    setError('')
+    try {
+      await api.moveStudentSheikh(student.id, selectedSheikhId)
+      onMoved()
+    } catch (err: any) {
+      setError(err.message || 'فشل النقل')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const otherSheikhs = sheikhs.filter((s) => s.name !== currentSheikhName)
+
+  return (
+    <Modal title={`نقل الطالب — ${student.name}`} onClose={onClose}>
+      <ErrorMsg error={error} />
+      <p className="text-sm text-deep-600 mb-4">الشيخ الحالي: <strong>{currentSheikhName}</strong></p>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <select value={selectedSheikhId} onChange={(e) => setSelectedSheikhId(e.target.value ? Number(e.target.value) : '')} required className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
+          <option value="">-- اختر الشيخ الجديد --</option>
+          {otherSheikhs.map((s) => (
+            <option key={s.id} value={s.id}>{s.name} — {s.circle_name}</option>
+          ))}
+        </select>
+        <div className="flex gap-3 pt-2">
+          <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 water-btn-outline rounded-xl text-sm">إلغاء</button>
+          <button type="submit" disabled={loading || !selectedSheikhId} className="flex-1 px-4 py-2.5 water-btn text-white rounded-xl text-sm font-medium disabled:opacity-50">{loading ? 'جاري...' : 'نقل'}</button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
 // ─── Student Profile Overlay ─────────────────────────────────────────────────
 
-function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete }: {
+function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete, onMove }: {
   student: StudentInfo
   sheikhName: string
   onClose: () => void
   onEdit: () => void
   onDelete: () => void
+  onMove: () => void
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={onClose}>
@@ -715,6 +766,7 @@ function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete }: {
 
         <div className="flex gap-3 pt-4 mt-4 border-t border-water-200/30">
           <button onClick={onEdit} className="flex-1 px-4 py-2.5 water-btn text-white rounded-xl text-sm font-medium">تعديل</button>
+          <button onClick={onMove} className="flex-1 px-4 py-2.5 water-btn-outline rounded-xl text-sm font-medium">نقل</button>
           <button onClick={onDelete} className="flex-1 px-4 py-2.5 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-xl text-sm font-medium hover:bg-red-50/50 dark:hover:bg-red-900/30 transition">حذف</button>
         </div>
       </div>
@@ -788,6 +840,8 @@ export default function ManagePage() {
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  const [moveStudent, setMoveStudent] = useState<{ student: StudentInfo; sheikhName: string } | null>(null)
 
   const handleDeleteSheikh = async (id: number) => {
     if (!confirm('حذف الشيخ وجميع طلابه؟')) return
@@ -1037,6 +1091,19 @@ export default function ManagePage() {
             setViewStudent(null)
             handleDeleteStudent(id)
           }}
+          onMove={() => {
+            setMoveStudent(viewStudent)
+            setViewStudent(null)
+          }}
+        />
+      )}
+      {moveStudent && (
+        <MoveSheikhModal
+          student={moveStudent.student}
+          currentSheikhName={moveStudent.sheikhName}
+          sheikhs={sheikhs}
+          onClose={() => setMoveStudent(null)}
+          onMoved={() => { setMoveStudent(null); load() }}
         />
       )}
     </div>

@@ -13,6 +13,7 @@ export default function ReportsPage() {
   const [studentSheikhMap, setStudentSheikhMap] = useState<Record<number, string>>({})
   const [studentStreaks, setStudentStreaks] = useState<Record<number, StudentStreak>>({})
   const [loading, setLoading] = useState(true)
+  const [sortAsc, setSortAsc] = useState(false)
 
   const load = useCallback(async () => {
     const [circlesData, sheikhsData] = await Promise.all([
@@ -116,13 +117,14 @@ export default function ReportsPage() {
                       <th className="text-right py-2 px-3">الطالب</th>
                       <th className="text-center py-2 px-3">الشيخ</th>
                       <th className="text-center py-2 px-3">حضر</th>
+                      <th className="text-center py-2 px-3">بعذر</th>
                       <th className="text-center py-2 px-3">غاب</th>
                       <th className="text-center py-2 px-3">النسبة</th>
                     </tr>
                   </thead>
                   <tbody>
                     {Object.entries(studentStreaks)
-                      .sort(([, a], [, b]) => b.attendance_rate - a.attendance_rate)
+                      .sort(([, a], [, b]) => sortAsc ? a.attendance_rate - b.attendance_rate : b.attendance_rate - a.attendance_rate)
                       .map(([studentId, streak]) => {
                         const sid = Number(studentId)
                         const student = students[sid]
@@ -131,8 +133,13 @@ export default function ReportsPage() {
                             <td className="py-2 px-3 text-deep-800">{student?.name || `#${studentId}`}</td>
                             <td className="py-2 px-3 text-center text-deep-500">{studentSheikhMap[sid] || ''}</td>
                             <td className="py-2 px-3 text-center text-green-700 dark:text-green-400">{streak.total_attended}</td>
+                            <td className="py-2 px-3 text-center text-yellow-700 dark:text-yellow-400">{streak.total_excused}</td>
                             <td className="py-2 px-3 text-center text-red-600 dark:text-red-400">{streak.total_absent}</td>
-                            <td className="py-2 px-3 text-center font-bold text-cyan-700 dark:text-cyan-400">{streak.attendance_rate}%</td>
+                            <td className="py-2 px-3 text-center">
+                              <button onClick={() => setSortAsc(!sortAsc)} className="font-bold text-cyan-700 dark:text-cyan-400 hover:underline cursor-pointer">
+                                {streak.attendance_rate}% {sortAsc ? '↑' : '↓'}
+                              </button>
+                            </td>
                           </tr>
                         )
                       })}

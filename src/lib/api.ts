@@ -52,15 +52,22 @@ export const api = {
     return request(`/sessions/${sessionId}/attendance`)
   },
 
-  upsertAttendance(sessionId: number, studentId: number, status: string, notes?: string) {
+  upsertAttendance(sessionId: number, studentId: number, status: string, notes?: string, sheikhId?: number | null) {
     return request('/attendance/upsert', {
       method: 'POST',
-      body: JSON.stringify({ session_id: sessionId, student_id: studentId, status, notes: notes || null }),
+      body: JSON.stringify({ session_id: sessionId, student_id: studentId, status, notes: notes || null, sheikh_id: sheikhId ?? null }),
     })
   },
 
   confirmSession(sessionId: number) {
     return request(`/sessions/${sessionId}/confirm`, { method: 'POST' })
+  },
+
+  updateSessionDate(sessionId: number, sessionDate: string) {
+    return request(`/sessions/${sessionId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ session_date: sessionDate }),
+    })
   },
 
   deleteSession(sessionId: number) {
@@ -143,6 +150,13 @@ export const api = {
 
   deleteStudent(id: number, deleteSessions: boolean = true) {
     return request(`/students/${id}?delete_sessions=${deleteSessions}`, { method: 'DELETE' })
+  },
+
+  moveStudentSheikh(studentId: number, sheikhId: number) {
+    return request(`/students/${studentId}/move-sheikh`, {
+      method: 'POST',
+      body: JSON.stringify({ sheikh_id: sheikhId }),
+    })
   },
 
   addWarning(studentId: number, reason: string) {

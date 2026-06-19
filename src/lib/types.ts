@@ -26,6 +26,7 @@ export interface StudentAttendance {
   attendance_id: number | null
   status: string
   notes?: string
+  sheikh_id: number | null
 }
 
 export interface SheikhGroup {
@@ -40,6 +41,7 @@ export interface SessionAttendance {
   circle_id: number
   circle_name?: string
   sheikh_groups: SheikhGroup[]
+  circle_sheikhs: { id: number; name: string }[]
 }
 
 export interface SheikhInfo {
@@ -103,6 +105,7 @@ export interface CircleAttendanceRate {
 export interface StudentStreak {
   student_id: number
   total_attended: number
+  total_excused: number
   total_absent: number
   total_sessions: number
   attendance_rate: number

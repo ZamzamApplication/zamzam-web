@@ -30,13 +30,17 @@ function useDebounce(callback: (...args: any[]) => void, delay: number) {
 
 function StudentRow({
   student,
+  circleSheikhs,
   onToggle,
   onNotesChange,
+  onSheikhChange,
   saving,
 }: {
-  student: { id: number; name: string; status: string; notes?: string }
+  student: { id: number; name: string; status: string; notes?: string; sheikh_id: number | null }
+  circleSheikhs: { id: number; name: string }[]
   onToggle: () => void
   onNotesChange: (notes: string) => void
+  onSheikhChange: (sheikhId: number) => void
   saving: boolean
 }) {
   const [notes, setNotes] = useState(student.notes || '')
@@ -60,6 +64,15 @@ function StudentRow({
       >
         {student.status}
       </button>
+      <select
+        value={student.sheikh_id ?? ''}
+        onChange={(e) => onSheikhChange(Number(e.target.value))}
+        className="px-2 py-1.5 text-xs bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400"
+      >
+        {circleSheikhs.map((sh) => (
+          <option key={sh.id} value={sh.id}>{sh.name}</option>
+        ))}
+      </select>
       <input
         value={notes}
         onChange={(e) => handleNotesChange(e.target.value)}
@@ -72,13 +85,17 @@ function StudentRow({
 
 function SheikhAccordion({
   group,
+  circleSheikhs,
   onUpdateStatus,
   onUpdateNotes,
+  onUpdateSheikh,
   savingIds,
 }: {
   group: SheikhGroup
+  circleSheikhs: { id: number; name: string }[]
   onUpdateStatus: (studentId: number, newStatus: string) => void
   onUpdateNotes: (studentId: number, notes: string) => void
+  onUpdateSheikh: (studentId: number, sheikhId: number) => void
   savingIds: Set<number>
 }) {
   const [open, setOpen] = useState(false)
@@ -101,8 +118,10 @@ function SheikhAccordion({
             <StudentRow
               key={student.id}
               student={student}
+              circleSheikhs={circleSheikhs}
               onToggle={() => onUpdateStatus(student.id, cycleStatus(student.status))}
               onNotesChange={(notes) => onUpdateNotes(student.id, notes)}
+              onSheikhChange={(sheikhId) => onUpdateSheikh(student.id, sheikhId)}
               saving={savingIds.has(student.id)}
             />
           ))}
@@ -118,7 +137,9 @@ export default function SessionAttendancePage() {
   const [data, setData] = useState<SessionAttendance | null>(null)
   const [savingIds, setSavingIds] = useState<Set<number>>(new Set())
   const [loading, setLoading] = useState(true)
-  const pendingUpdates = useRef<Map<number, { status?: string; notes?: string }>>(new Map())
+  const [editingDate, setEditingDate] = useState(false)
+  const [editDateVal, setEditDateVal] = useState('')
+  const pendingUpdates = useRef<Map<number, { status?: string; notes?: string; sheikh_id?: number }>>(new Map())
   const flushTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -144,7 +165,8 @@ export default function SessionAttendancePage() {
       const promises: Promise<any>[] = []
       updates.forEach((update, studentId) => {
         if (!data) return
-        promises.push(api.upsertAttendance(data.session_id, studentId, update.status || 'غياب', update.notes))
+        const sheikhId = update.sheikh_id !== undefined ? update.sheikh_id : undefined
+        promises.push(api.upsertAttendance(data.session_id, studentId, update.status || 'غياب', update.notes, sheikhId))
       })
       await Promise.all(promises)
     } catch (err) {
@@ -163,7 +185,7 @@ export default function SessionAttendancePage() {
     flushTimer.current = setTimeout(flushUpdates, 400)
   }, [flushUpdates])
 
-  const queueUpdate = useCallback((studentId: number, update: { status?: string; notes?: string }) => {
+  const queueUpdate = useCallback((studentId: number, update: { status?: string; notes?: string; sheikh_id?: number }) => {
     const existing = pendingUpdates.current.get(studentId) || {}
     pendingUpdates.current.set(studentId, { ...existing, ...update })
     scheduleFlush()
@@ -188,6 +210,33 @@ export default function SessionAttendancePage() {
   const handleUpdateNotes = useCallback((studentId: number, notes: string) => {
     queueUpdate(studentId, { notes })
   }, [queueUpdate])
+
+  const handleUpdateSheikh = useCallback((studentId: number, sheikhId: number) => {
+    setData((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        sheikh_groups: prev.sheikh_groups.map((g) => ({
+          ...g,
+          students: g.students.map((s) =>
+            s.id === studentId ? { ...s, sheikh_id: sheikhId } : s
+          ),
+        })),
+      }
+    })
+    queueUpdate(studentId, { sheikh_id: sheikhId })
+  }, [queueUpdate])
+
+  const handleSaveDate = async () => {
+    if (!data || !editDateVal) return
+    try {
+      const result = await api.updateSessionDate(data.session_id, editDateVal)
+      setData((prev) => prev ? { ...prev, date: result.date } : prev)
+      setEditingDate(false)
+    } catch (err) {
+      console.error(err)
+    }
+  }
 
   const handleConfirm = async () => {
     if (!data) return
@@ -221,7 +270,24 @@ export default function SessionAttendancePage() {
         <div>
           <h1 className="text-2xl font-bold text-deep-800">تسجيل الحضور</h1>
           <p className="text-deep-600/60 text-sm mt-1">
-            {data.date} — {data.circle_name || `حلقة #${data.circle_id}`} — {presentCount}/{totalCount} حاضر
+            {editingDate ? (
+              <span className="inline-flex items-center gap-2">
+                <input
+                  type="date"
+                  value={editDateVal}
+                  onChange={(e) => setEditDateVal(e.target.value)}
+                  className="px-2 py-1 text-xs bg-white/50 dark:bg-slate-800/50 border border-water-300 rounded-xl"
+                  autoFocus
+                />
+                <button onClick={handleSaveDate} className="text-xs water-btn text-white px-2 py-1 rounded-lg">حفظ</button>
+                <button onClick={() => setEditingDate(false)} className="text-xs text-deep-400 px-2 py-1">إلغاء</button>
+              </span>
+            ) : (
+              <button onClick={() => { setEditDateVal(data.date); setEditingDate(true) }} className="hover:text-cyan-600 transition cursor-pointer">
+                {data.date}
+              </button>
+            )}
+            {' — '}{data.circle_name || `حلقة #${data.circle_id}`} — {presentCount}/{totalCount} حاضر
           </p>
         </div>
         <div className="flex gap-3">
@@ -247,8 +313,10 @@ export default function SessionAttendancePage() {
           <SheikhAccordion
             key={group.sheikh.id}
             group={group}
+            circleSheikhs={data.circle_sheikhs}
             onUpdateStatus={handleUpdateStatus}
             onUpdateNotes={handleUpdateNotes}
+            onUpdateSheikh={handleUpdateSheikh}
             savingIds={savingIds}
           />
         ))}
@@ -256,7 +324,7 @@ export default function SessionAttendancePage() {
 
       {data.is_confirmed && (
         <div className="mt-6 glass-strong text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800 rounded-2xl p-4 text-center">
-          تم تأكيد هذه الجلسة ✅
+          تم تأكيد هذه الجلسة
         </div>
       )}
     </div>
