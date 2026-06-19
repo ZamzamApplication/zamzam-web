@@ -740,6 +740,16 @@ export default function ManagePage() {
       return next
     })
   }
+
+  const allExpanded = sheikhs.length > 0 && expandedSheikhs.size === sheikhs.length
+
+  const toggleAllSheikhs = () => {
+    if (allExpanded) {
+      setExpandedSheikhs(new Set())
+    } else {
+      setExpandedSheikhs(new Set(sheikhs.map((s) => s.id)))
+    }
+  }
   const [previewPic, setPreviewPic] = useState<string | null>(null)
   const [viewStudent, setViewStudent] = useState<{ student: StudentInfo; sheikhName: string } | null>(null)
 
@@ -844,7 +854,10 @@ export default function ManagePage() {
       {/* ─── Sheikhs & Students Tab ─────────────────────────────────────── */}
       {activeTab === 'sheikhs' && (
         <div>
-          <div className="flex justify-end mb-4">
+          <div className="flex justify-between items-center mb-4">
+            <button onClick={toggleAllSheikhs} className="water-btn-outline px-4 py-2 rounded-xl text-sm">
+              {allExpanded ? 'طي الكل' : 'فتح الكل'}
+            </button>
             <button onClick={() => setShowAddSheikh(true)} className="water-btn text-white px-4 py-2 rounded-xl text-sm">+ إضافة شيخ</button>
           </div>
 
