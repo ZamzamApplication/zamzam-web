@@ -217,21 +217,6 @@ export const api = {
     return request(`/users/${id}`, { method: 'DELETE' })
   },
 
-  getCircleSchedules(circleId: number) {
-    return request(`/circles/${circleId}/schedules`)
-  },
-
-  createSchedule(circleId: number, dayOfWeek: number, time: string) {
-    return request('/schedules', {
-      method: 'POST',
-      body: JSON.stringify({ circle_id: circleId, day_of_week: dayOfWeek, time }),
-    })
-  },
-
-  deleteSchedule(id: number) {
-    return request(`/schedules/${id}`, { method: 'DELETE' })
-  },
-
   getCircleAttendanceRate(circleId: number) {
     return request(`/reports/circle/${circleId}/rate`)
   },

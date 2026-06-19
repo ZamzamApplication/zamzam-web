@@ -86,13 +86,6 @@ export interface UserInfo {
   sheikh_id: number | null
 }
 
-export interface CircleSchedule {
-  id: number
-  circle_id: number
-  day_of_week: number
-  time: string
-}
-
 export interface CircleAttendanceRate {
   circle_id: number
   total_attendance_records: number
@@ -110,8 +103,6 @@ export interface StudentStreak {
   total_sessions: number
   attendance_rate: number
 }
-
-export const DAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
 
 export interface AttendanceGridSession {
   id: number

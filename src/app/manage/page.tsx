@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '@/lib/api'
-import type { SheikhInfo, StudentInfo, WarningInfo, Circle, UserInfo, CircleSchedule } from '@/lib/types'
-import { DAY_NAMES } from '@/lib/types'
+import type { SheikhInfo, StudentInfo, WarningInfo, Circle, UserInfo } from '@/lib/types'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -553,45 +552,6 @@ function EditUserModal({ user, sheikhs, onClose, onUpdated }: { user: UserInfo; 
   )
 }
 
-// ─── Schedule Modal ─────────────────────────────────────────────────────────
-
-function AddScheduleModal({ circleId, onClose, onCreated }: { circleId: number; onClose: () => void; onCreated: () => void }) {
-  const [dayOfWeek, setDayOfWeek] = useState(0)
-  const [time, setTime] = useState('05:30')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-    try {
-      await api.createSchedule(circleId, dayOfWeek, time)
-      onCreated()
-    } catch (err: any) {
-      setError(err.message || 'فشل الإضافة')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <Modal title="إضافة موعد للحلقة" onClose={onClose}>
-      <ErrorMsg error={error} />
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <select value={dayOfWeek} onChange={(e) => setDayOfWeek(Number(e.target.value))} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
-          {DAY_NAMES.map((name, i) => <option key={i} value={i}>{name}</option>)}
-        </select>
-        <input value={time} onChange={(e) => setTime(e.target.value)} type="time" required className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
-        <div className="flex gap-3 pt-2">
-          <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 water-btn-outline rounded-xl text-sm">إلغاء</button>
-          <button type="submit" disabled={loading} className="flex-1 px-4 py-2.5 water-btn text-white rounded-xl text-sm font-medium disabled:opacity-50">{loading ? 'جاري...' : 'إضافة'}</button>
-        </div>
-      </form>
-    </Modal>
-  )
-}
-
 // ─── Image Preview Modal ─────────────────────────────────────────────────────
 
 function ImagePreviewModal({ src, onClose }: { src: string; onClose: () => void }) {
@@ -780,7 +740,6 @@ export default function ManagePage() {
   const [sheikhs, setSheikhs] = useState<(SheikhInfo & { students: StudentInfo[] })[]>([])
   const [circles, setCircles] = useState<Circle[]>([])
   const [users, setUsers] = useState<UserInfo[]>([])
-  const [schedules, setSchedules] = useState<Record<number, CircleSchedule[]>>({})
   const [activeTab, setActiveTab] = useState<'sheikhs' | 'users' | 'circles'>('sheikhs')
   const [loading, setLoading] = useState(true)
   const [expandedSheikhs, setExpandedSheikhs] = useState<Set<number>>(new Set())
@@ -814,8 +773,6 @@ export default function ManagePage() {
   const [editStudent, setEditStudent] = useState<{ student: StudentInfo; sheikhName: string } | null>(null)
   const [showAddUser, setShowAddUser] = useState(false)
   const [editUser, setEditUser] = useState<UserInfo | null>(null)
-  const [showAddSchedule, setShowAddSchedule] = useState<number | null>(null)
-
   const load = useCallback(async () => {
     const [sheikhsData, circlesData, usersData] = await Promise.all([
       api.getSheikhs(),
@@ -832,11 +789,6 @@ export default function ManagePage() {
     setCircles(circlesData)
     setUsers(usersData)
     setLoading(false)
-  }, [])
-
-  const loadSchedules = useCallback(async (circleId: number) => {
-    const data = await api.getCircleSchedules(circleId)
-    setSchedules((prev) => ({ ...prev, [circleId]: data }))
   }, [])
 
   useEffect(() => { load() }, [load])
@@ -917,14 +869,9 @@ export default function ManagePage() {
   }
 
   const handleDeleteCircle = async (id: number) => {
-    if (!confirm('تحذير: سيتم حذف الحلقة وجميع ما فيها بما في ذلك الجلسات وسجلات الحضور والشيوخ والمواعيد. هل أنت متأكد؟')) return
+    if (!confirm('تحذير: سيتم حذف الحلقة وجميع ما فيها بما في ذلك الجلسات وسجلات الحضور والشيوخ. هل أنت متأكد؟')) return
     await api.deleteCircle(id)
     load()
-  }
-
-  const handleDeleteSchedule = async (id: number) => {
-    await api.deleteSchedule(id)
-    if (showAddSchedule) loadSchedules(showAddSchedule)
   }
 
   if (loading) return null
@@ -932,7 +879,7 @@ export default function ManagePage() {
   const tabs = [
     { key: 'sheikhs', label: 'الشيوخ والطلاب' },
     { key: 'users', label: 'المستخدمين' },
-    { key: 'circles', label: 'الحلقات والمواعيد' },
+    { key: 'circles', label: 'الحلقات' },
   ] as const
 
   return (
@@ -1115,21 +1062,10 @@ export default function ManagePage() {
                       {c.description && <span className="text-deep-500 text-sm mr-3">{c.description}</span>}
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={() => { setShowAddSchedule(c.id); loadSchedules(c.id) }} className="water-btn-outline px-3 py-1.5 rounded-xl text-xs">+ إضافة موعد</button>
                       <button onClick={() => setEditCircle(c)} className="water-btn-outline px-3 py-1.5 rounded-xl text-xs">تعديل</button>
                       <button onClick={() => handleDeleteCircle(c.id)} className="px-3 py-1.5 rounded-xl text-xs border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50/50 dark:hover:bg-red-900/30 transition">حذف</button>
                     </div>
                   </div>
-                  {(schedules[c.id]?.length ?? 0) > 0 && (
-                    <div className="divide-y divide-water-200/30 px-5 py-2">
-                      {schedules[c.id]?.map((sch) => (
-                        <div key={sch.id} className="flex items-center justify-between py-1.5">
-                          <span className="text-deep-700 text-sm">{DAY_NAMES[sch.day_of_week]} — {sch.time}</span>
-                          <button onClick={() => handleDeleteSchedule(sch.id)} className="text-xs text-red-400 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition">حذف</button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
@@ -1146,7 +1082,6 @@ export default function ManagePage() {
       {editStudent && <EditStudentModal student={editStudent.student} sheikhName={editStudent.sheikhName} onClose={() => setEditStudent(null)} onUpdated={() => { setEditStudent(null); load() }} />}
       {showAddUser && <AddUserModal sheikhs={sheikhs} onClose={() => setShowAddUser(false)} onCreated={() => { setShowAddUser(false); load() }} />}
       {editUser && <EditUserModal user={editUser} sheikhs={sheikhs} onClose={() => setEditUser(null)} onUpdated={() => { setEditUser(null); load() }} />}
-      {showAddSchedule && <AddScheduleModal circleId={showAddSchedule} onClose={() => setShowAddSchedule(null)} onCreated={() => { loadSchedules(showAddSchedule); setShowAddSchedule(null) }} />}
       {previewPic && <ImagePreviewModal src={previewPic} onClose={() => setPreviewPic(null)} />}
       {deleteConfirm && (
         <DeleteStudentModal
