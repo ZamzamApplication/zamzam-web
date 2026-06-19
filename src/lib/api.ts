@@ -152,6 +152,13 @@ export const api = {
     return request(`/students/${id}?delete_sessions=${deleteSessions}`, { method: 'DELETE' })
   },
 
+  reorderStudents(sheikhId: number, studentIds: number[]) {
+    return request(`/sheikhs/${sheikhId}/students/reorder`, {
+      method: 'PUT',
+      body: JSON.stringify({ student_ids: studentIds }),
+    })
+  },
+
   moveStudentSheikh(studentId: number, sheikhId: number) {
     return request(`/students/${studentId}/move-sheikh`, {
       method: 'POST',

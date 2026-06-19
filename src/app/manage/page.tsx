@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '@/lib/api'
 import type { SheikhInfo, StudentInfo, WarningInfo, Circle, UserInfo, CircleSchedule } from '@/lib/types'
 import { DAY_NAMES } from '@/lib/types'
@@ -842,6 +842,54 @@ export default function ManagePage() {
   useEffect(() => { load() }, [load])
 
   const [moveStudent, setMoveStudent] = useState<{ student: StudentInfo; sheikhName: string } | null>(null)
+  const dragData = useRef<{ studentId: number; fromSheikhId: number } | null>(null)
+
+  const handleDragStart = (studentId: number, sheikhId: number) => {
+    dragData.current = { studentId, fromSheikhId: sheikhId }
+  }
+
+  const handleDropOnSheikh = async (toSheikhId: number) => {
+    const drag = dragData.current
+    if (!drag) return
+    dragData.current = null
+
+    if (drag.fromSheikhId === toSheikhId) return
+
+    try {
+      await api.moveStudentSheikh(drag.studentId, toSheikhId)
+      load()
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const handleDropReorder = async (sheikhId: number, targetStudentId?: number) => {
+    const drag = dragData.current
+    if (!drag) return
+    dragData.current = null
+
+    if (drag.fromSheikhId !== sheikhId) return
+
+    const sheikh = sheikhs.find((s) => s.id === sheikhId)
+    if (!sheikh) return
+    const ids = sheikh.students.map((s) => s.id)
+    const fromIdx = ids.indexOf(drag.studentId)
+    if (fromIdx === -1) return
+    ids.splice(fromIdx, 1)
+    if (targetStudentId !== undefined) {
+      const toIdx = ids.indexOf(targetStudentId)
+      if (toIdx !== -1) ids.splice(toIdx, 0, drag.studentId)
+      else ids.push(drag.studentId)
+    } else {
+      ids.push(drag.studentId)
+    }
+    try {
+      await api.reorderStudents(sheikhId, ids)
+      load()
+    } catch (err) {
+      console.error(err)
+    }
+  }
 
   const handleDeleteSheikh = async (id: number) => {
     if (!confirm('حذف الشيخ وجميع طلابه؟')) return
@@ -941,10 +989,40 @@ export default function ManagePage() {
                     </div>
                   </div>
                   {isExpanded && (
-                    sheikh.students.length > 0 ? (
-                      <div className="divide-y divide-water-200/30">
-                        {sheikh.students.map((s) => (
-                          <div key={s.id} className="flex items-center justify-between px-5 py-2.5 hover:bg-water-100/30">
+                    <div
+                      className="divide-y divide-water-200/30 min-h-[40px]"
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={async (e) => {
+                        e.preventDefault()
+                        const drag = dragData.current
+                        if (!drag) return
+                        if (drag.fromSheikhId === sheikh.id) {
+                          handleDropReorder(sheikh.id)
+                        } else {
+                          await handleDropOnSheikh(sheikh.id)
+                        }
+                      }}
+                    >
+                      {sheikh.students.length > 0 ? (
+                        sheikh.students.map((s) => (
+                          <div
+                            key={s.id}
+                            draggable
+                            onDragStart={() => handleDragStart(s.id, sheikh.id)}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={async (e) => {
+                              e.stopPropagation()
+                              e.preventDefault()
+                              const drag = dragData.current
+                              if (!drag) return
+                              if (drag.fromSheikhId === sheikh.id) {
+                                handleDropReorder(sheikh.id, s.id)
+                              } else {
+                                await handleDropOnSheikh(sheikh.id)
+                              }
+                            }}
+                            className="flex items-center justify-between px-5 py-2.5 hover:bg-water-100/30 cursor-grab active:cursor-grabbing"
+                          >
                             <div className="flex items-center gap-3 cursor-pointer" onClick={() => setViewStudent({ student: s, sheikhName: sheikh.name })}>
                               {s.profile_pic ? (
                                 <img
@@ -966,11 +1044,11 @@ export default function ManagePage() {
                               <button onClick={() => handleDeleteStudent(s.id)} className="text-xs text-red-400 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition">حذف</button>
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="px-5 py-3 text-deep-400 text-sm text-center">لا يوجد طلاب</div>
-                    )
+                        ))
+                      ) : (
+                        <div className="px-5 py-3 text-deep-400 text-sm text-center">لا يوجد طلاب</div>
+                      )}
+                    </div>
                   )}
                 </div>
                 )
