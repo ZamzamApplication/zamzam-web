@@ -56,18 +56,18 @@ function StudentRow({
   }, [student.notes])
 
   return (
-    <div className="flex items-center gap-3 py-2.5 px-4 hover:bg-water-100/30 rounded-xl transition">
-      <span className="font-medium text-deep-800 min-w-[100px]">{student.name}</span>
+    <div className="grid grid-cols-[1fr_90px_120px_1fr] gap-2 items-center py-2.5 px-4 hover:bg-water-100/30 rounded-xl transition">
+      <span className="font-medium text-deep-800 truncate">{student.name}</span>
       <button
         onClick={onToggle}
-        className={`px-4 py-1.5 rounded-lg text-sm font-medium transition ${STATUS_STYLES[student.status] || STATUS_STYLES['غياب']} ${saving ? 'opacity-60' : ''}`}
+        className={`px-2 py-1.5 rounded-lg text-sm font-medium transition text-center ${STATUS_STYLES[student.status] || STATUS_STYLES['غياب']} ${saving ? 'opacity-60' : ''}`}
       >
         {student.status}
       </button>
       <select
         value={student.sheikh_id ?? ''}
         onChange={(e) => onSheikhChange(Number(e.target.value))}
-        className="px-2 py-1.5 text-xs bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400"
+        className="w-full px-2 py-1.5 text-xs bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400"
       >
         {circleSheikhs.map((sh) => (
           <option key={sh.id} value={sh.id}>{sh.name}</option>
@@ -77,7 +77,7 @@ function StudentRow({
         value={notes}
         onChange={(e) => handleNotesChange(e.target.value)}
         placeholder="ملاحظات..."
-        className="flex-1 min-w-0 px-3 py-1.5 text-xs bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400"
+        className="w-full px-3 py-1.5 text-xs bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400"
       />
     </div>
   )
@@ -114,6 +114,12 @@ function SheikhAccordion({
 
       {open && (
         <div className="divide-y divide-water-200/30">
+          <div className="grid grid-cols-[1fr_90px_120px_1fr] gap-2 items-center py-2 px-4 text-xs font-medium text-deep-500 bg-water-100/20">
+            <span>الطالب</span>
+            <span className="text-center">الحالة</span>
+            <span className="text-center">الشيخ</span>
+            <span>ملاحظات</span>
+          </div>
           {group.students.map((student) => (
             <StudentRow
               key={student.id}
