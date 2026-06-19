@@ -198,15 +198,15 @@ function AddStudentModal({ sheikhId, sheikhName, onClose, onCreated }: { sheikhI
   const [profilePicFile, setProfilePicFile] = useState<File | null>(null)
   const [profilePicPreview, setProfilePicPreview] = useState('')
   const [isEnrolled, setIsEnrolled] = useState(true)
-  const [parentPhones, setParentPhones] = useState<{ phone_number: string; parent_type: string }[]>([])
+  const [parentPhones, setParentPhones] = useState<{ phone_number: string; parent_type: string; name?: string }[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   const addParentPhone = () => {
-    setParentPhones([...parentPhones, { phone_number: '', parent_type: 'أب' }])
+    setParentPhones([...parentPhones, { phone_number: '', parent_type: 'أب', name: '' }])
   }
 
-  const updateParentPhone = (i: number, field: 'phone_number' | 'parent_type', value: string) => {
+  const updateParentPhone = (i: number, field: 'phone_number' | 'parent_type' | 'name', value: string) => {
     const updated = [...parentPhones]
     updated[i] = { ...updated[i], [field]: value }
     setParentPhones(updated)
@@ -277,21 +277,21 @@ function AddStudentModal({ sheikhId, sheikhName, onClose, onCreated }: { sheikhI
             <button type="button" onClick={addParentPhone} className="text-xs water-btn-outline px-2 py-1 rounded-lg">+ إضافة</button>
           </div>
           {parentPhones.map((pp, i) => (
-            <div key={i} className="flex gap-2 mb-2">
-              <input value={pp.phone_number} onChange={(e) => updateParentPhone(i, 'phone_number', e.target.value)} placeholder="رقم الهاتف" className="flex-1 px-3 py-1.5 text-sm bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
-              <select value={pp.parent_type} onChange={(e) => updateParentPhone(i, 'parent_type', e.target.value)} className="px-3 py-1.5 text-sm bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
-                <option value="أب">أب</option>
-                <option value="أم">أم</option>
-                <option value="أخ">أخ</option>
-                <option value="أب">أب</option>
-                <option value="أم">أم</option>
-                <option value="أخ">أخ</option>
-                <option value="أخت">أخت</option>
-                <option value="جد">جد</option>
-                <option value="جدة">جدة</option>
-                <option value="أرضي">أرضي</option>
-              </select>
-              <button type="button" onClick={() => removeParentPhone(i)} className="text-red-400 hover:text-red-600 text-sm px-1">✕</button>
+            <div key={i} className="space-y-1.5 mb-2 p-2 rounded-xl bg-water-100/20">
+              <div className="flex gap-2">
+                <input value={pp.phone_number} onChange={(e) => updateParentPhone(i, 'phone_number', e.target.value)} placeholder="رقم الهاتف" className="flex-1 px-3 py-1.5 text-sm bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+                <select value={pp.parent_type} onChange={(e) => updateParentPhone(i, 'parent_type', e.target.value)} className="px-3 py-1.5 text-sm bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
+                  <option value="أب">أب</option>
+                  <option value="أم">أم</option>
+                  <option value="أخ">أخ</option>
+                  <option value="أخت">أخت</option>
+                  <option value="جد">جد</option>
+                  <option value="جدة">جدة</option>
+                  <option value="أرضي">أرضي</option>
+                </select>
+                <button type="button" onClick={() => removeParentPhone(i)} className="text-red-400 hover:text-red-600 text-sm px-1">✕</button>
+              </div>
+              <input value={pp.name || ''} onChange={(e) => updateParentPhone(i, 'name', e.target.value)} placeholder="الاسم (اختياري)" className="w-full px-3 py-1.5 text-sm bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
             </div>
           ))}
         </div>
@@ -315,8 +315,8 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
   const [warnings, setWarnings] = useState<WarningInfo[]>(student.warnings)
   const [newWarningReason, setNewWarningReason] = useState('')
   const [addingWarning, setAddingWarning] = useState(false)
-  const [parentPhones, setParentPhones] = useState<{ phone_number?: string; parent_type?: string }[]>(
-    student.parent_phones?.map((p) => ({ phone_number: p.phone_number, parent_type: p.parent_type })) || []
+  const [parentPhones, setParentPhones] = useState<{ phone_number?: string; parent_type?: string; name?: string }[]>(
+    student.parent_phones?.map((p) => ({ phone_number: p.phone_number, parent_type: p.parent_type, name: p.name || '' })) || []
   )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -325,7 +325,7 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
     setParentPhones([...parentPhones, { phone_number: '', parent_type: 'أب' }])
   }
 
-  const updateParentPhone = (i: number, field: 'phone_number' | 'parent_type', value: string) => {
+  const updateParentPhone = (i: number, field: 'phone_number' | 'parent_type' | 'name', value: string) => {
     const updated = [...parentPhones]
     updated[i] = { ...updated[i], [field]: value }
     setParentPhones(updated)
@@ -426,21 +426,21 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
             <button type="button" onClick={addParentPhone} className="text-xs water-btn-outline px-2 py-1 rounded-lg">+ إضافة</button>
           </div>
           {parentPhones.map((pp, i) => (
-            <div key={i} className="flex gap-2 mb-2">
-              <input value={pp.phone_number || ''} onChange={(e) => updateParentPhone(i, 'phone_number', e.target.value)} placeholder="رقم الهاتف" className="flex-1 px-3 py-1.5 text-sm bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
-              <select value={pp.parent_type || 'أب'} onChange={(e) => updateParentPhone(i, 'parent_type', e.target.value)} className="px-3 py-1.5 text-sm bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
-                <option value="أب">أب</option>
-                <option value="أم">أم</option>
-                <option value="أخ">أخ</option>
-                <option value="أب">أب</option>
-                <option value="أم">أم</option>
-                <option value="أخ">أخ</option>
-                <option value="أخت">أخت</option>
-                <option value="جد">جد</option>
-                <option value="جدة">جدة</option>
-                <option value="أرضي">أرضي</option>
-              </select>
-              <button type="button" onClick={() => removeParentPhone(i)} className="text-red-400 hover:text-red-600 text-sm px-1">✕</button>
+            <div key={i} className="space-y-1.5 mb-2 p-2 rounded-xl bg-water-100/20">
+              <div className="flex gap-2">
+                <input value={pp.phone_number || ''} onChange={(e) => updateParentPhone(i, 'phone_number', e.target.value)} placeholder="رقم الهاتف" className="flex-1 px-3 py-1.5 text-sm bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+                <select value={pp.parent_type || 'أب'} onChange={(e) => updateParentPhone(i, 'parent_type', e.target.value)} className="px-3 py-1.5 text-sm bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
+                  <option value="أب">أب</option>
+                  <option value="أم">أم</option>
+                  <option value="أخ">أخ</option>
+                  <option value="أخت">أخت</option>
+                  <option value="جد">جد</option>
+                  <option value="جدة">جدة</option>
+                  <option value="أرضي">أرضي</option>
+                </select>
+                <button type="button" onClick={() => removeParentPhone(i)} className="text-red-400 hover:text-red-600 text-sm px-1">✕</button>
+              </div>
+              <input value={pp.name || ''} onChange={(e) => updateParentPhone(i, 'name', e.target.value)} placeholder="الاسم (اختياري)" className="w-full px-3 py-1.5 text-sm bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
             </div>
           ))}
         </div>
@@ -703,9 +703,10 @@ function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete }: {
             <div className="pt-1">
               <span className="text-deep-500 text-xs block mb-2">أرقام ولي الأمر</span>
               {student.parent_phones.map((p, i) => (
-                <div key={i} className="flex justify-between items-center py-1 text-sm">
-                  <span className="text-deep-600 bg-water-100/50 px-2 py-0.5 rounded-lg text-xs">{p.parent_type}</span>
-                  <span className="text-deep-800 font-medium" dir="ltr">{p.phone_number}</span>
+                <div key={i} className="flex items-center py-1 text-sm">
+                  <span className="text-deep-600 bg-water-100/50 px-2 py-0.5 rounded-lg text-xs ml-2">{p.parent_type}</span>
+                  <span className="text-deep-800 font-medium flex-1">{p.name || ''}</span>
+                  <span className="text-deep-600" dir="ltr">{p.phone_number}</span>
                 </div>
               ))}
             </div>
@@ -835,7 +836,7 @@ export default function ManagePage() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-deep-800 mb-1">الإدارة</h1>
-      <p className="text-deep-500 text-sm mb-4">إجمالي الطلاب: {sheikhs.reduce((sum, s) => sum + s.students.length, 0)}</p>
+      <p className="text-deep-500 text-sm mb-4">إجمالي الطلاب: {sheikhs.reduce((sum, s) => sum + s.students.filter((st) => st.is_enrolled).length, 0)}</p>
 
       <div className="flex gap-2 mb-6 border-b border-water-200/30">
         {tabs.map((t) => (

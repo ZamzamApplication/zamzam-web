@@ -54,6 +54,7 @@ export interface ParentPhone {
   id: number
   phone_number: string
   parent_type: string
+  name?: string
 }
 
 export interface WarningInfo {
