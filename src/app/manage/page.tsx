@@ -18,7 +18,7 @@ function picUrl(path: string | null | undefined): string | null {
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={onClose}>
-      <div className="glass-strong rounded-2xl p-6 w-full max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
+      <div className="glass-strong rounded-2xl p-6 w-full max-w-sm mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-xl font-bold text-deep-800 mb-4">{title}</h2>
         {children}
       </div>
