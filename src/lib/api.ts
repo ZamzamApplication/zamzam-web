@@ -100,7 +100,7 @@ export const api = {
     return request(`/sheikhs/${sheikhId}/students`)
   },
 
-  createStudent(name: string, sheikhId: number, phone?: string, birthday?: string, customStudentId?: string, isEnrolled?: boolean, parentPhones?: { phone_number: string; parent_type: string }[]) {
+  createStudent(name: string, sheikhId: number, phone?: string, birthday?: string, customStudentId?: string, isEnrolled?: boolean, parentPhones?: { phone_number: string; parent_type: string }[], registrationDate?: string) {
     return request('/students', {
       method: 'POST',
       body: JSON.stringify({
@@ -110,6 +110,7 @@ export const api = {
         student_id: customStudentId || null,
         birthday: birthday || null,
         is_enrolled: isEnrolled ?? true,
+        registration_date: registrationDate || null,
         parent_phones: parentPhones || [],
       }),
     })
@@ -124,7 +125,7 @@ export const api = {
     })
   },
 
-  updateStudent(id: number, name?: string, phone?: string, birthday?: string, customStudentId?: string, profilePic?: string, isEnrolled?: boolean, parentPhones?: { phone_number?: string; parent_type?: string }[]) {
+  updateStudent(id: number, name?: string, phone?: string, birthday?: string, customStudentId?: string, profilePic?: string, isEnrolled?: boolean, parentPhones?: { phone_number?: string; parent_type?: string }[], registrationDate?: string) {
     const body: Record<string, unknown> = {}
     if (name !== undefined) body.name = name
     if (phone !== undefined) body.phone = phone ?? null
@@ -132,6 +133,7 @@ export const api = {
     if (customStudentId !== undefined) body.student_id = customStudentId ?? null
     if (profilePic !== undefined) body.profile_pic = profilePic ?? null
     if (isEnrolled !== undefined) body.is_enrolled = isEnrolled
+    if (registrationDate !== undefined) body.registration_date = registrationDate ?? null
     if (parentPhones !== undefined) body.parent_phones = parentPhones
     return request(`/students/${id}`, {
       method: 'PUT',
@@ -139,8 +141,8 @@ export const api = {
     })
   },
 
-  deleteStudent(id: number) {
-    return request(`/students/${id}`, { method: 'DELETE' })
+  deleteStudent(id: number, deleteSessions: boolean = true) {
+    return request(`/students/${id}?delete_sessions=${deleteSessions}`, { method: 'DELETE' })
   },
 
   addWarning(studentId: number, reason: string) {

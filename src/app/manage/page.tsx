@@ -194,6 +194,7 @@ function AddStudentModal({ sheikhId, sheikhName, onClose, onCreated }: { sheikhI
   const [phone, setPhone] = useState('')
   const [studentId, setStudentId] = useState('')
   const [birthday, setBirthday] = useState('')
+  const [registrationDate, setRegistrationDate] = useState(new Date().toISOString().split('T')[0])
   const [profilePicFile, setProfilePicFile] = useState<File | null>(null)
   const [profilePicPreview, setProfilePicPreview] = useState('')
   const [isEnrolled, setIsEnrolled] = useState(true)
@@ -230,7 +231,7 @@ function AddStudentModal({ sheikhId, sheikhName, onClose, onCreated }: { sheikhI
     setError('')
     try {
       const filteredPhones = parentPhones.filter((p) => p.phone_number)
-      const result = await api.createStudent(name, sheikhId, phone || undefined, birthday || undefined, studentId || undefined, isEnrolled, filteredPhones.length ? filteredPhones : undefined)
+      const result = await api.createStudent(name, sheikhId, phone || undefined, birthday || undefined, studentId || undefined, isEnrolled, filteredPhones.length ? filteredPhones : undefined, registrationDate || undefined)
       if (profilePicFile) {
         await api.uploadStudentPic(result.id, profilePicFile)
       }
@@ -252,6 +253,10 @@ function AddStudentModal({ sheikhId, sheikhName, onClose, onCreated }: { sheikhI
         <div>
           <label className="block text-sm text-deep-600 mb-1">تاريخ الميلاد</label>
           <input value={birthday} onChange={(e) => setBirthday(e.target.value)} type="date" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        </div>
+        <div>
+          <label className="block text-sm text-deep-600 mb-1">تاريخ التسجيل</label>
+          <input value={registrationDate} onChange={(e) => setRegistrationDate(e.target.value)} type="date" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
         </div>
         <div>
           <label className="block text-sm text-deep-600 mb-1">الصورة الشخصية</label>
@@ -304,6 +309,7 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
   const [phone, setPhone] = useState(student.phone || '')
   const [studentId, setStudentId] = useState(student.student_id || '')
   const [birthday, setBirthday] = useState(student.birthday || '')
+  const [registrationDate, setRegistrationDate] = useState(student.registration_date || '')
   const [profilePic, setProfilePic] = useState(student.profile_pic || '')
   const [isEnrolled, setIsEnrolled] = useState(student.is_enrolled)
   const [warnings, setWarnings] = useState<WarningInfo[]>(student.warnings)
@@ -350,7 +356,7 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
     setLoading(true)
     setError('')
     try {
-      await api.updateStudent(student.id, name, phone || undefined, birthday || undefined, studentId || undefined, profilePic || undefined, isEnrolled, parentPhones)
+      await api.updateStudent(student.id, name, phone || undefined, birthday || undefined, studentId || undefined, profilePic || undefined, isEnrolled, parentPhones, registrationDate || undefined)
       onUpdated()
     } catch (err: any) {
       setError(err.message || 'فشل التحديث')
@@ -369,6 +375,10 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
         <div>
           <label className="block text-sm text-deep-600 mb-1">تاريخ الميلاد</label>
           <input value={birthday} onChange={(e) => setBirthday(e.target.value)} type="date" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        </div>
+        <div>
+          <label className="block text-sm text-deep-600 mb-1">تاريخ التسجيل</label>
+          <input value={registrationDate} onChange={(e) => setRegistrationDate(e.target.value)} type="date" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
         </div>
         <div>
           <label className="block text-sm text-deep-600 mb-1">الصورة الشخصية</label>
@@ -592,6 +602,30 @@ function ImagePreviewModal({ src, onClose }: { src: string; onClose: () => void 
   )
 }
 
+// ─── Delete Student Modal ────────────────────────────────────────────────────
+
+function DeleteStudentModal({ onClose, onConfirm }: { onClose: () => void; onConfirm: (deleteSessions: boolean) => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={onClose}>
+      <div className="glass-strong rounded-2xl p-6 w-full max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
+        <h2 className="text-xl font-bold text-deep-800 mb-2">حذف الطالب</h2>
+        <p className="text-deep-600 text-sm mb-4">اختر نوع الحذف:</p>
+        <div className="space-y-3">
+          <button onClick={() => onConfirm(true)} className="w-full px-4 py-3 rounded-xl border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm font-medium hover:bg-red-50/50 dark:hover:bg-red-900/30 transition text-right">
+            <div className="font-medium">حذف مع الجلسات</div>
+            <div className="text-xs text-deep-400 font-normal mt-0.5">سيتم حذف الطالب وجميع سجلات حضوره</div>
+          </button>
+          <button onClick={() => onConfirm(false)} className="w-full px-4 py-3 rounded-xl border border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400 text-sm font-medium hover:bg-amber-50/50 dark:hover:bg-amber-900/30 transition text-right">
+            <div className="font-medium">حذف الطالب فقط</div>
+            <div className="text-xs text-deep-400 font-normal mt-0.5">سيتم حذف الطالب والاحتفاظ بسجل الحضور</div>
+          </button>
+          <button onClick={onClose} className="w-full px-4 py-2.5 water-btn-outline rounded-xl text-sm">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Student Profile Overlay ─────────────────────────────────────────────────
 
 function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete }: {
@@ -627,6 +661,12 @@ function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete }: {
             <div className="flex justify-between items-center py-1 border-b border-water-100/50">
               <span className="text-deep-500">تاريخ الميلاد</span>
               <span className="text-deep-800 font-medium">{student.birthday}</span>
+            </div>
+          )}
+          {student.registration_date && (
+            <div className="flex justify-between items-center py-1 border-b border-water-100/50">
+              <span className="text-deep-500">تاريخ التسجيل</span>
+              <span className="text-deep-800 font-medium">{student.registration_date}</span>
             </div>
           )}
           <div className="flex justify-between items-center py-1 border-b border-water-100/50">
@@ -744,9 +784,16 @@ export default function ManagePage() {
     load()
   }
 
+  const [deleteConfirm, setDeleteConfirm] = useState<{ studentId: number } | null>(null)
+
   const handleDeleteStudent = async (id: number) => {
-    if (!confirm('حذف الطالب؟')) return
-    await api.deleteStudent(id)
+    setDeleteConfirm({ studentId: id })
+  }
+
+  const confirmDeleteStudent = async (deleteSessions: boolean) => {
+    if (!deleteConfirm) return
+    await api.deleteStudent(deleteConfirm.studentId, deleteSessions)
+    setDeleteConfirm(null)
     load()
   }
 
@@ -955,6 +1002,12 @@ export default function ManagePage() {
       {editUser && <EditUserModal user={editUser} sheikhs={sheikhs} onClose={() => setEditUser(null)} onUpdated={() => { setEditUser(null); load() }} />}
       {showAddSchedule && <AddScheduleModal circleId={showAddSchedule} onClose={() => setShowAddSchedule(null)} onCreated={() => { loadSchedules(showAddSchedule); setShowAddSchedule(null) }} />}
       {previewPic && <ImagePreviewModal src={previewPic} onClose={() => setPreviewPic(null)} />}
+      {deleteConfirm && (
+        <DeleteStudentModal
+          onClose={() => setDeleteConfirm(null)}
+          onConfirm={(deleteSessions) => confirmDeleteStudent(deleteSessions)}
+        />
+      )}
       {viewStudent && (
         <ViewStudentModal
           student={viewStudent.student}
