@@ -229,7 +229,6 @@ export const api = {
     const params = new URLSearchParams()
     if (sheikhId) params.set('sheikh_id', String(sheikhId))
     if (circleId) params.set('circle_id', String(circleId))
-    params.set('limit', '3')
     const qs = params.toString()
     return request(`/reports/attendance-grid${qs ? `?${qs}` : ''}`)
   },
