@@ -18,13 +18,6 @@ const STATUS_STYLES: Record<string, string> = {
   'لا ينطبق': 'status-badge bg-blue-100/60 text-blue-700 border-blue-300 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700',
 }
 
-const STATUS_ORDER = ['غياب', 'حاضر', 'غياب بعذر', 'لا ينطبق']
-
-function cycleStatus(current: string): string {
-  const idx = STATUS_ORDER.indexOf(current)
-  return STATUS_ORDER[(idx + 1) % STATUS_ORDER.length]
-}
-
 function useDebounce(callback: (...args: any[]) => void, delay: number) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -37,14 +30,14 @@ function useDebounce(callback: (...args: any[]) => void, delay: number) {
 function StudentRow({
   student,
   circleSheikhs,
-  onToggle,
+  onStatusChange,
   onNotesChange,
   onSheikhChange,
   saving,
 }: {
   student: { id: number; name: string; status: string; notes?: string; sheikh_id: number | null }
   circleSheikhs: { id: number; name: string }[]
-  onToggle: () => void
+  onStatusChange: (status: string) => void
   onNotesChange: (notes: string) => void
   onSheikhChange: (sheikhId: number) => void
   saving: boolean
@@ -64,12 +57,16 @@ function StudentRow({
   return (
     <div className="grid grid-cols-[1fr_90px_120px_1fr] gap-2 items-center py-2.5 px-4 hover:bg-water-100/30 rounded-xl transition">
       <span className="font-medium text-deep-800 truncate">{student.name}</span>
-      <button
-        onClick={onToggle}
+      <select
+        value={student.status}
+        onChange={(e) => onStatusChange(e.target.value)}
         className={`px-2 py-1.5 rounded-lg text-sm font-medium transition text-center ${STATUS_STYLES[student.status] || STATUS_STYLES['غياب']} ${saving ? 'opacity-60' : ''}`}
       >
-        {student.status}
-      </button>
+        <option value="غياب" className="bg-gray-100 text-gray-600">غياب</option>
+        <option value="حاضر" className="bg-green-100 text-green-700">حاضر</option>
+        <option value="غياب بعذر" className="bg-yellow-100 text-yellow-700">غياب بعذر</option>
+        <option value="لا ينطبق" className="bg-blue-100 text-blue-700">لا ينطبق</option>
+      </select>
       <select
         value={student.sheikh_id ?? ''}
         onChange={(e) => onSheikhChange(Number(e.target.value))}
@@ -131,7 +128,7 @@ function SheikhAccordion({
               key={student.id}
               student={student}
               circleSheikhs={circleSheikhs}
-              onToggle={() => onUpdateStatus(student.id, cycleStatus(student.status))}
+              onStatusChange={(status) => onUpdateStatus(student.id, status)}
               onNotesChange={(notes) => onUpdateNotes(student.id, notes)}
               onSheikhChange={(sheikhId) => onUpdateSheikh(student.id, sheikhId)}
               saving={savingIds.has(student.id)}
