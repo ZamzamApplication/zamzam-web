@@ -365,7 +365,7 @@ export default function SessionAttendancePage() {
         </div>
       </div>
 
-      <div className="flex justify-end mb-2">
+      <div className="flex justify-start mb-2">
         <button
           onClick={() => setExpandedSheikhs(allExpanded ? new Set() : new Set(data.sheikh_groups.map((g) => g.sheikh.id)))}
           className="text-xs text-cyan-700 dark:text-cyan-400 hover:underline px-2 py-1 transition"
