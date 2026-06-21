@@ -93,6 +93,8 @@ function SheikhAccordion({
   onUpdateNotes,
   onUpdateSheikh,
   savingIds,
+  expanded,
+  onToggle,
 }: {
   group: SheikhGroup
   circleSheikhs: { id: number; name: string }[]
@@ -100,13 +102,14 @@ function SheikhAccordion({
   onUpdateNotes: (studentId: number, notes: string) => void
   onUpdateSheikh: (studentId: number, sheikhId: number) => void
   savingIds: Set<number>
+  expanded: boolean
+  onToggle: () => void
 }) {
-  const [open, setOpen] = useState(false)
 
   return (
     <div className="glass-card rounded-2xl overflow-hidden">
       <button
-        onClick={() => setOpen(!open)}
+        onClick={onToggle}
         className="w-full flex items-center justify-between px-5 py-4 bg-water-100/30 hover:bg-water-200/30 transition"
       >
         <span className="text-lg font-bold text-deep-800">{group.sheikh.name}</span>
@@ -115,7 +118,7 @@ function SheikhAccordion({
         </span>
       </button>
 
-      {open && (
+      {expanded && (
         <div className="divide-y divide-water-200/30">
           <div className="grid grid-cols-[1fr_90px_120px_1fr] gap-2 items-center py-2 px-4 text-xs font-medium text-deep-500 bg-water-100/20">
             <span>الطالب</span>
@@ -151,6 +154,18 @@ export default function SessionAttendancePage() {
   const [editDateVal, setEditDateVal] = useState('')
   const pendingUpdates = useRef<Map<number, { status?: string; notes?: string; sheikh_id?: number }>>(new Map())
   const flushTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [expandedSheikhs, setExpandedSheikhs] = useState<Set<number>>(new Set())
+
+  const toggleSheikh = useCallback((id: number) => {
+    setExpandedSheikhs((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
+
+  const allExpanded = data ? data.sheikh_groups.length > 0 && expandedSheikhs.size === data.sheikh_groups.length : false
 
   useEffect(() => {
     Promise.all([
@@ -350,6 +365,14 @@ export default function SessionAttendancePage() {
         </div>
       </div>
 
+      <div className="flex justify-end mb-2">
+        <button
+          onClick={() => setExpandedSheikhs(allExpanded ? new Set() : new Set(data.sheikh_groups.map((g) => g.sheikh.id)))}
+          className="text-xs text-cyan-700 dark:text-cyan-400 hover:underline px-2 py-1 transition"
+        >
+          {allExpanded ? 'طي الكل' : 'فتح الكل'}
+        </button>
+      </div>
       <div className="space-y-3">
         {data.sheikh_groups.map((group) => (
           <SheikhAccordion
@@ -360,6 +383,8 @@ export default function SessionAttendancePage() {
             onUpdateNotes={handleUpdateNotes}
             onUpdateSheikh={handleUpdateSheikh}
             savingIds={savingIds}
+            expanded={expandedSheikhs.has(group.sheikh.id)}
+            onToggle={() => toggleSheikh(group.sheikh.id)}
           />
         ))}
       </div>
