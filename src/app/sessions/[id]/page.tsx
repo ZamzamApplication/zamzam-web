@@ -155,6 +155,14 @@ export default function SessionAttendancePage() {
   const pendingUpdates = useRef<Map<number, { status?: string; notes?: string; sheikh_id?: number }>>(new Map())
   const flushTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [expandedSheikhs, setExpandedSheikhs] = useState<Set<number>>(new Set())
+  const [userRole, setUserRole] = useState<string>('')
+
+  useEffect(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem('user') || '{}')
+      setUserRole(u.role || '')
+    } catch { /* ignore */ }
+  }, [])
 
   const toggleSheikh = useCallback((id: number) => {
     setExpandedSheikhs((prev) => {
@@ -302,7 +310,6 @@ export default function SessionAttendancePage() {
     0
   )
   const totalCount = data.sheikh_groups.reduce((acc, g) => acc + g.students.length, 0)
-
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
@@ -354,7 +361,7 @@ export default function SessionAttendancePage() {
           >
             رجوع
           </button>
-          {!data.is_confirmed && (
+          {!data.is_confirmed && userRole === 'admin' && (
             <button
               onClick={handleConfirm}
               className="water-btn text-white px-4 py-2 rounded-xl text-sm font-medium"

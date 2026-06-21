@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { api } from '@/lib/api'
 import type { Session } from '@/lib/types'
 import CreateSessionModal from '@/components/CreateSessionModal'
@@ -73,10 +74,10 @@ export default function SessionsPage() {
       ) : (
         <div className="grid gap-4">
           {sessions.map((s) => (
-            <div
+            <Link
               key={s.id}
-              onClick={() => router.push(`/sessions/${s.id}`)}
-              className="glass-card rounded-2xl p-5 cursor-pointer"
+              href={`/sessions/${s.id}`}
+              className="glass-card rounded-2xl p-5 cursor-pointer block"
             >
               <div className="flex justify-between items-center">
                 <div>
@@ -86,7 +87,7 @@ export default function SessionsPage() {
                 <div className="flex items-center gap-3">
                   <button
                     onClick={async (e) => {
-                      e.stopPropagation()
+                      e.preventDefault()
                       if (!confirm('حذف الجلسة وجميع سجلات الحضور المرتبطة بها؟')) return
                       await api.deleteSession(s.id)
                       load()
@@ -102,7 +103,7 @@ export default function SessionsPage() {
                   </span>
                 </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       )}

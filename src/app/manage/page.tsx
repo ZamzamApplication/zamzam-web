@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import type { Circle, SheikhInfo, StudentInfo, UserInfo, WarningInfo } from '@/lib/types'
 
@@ -953,12 +954,20 @@ function StudentStatusTabs({
 // ─── Main Page ──────────────────────────────────────────────────────────────
 
 export default function ManagePage() {
+  const router = useRouter()
   const [sheikhs, setSheikhs] = useState<(SheikhInfo & { students: StudentInfo[] })[]>([])
   const [circles, setCircles] = useState<Circle[]>([])
   const [users, setUsers] = useState<UserInfo[]>([])
   const [activeTab, setActiveTab] = useState<'sheikhs' | 'users' | 'circles'>('sheikhs')
   const [loading, setLoading] = useState(true)
   const [expandedSheikhs, setExpandedSheikhs] = useState<Set<number>>(new Set())
+
+  useEffect(() => {
+    const u = JSON.parse(localStorage.getItem('user') || '{}')
+    if (u.role !== 'admin') {
+      router.replace('/dashboard')
+    }
+  }, [router])
 
   const toggleSheikh = (id: number) => {
     setExpandedSheikhs((prev) => {

@@ -68,9 +68,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     }
     if (token) {
       api.getMe()
-        .then(setUser)
+        .then((u) => {
+          setUser(u)
+          localStorage.setItem('user', JSON.stringify(u))
+        })
         .catch(() => {
           localStorage.removeItem('token')
+          localStorage.removeItem('user')
           if (!isLandingPage) router.push('/login')
         })
         .finally(() => setLoading(false))
@@ -125,14 +129,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </Link>
               <Link href="/sessions" className="text-white/80 hover:text-white transition">الجلسات</Link>
               <Link href="/attendance" className="text-white/80 hover:text-white transition">سجل الحضور</Link>
-              <Link href="/manage" className="text-white/80 hover:text-white transition">الإدارة</Link>
+              {user?.role === 'admin' && <Link href="/manage" className="text-white/80 hover:text-white transition">الإدارة</Link>}
               <Link href="/reports" className="text-white/80 hover:text-white transition">التقارير</Link>
             </div>
             <div className="flex items-center gap-3">
               <ThemeToggle />
               <span className="text-white/60 text-sm">{user.username}</span>
               <button
-                onClick={() => { localStorage.removeItem('token'); router.push('/login') }}
+                onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('user'); router.push('/login') }}
                 className="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-sm transition border border-white/10"
               >
                 تسجيل الخروج
