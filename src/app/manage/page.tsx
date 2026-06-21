@@ -1,8 +1,8 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/api'
-import type { SheikhInfo, StudentInfo, WarningInfo, Circle, UserInfo } from '@/lib/types'
+import type { Circle, SheikhInfo, StudentInfo, UserInfo, WarningInfo } from '@/lib/types'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -196,7 +196,7 @@ function AddStudentModal({ sheikhId, sheikhName, onClose, onCreated }: { sheikhI
   const [registrationDate, setRegistrationDate] = useState(new Date().toISOString().split('T')[0])
   const [profilePicFile, setProfilePicFile] = useState<File | null>(null)
   const [profilePicPreview, setProfilePicPreview] = useState('')
-  const [isEnrolled, setIsEnrolled] = useState(true)
+  const [status, setStatus] = useState('مقيد')
   const [parentPhones, setParentPhones] = useState<{ phone_number: string; parent_type: string; name?: string }[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -230,7 +230,7 @@ function AddStudentModal({ sheikhId, sheikhName, onClose, onCreated }: { sheikhI
     setError('')
     try {
       const filteredPhones = parentPhones.filter((p) => p.phone_number)
-      const result = await api.createStudent(name, sheikhId, phone || undefined, birthday || undefined, studentId || undefined, isEnrolled, filteredPhones.length ? filteredPhones : undefined, registrationDate || undefined)
+      const result = await api.createStudent(name, sheikhId, phone || undefined, birthday || undefined, studentId || undefined, status, filteredPhones.length ? filteredPhones : undefined, registrationDate || undefined)
       if (profilePicFile) {
         await api.uploadStudentPic(result.id, profilePicFile)
       }
@@ -266,10 +266,16 @@ function AddStudentModal({ sheikhId, sheikhName, onClose, onCreated }: { sheikhI
             <input type="file" accept="image/*" onChange={handleProfilePicChange} className="w-full text-sm text-deep-600 file:ml-0 file:mr-3 file:px-3 file:py-1.5 file:rounded-xl file:border-0 file:text-sm file:water-btn file:text-white file:cursor-pointer" />
           </div>
         </div>
-        <label className="flex items-center gap-2 text-deep-700">
-          <input type="checkbox" checked={isEnrolled} onChange={(e) => setIsEnrolled(e.target.checked)} className="rounded" />
-          <span className="text-sm">مقيد</span>
-        </label>
+        <div>
+          <label className="block text-sm text-deep-600 mb-1">الحالة</label>
+          <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
+            <option value="مقيد">مقيد</option>
+            <option value="مستبعد">مستبعد</option>
+            <option value="منقطع">منقطع</option>
+            <option value="ضيف">ضيف</option>
+            <option value="غير مقيد">غير مقيد</option>
+          </select>
+        </div>
         <div className="border-t border-water-200/30 pt-3">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-deep-700">أرقام ولي الأمر</span>
@@ -310,10 +316,14 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
   const [birthday, setBirthday] = useState(student.birthday || '')
   const [registrationDate, setRegistrationDate] = useState(student.registration_date || '')
   const [profilePic, setProfilePic] = useState(student.profile_pic || '')
-  const [isEnrolled, setIsEnrolled] = useState(student.is_enrolled)
+  const [status, setStatus] = useState(student.status)
   const [warnings, setWarnings] = useState<WarningInfo[]>(student.warnings)
   const [newWarningReason, setNewWarningReason] = useState('')
   const [addingWarning, setAddingWarning] = useState(false)
+  const [deletingWarningId, setDeletingWarningId] = useState<number | null>(null)
+  const [editingWarningId, setEditingWarningId] = useState<number | null>(null)
+  const [editingWarningText, setEditingWarningText] = useState('')
+  const [savingWarningEdit, setSavingWarningEdit] = useState(false)
   const [parentPhones, setParentPhones] = useState<{ phone_number?: string; parent_type?: string; name?: string }[]>(
     student.parent_phones?.map((p) => ({ phone_number: p.phone_number, parent_type: p.parent_type, name: p.name || '' })) || []
   )
@@ -349,13 +359,52 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
     }
   }
 
+  const handleDeleteWarning = async (warningId: number) => {
+    setDeletingWarningId(warningId)
+    setError('')
+    try {
+      await api.deleteWarning(warningId)
+      setWarnings(warnings.filter((w) => w.id !== warningId))
+    } catch (err: any) {
+      setError(err.message || 'فشل حذف الإنذار')
+    } finally {
+      setDeletingWarningId(null)
+    }
+  }
+
+  const handleStartEditWarning = (w: WarningInfo) => {
+    setEditingWarningId(w.id)
+    setEditingWarningText(w.reason)
+  }
+
+  const handleSaveWarningEdit = async () => {
+    if (!editingWarningId || !editingWarningText.trim()) return
+    setSavingWarningEdit(true)
+    setError('')
+    try {
+      const updated = await api.updateWarning(editingWarningId, editingWarningText)
+      setWarnings(warnings.map((w) => w.id === editingWarningId ? { ...w, reason: updated.reason } : w))
+      setEditingWarningId(null)
+      setEditingWarningText('')
+    } catch (err: any) {
+      setError(err.message || 'فشل تعديل الإنذار')
+    } finally {
+      setSavingWarningEdit(false)
+    }
+  }
+
+  const handleCancelEditWarning = () => {
+    setEditingWarningId(null)
+    setEditingWarningText('')
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name) return
     setLoading(true)
     setError('')
     try {
-      await api.updateStudent(student.id, name, phone || undefined, birthday || undefined, studentId || undefined, profilePic || undefined, isEnrolled, parentPhones, registrationDate || undefined)
+      await api.updateStudent(student.id, name, phone || undefined, birthday || undefined, studentId || undefined, profilePic || undefined, status, parentPhones, registrationDate || undefined)
       onUpdated()
     } catch (err: any) {
       setError(err.message || 'فشل التحديث')
@@ -388,12 +437,16 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
             <input value={profilePic} onChange={(e) => setProfilePic(e.target.value)} placeholder="رابط الصورة الشخصية (اختياري)" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
           </div>
         </div>
-        <label className="flex items-center gap-2 text-deep-700">
-          <input type="checkbox" checked={isEnrolled} onChange={(e) => setIsEnrolled(e.target.checked)} className="rounded" />
-          <span className="text-sm">مقيد</span>
-        </label>
-
-        {/* Warning history */}
+        <div>
+          <label className="block text-sm text-deep-600 mb-1">الحالة</label>
+          <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
+            <option value="مقيد">مقيد</option>
+            <option value="مستبعد">مستبعد</option>
+            <option value="منقطع">منقطع</option>
+            <option value="ضيف">ضيف</option>
+            <option value="غير مقيد">غير مقيد</option>
+          </select>
+        </div>
         <div className="border-t border-water-200/30 pt-3">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-deep-700">الإنذارات ({warnings.length})</span>
@@ -408,10 +461,42 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
             <div className="space-y-1.5 max-h-40 overflow-y-auto">
               {warnings.map((w) => (
                 <div key={w.id} className="flex items-start gap-2 bg-red-50/40 dark:bg-red-900/20 rounded-xl px-3 py-2">
-                  <span className="text-red-500 text-sm mt-0.5">⚠</span>
+                  <span className="text-red-500 text-sm mt-0.5 shrink-0">⚠</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-deep-800">{w.reason}</p>
-                    <p className="text-[10px] text-deep-400">{new Date(w.created_at).toLocaleDateString('ar-SA')}</p>
+                    {editingWarningId === w.id ? (
+                      <div className="flex gap-2">
+                        <input
+                          value={editingWarningText}
+                          onChange={(e) => setEditingWarningText(e.target.value)}
+                          className="flex-1 px-2 py-1 text-xs bg-white/50 dark:bg-slate-800/50 border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400"
+                          autoFocus
+                        />
+                        <button type="button" onClick={handleSaveWarningEdit} disabled={savingWarningEdit || !editingWarningText.trim()} className="text-xs text-green-600 hover:text-green-700 px-1 disabled:opacity-40">{savingWarningEdit ? '...' : 'حفظ'}</button>
+                        <button type="button" onClick={handleCancelEditWarning} className="text-xs text-deep-400 hover:text-deep-600 px-1">إلغاء</button>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-xs text-deep-800">{w.reason}</p>
+                        <p className="text-[10px] text-deep-400">{new Date(w.created_at).toLocaleDateString('ar-SA')}</p>
+                      </>
+                    )}
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleStartEditWarning(w)}
+                      className="text-deep-400 hover:text-cyan-600 text-xs px-1 transition"
+                    >
+                      ✏
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteWarning(w.id)}
+                      disabled={deletingWarningId === w.id}
+                      className="text-red-400 hover:text-red-600 text-sm px-1 transition disabled:opacity-40"
+                    >
+                      {deletingWarningId === w.id ? '...' : '✕'}
+                    </button>
                   </div>
                 </div>
               ))}
@@ -685,9 +770,14 @@ function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete, onMo
             <span className="text-deep-800 font-medium">{sheikhName}</span>
           </div>
           <div className="flex justify-between items-center py-1 border-b border-water-100/50">
-            <span className="text-deep-500">مقيد</span>
-            <span className={`font-medium ${student.is_enrolled ? 'text-emerald-600' : 'text-red-500'}`}>
-              {student.is_enrolled ? 'نعم' : 'لا'}
+            <span className="text-deep-500">الحالة</span>
+            <span className={`font-medium ${
+              student.status === 'مقيد' ? 'text-emerald-600' :
+              student.status === 'مستبعد' ? 'text-red-500' :
+              student.status === 'منقطع' ? 'text-orange-500' :
+              student.status === 'ضيف' ? 'text-blue-500' : 'text-deep-500'
+            }`}>
+              {student.status}
             </span>
           </div>
           <div className="py-1 border-b border-water-100/50">
@@ -733,6 +823,132 @@ function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete, onMo
     </div>
   )
 }
+
+// ─── Student Status Tabs ─────────────────────────────────────────────────────
+
+const STATUS_ORDER = ['مقيد', 'مستبعد', 'منقطع', 'ضيف', 'غير مقيد']
+
+const STATUS_COLORS: Record<string, string> = {
+  'مقيد': 'text-emerald-600 border-emerald-300 bg-emerald-50/50 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-700',
+  'مستبعد': 'text-red-600 border-red-300 bg-red-50/50 dark:bg-red-900/20 dark:text-red-300 dark:border-red-700',
+  'منقطع': 'text-orange-600 border-orange-300 bg-orange-50/50 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-700',
+  'ضيف': 'text-blue-600 border-blue-300 bg-blue-50/50 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-700',
+  'غير مقيد': 'text-deep-500 border-water-300 bg-water-50/50 dark:bg-slate-800/30 dark:text-deep-400 dark:border-slate-700',
+}
+
+function StudentStatusTabs({
+  students,
+  sheikhName,
+  sheikhId,
+  onViewStudent,
+  onEditStudent,
+  onDeleteStudent,
+  onDragStart,
+  onDropReorder,
+  onDropOnSheikh,
+}: {
+  students: StudentInfo[]
+  sheikhName: string
+  sheikhId: number
+  onViewStudent: (s: StudentInfo) => void
+  onEditStudent: (s: StudentInfo) => void
+  onDeleteStudent: (id: number) => void
+  onDragStart: (studentId: number, fromSheikhId: number) => void
+  onDropReorder: (sheikhId: number, targetStudentId?: number) => void
+  onDropOnSheikh: (sheikhId: number) => void
+}) {
+  const [openTab, setOpenTab] = useState('مقيد')
+
+  const grouped = STATUS_ORDER.reduce(
+    (acc, status) => {
+      acc[status] = students.filter((s) => s.status === status)
+      return acc
+    },
+    {} as Record<string, StudentInfo[]>,
+  )
+
+  return (
+    <div className="min-h-[40px]">
+      <div className="flex border-b border-water-200/30">
+        {STATUS_ORDER.map((status) => {
+          const count = grouped[status].length
+          return (
+            <button
+              key={status}
+              onClick={() => setOpenTab(openTab === status ? '' : status)}
+              className={`px-3 py-2 text-xs font-medium transition border-b-2 -mb-px ${
+                openTab === status
+                  ? 'border-cyan-500 text-cyan-700 dark:text-cyan-400'
+                  : 'border-transparent text-deep-500 hover:text-deep-700'
+              }`}
+            >
+              {status} ({count})
+            </button>
+          )
+        })}
+      </div>
+      {openTab && (
+        <div
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={async (e) => {
+            e.preventDefault()
+            const drag = (window as any).__dragData
+            if (!drag) return
+            if (drag.fromSheikhId === sheikhId) {
+              onDropReorder(sheikhId)
+            } else {
+              await onDropOnSheikh(sheikhId)
+            }
+          }}
+        >
+          {grouped[openTab].length > 0 ? (
+            <div className="divide-y divide-water-200/30">
+              {grouped[openTab].map((s) => (
+                <div
+                  key={s.id}
+                  draggable
+                  onDragStart={() => { (window as any).__dragData = { studentId: s.id, fromSheikhId: sheikhId }; onDragStart(s.id, sheikhId) }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={async (e) => {
+                    e.stopPropagation()
+                    e.preventDefault()
+                    const drag = (window as any).__dragData
+                    if (!drag) return
+                    if (drag.fromSheikhId === sheikhId) {
+                      onDropReorder(sheikhId, s.id)
+                    } else {
+                      await onDropOnSheikh(sheikhId)
+                    }
+                  }}
+                  className="flex items-center justify-between px-5 py-2.5 hover:bg-water-100/30 cursor-grab active:cursor-grabbing"
+                >
+                  <div className="flex items-center gap-3 cursor-pointer" onClick={() => onViewStudent(s)}>
+                    {s.profile_pic ? (
+                      <img src={picUrl(s.profile_pic)!} alt="" className="w-8 h-8 rounded-full object-cover border border-water-300" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-water-200/50 flex items-center justify-center text-deep-400 text-xs border border-water-300">
+                        {s.name.charAt(0)}
+                      </div>
+                    )}
+                    <span className="text-deep-600 text-xs ml-1">{s.student_id ? `#${s.student_id}` : `#${s.id}`}</span>
+                    <span className="text-deep-800">{s.name}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => onEditStudent(s)} className="text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-800 dark:hover:text-cyan-300 transition">تعديل</button>
+                    <button onClick={() => onDeleteStudent(s.id)} className="text-xs text-red-400 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition">حذف</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="px-5 py-3 text-deep-400 text-sm text-center">لا يوجد طلاب</div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 
 // ─── Main Page ──────────────────────────────────────────────────────────────
 
@@ -794,34 +1010,14 @@ export default function ManagePage() {
   useEffect(() => { load() }, [load])
 
   const [moveStudent, setMoveStudent] = useState<{ student: StudentInfo; sheikhName: string } | null>(null)
-  const dragData = useRef<{ studentId: number; fromSheikhId: number } | null>(null)
-
   const handleDragStart = (studentId: number, sheikhId: number) => {
-    dragData.current = { studentId, fromSheikhId: sheikhId }
-  }
-
-  const handleDropOnSheikh = async (toSheikhId: number) => {
-    const drag = dragData.current
-    if (!drag) return
-    dragData.current = null
-
-    if (drag.fromSheikhId === toSheikhId) return
-
-    try {
-      await api.moveStudentSheikh(drag.studentId, toSheikhId)
-      load()
-    } catch (err) {
-      console.error(err)
-    }
+    ;(window as any).__dragData = { studentId, fromSheikhId: sheikhId }
   }
 
   const handleDropReorder = async (sheikhId: number, targetStudentId?: number) => {
-    const drag = dragData.current
+    const drag = (window as any).__dragData
     if (!drag) return
-    dragData.current = null
-
-    if (drag.fromSheikhId !== sheikhId) return
-
+    ;(window as any).__dragData = null
     const sheikh = sheikhs.find((s) => s.id === sheikhId)
     if (!sheikh) return
     const ids = sheikh.students.map((s) => s.id)
@@ -837,6 +1033,19 @@ export default function ManagePage() {
     }
     try {
       await api.reorderStudents(sheikhId, ids)
+      load()
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const handleDropOnSheikh = async (sheikhId: number) => {
+    const drag = (window as any).__dragData
+    if (!drag) return
+    ;(window as any).__dragData = null
+    if (drag.fromSheikhId === sheikhId) return
+    try {
+      await api.moveStudentSheikh(drag.studentId, sheikhId)
       load()
     } catch (err) {
       console.error(err)
@@ -885,7 +1094,7 @@ export default function ManagePage() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-deep-800 mb-1">الإدارة</h1>
-      <p className="text-deep-500 text-sm mb-4">إجمالي الطلاب: {sheikhs.reduce((sum, s) => sum + s.students.filter((st) => st.is_enrolled).length, 0)}</p>
+      <p className="text-deep-500 text-sm mb-4">إجمالي الطلاب المقيدين: {sheikhs.reduce((sum, s) => sum + s.students.filter((st) => st.status === 'مقيد').length, 0)}</p>
 
       <div className="flex gap-2 mb-6 border-b border-water-200/30">
         {tabs.map((t) => (
@@ -935,68 +1144,19 @@ export default function ManagePage() {
                       <button onClick={() => handleDeleteSheikh(sheikh.id)} className="px-3 py-1.5 rounded-xl text-xs border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50/50 dark:hover:bg-red-900/30 transition">حذف</button>
                     </div>
                   </div>
-                  {isExpanded && (
-                    <div
-                      className="divide-y divide-water-200/30 min-h-[40px]"
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={async (e) => {
-                        e.preventDefault()
-                        const drag = dragData.current
-                        if (!drag) return
-                        if (drag.fromSheikhId === sheikh.id) {
-                          handleDropReorder(sheikh.id)
-                        } else {
-                          await handleDropOnSheikh(sheikh.id)
-                        }
-                      }}
-                    >
-                      {sheikh.students.length > 0 ? (
-                        sheikh.students.map((s) => (
-                          <div
-                            key={s.id}
-                            draggable
-                            onDragStart={() => handleDragStart(s.id, sheikh.id)}
-                            onDragOver={(e) => e.preventDefault()}
-                            onDrop={async (e) => {
-                              e.stopPropagation()
-                              e.preventDefault()
-                              const drag = dragData.current
-                              if (!drag) return
-                              if (drag.fromSheikhId === sheikh.id) {
-                                handleDropReorder(sheikh.id, s.id)
-                              } else {
-                                await handleDropOnSheikh(sheikh.id)
-                              }
-                            }}
-                            className="flex items-center justify-between px-5 py-2.5 hover:bg-water-100/30 cursor-grab active:cursor-grabbing"
-                          >
-                            <div className="flex items-center gap-3 cursor-pointer" onClick={() => setViewStudent({ student: s, sheikhName: sheikh.name })}>
-                              {s.profile_pic ? (
-                                <img
-                                  src={picUrl(s.profile_pic)!}
-                                  alt=""
-                                  className="w-8 h-8 rounded-full object-cover border border-water-300"
-                                  onClick={(e) => { e.stopPropagation(); setPreviewPic(picUrl(s.profile_pic)!) }}
-                                />
-                              ) : (
-                                <div className="w-8 h-8 rounded-full bg-water-200/50 flex items-center justify-center text-deep-400 text-xs border border-water-300">
-                                  {s.name.charAt(0)}
-                                </div>
-                              )}
-                              <span className="text-deep-600 text-xs ml-1">{s.student_id ? `#${s.student_id}` : `#${s.id}`}</span>
-                              <span className="text-deep-800">{s.name}</span>
-                            </div>
-                            <div className="flex gap-2">
-                              <button onClick={() => setEditStudent({ student: s, sheikhName: sheikh.name })} className="text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-800 dark:hover:text-cyan-300 transition">تعديل</button>
-                              <button onClick={() => handleDeleteStudent(s.id)} className="text-xs text-red-400 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition">حذف</button>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="px-5 py-3 text-deep-400 text-sm text-center">لا يوجد طلاب</div>
-                      )}
-                    </div>
-                  )}
+                   {isExpanded && (
+                    <StudentStatusTabs
+                      students={sheikh.students}
+                      sheikhName={sheikh.name}
+                      sheikhId={sheikh.id}
+                      onViewStudent={(s) => setViewStudent({ student: s, sheikhName: sheikh.name })}
+                      onEditStudent={(s) => setEditStudent({ student: s, sheikhName: sheikh.name })}
+                      onDeleteStudent={handleDeleteStudent}
+                      onDragStart={handleDragStart}
+                      onDropReorder={handleDropReorder}
+                      onDropOnSheikh={handleDropOnSheikh}
+                    />
+                   )}
                 </div>
                 )
               })}

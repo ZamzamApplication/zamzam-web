@@ -107,7 +107,7 @@ export const api = {
     return request(`/sheikhs/${sheikhId}/students`)
   },
 
-  createStudent(name: string, sheikhId: number, phone?: string, birthday?: string, customStudentId?: string, isEnrolled?: boolean, parentPhones?: { phone_number: string; parent_type: string }[], registrationDate?: string) {
+  createStudent(name: string, sheikhId: number, phone?: string, birthday?: string, customStudentId?: string, status?: string, parentPhones?: { phone_number: string; parent_type: string }[], registrationDate?: string) {
     return request('/students', {
       method: 'POST',
       body: JSON.stringify({
@@ -116,7 +116,7 @@ export const api = {
         phone: phone || null,
         student_id: customStudentId || null,
         birthday: birthday || null,
-        is_enrolled: isEnrolled ?? true,
+        status: status || 'مقيد',
         registration_date: registrationDate || null,
         parent_phones: parentPhones || [],
       }),
@@ -132,14 +132,14 @@ export const api = {
     })
   },
 
-  updateStudent(id: number, name?: string, phone?: string, birthday?: string, customStudentId?: string, profilePic?: string, isEnrolled?: boolean, parentPhones?: { phone_number?: string; parent_type?: string }[], registrationDate?: string) {
+  updateStudent(id: number, name?: string, phone?: string, birthday?: string, customStudentId?: string, profilePic?: string, status?: string, parentPhones?: { phone_number?: string; parent_type?: string }[], registrationDate?: string) {
     const body: Record<string, unknown> = {}
     if (name !== undefined) body.name = name
     if (phone !== undefined) body.phone = phone ?? null
     if (birthday !== undefined) body.birthday = birthday ?? null
     if (customStudentId !== undefined) body.student_id = customStudentId ?? null
     if (profilePic !== undefined) body.profile_pic = profilePic ?? null
-    if (isEnrolled !== undefined) body.is_enrolled = isEnrolled
+    if (status !== undefined) body.status = status
     if (registrationDate !== undefined) body.registration_date = registrationDate ?? null
     if (parentPhones !== undefined) body.parent_phones = parentPhones
     return request(`/students/${id}`, {
@@ -169,6 +169,17 @@ export const api = {
   addWarning(studentId: number, reason: string) {
     return request(`/students/${studentId}/warnings`, {
       method: 'POST',
+      body: JSON.stringify({ reason }),
+    })
+  },
+
+  deleteWarning(warningId: number) {
+    return request(`/warnings/${warningId}`, { method: 'DELETE' })
+  },
+
+  updateWarning(warningId: number, reason: string) {
+    return request(`/warnings/${warningId}`, {
+      method: 'PUT',
       body: JSON.stringify({ reason }),
     })
   },
@@ -219,6 +230,10 @@ export const api = {
 
   getCircleAttendanceRate(circleId: number) {
     return request(`/reports/circle/${circleId}/rate`)
+  },
+
+  getCircleStudentStats(circleId: number) {
+    return request(`/reports/circle/${circleId}/student-stats`)
   },
 
   getStudentStreak(studentId: number) {

@@ -72,7 +72,7 @@ export interface StudentInfo {
   student_id?: string
   birthday?: string
   profile_pic?: string
-  is_enrolled: boolean
+  status: string
   registration_date?: string
   warnings: WarningInfo[]
   sheikh?: { id: number; name: string }
@@ -125,4 +125,21 @@ export interface AttendanceGridStudent {
 export interface AttendanceGrid {
   sessions: AttendanceGridSession[]
   students: AttendanceGridStudent[]
+}
+
+export interface StudentStatsItem {
+  student_id: number
+  student_name: string
+  sheikh_name: string
+  total_sessions: number
+  present: number
+  excused: number
+  absent: number
+  not_applicable: number
+  attendance_rate: number
+}
+
+export interface CircleStudentStatsResponse {
+  circle_id: number
+  students: StudentStatsItem[]
 }

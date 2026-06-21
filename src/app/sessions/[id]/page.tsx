@@ -1,9 +1,15 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
-import type { SessionAttendance, SheikhGroup } from '@/lib/types'
+import type { Session, SessionAttendance, SheikhGroup } from '@/lib/types'
+
+const ARABIC_DAYS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
+
+function getArabicDay(dateStr: string): string {
+  return ARABIC_DAYS[new Date(dateStr + 'T12:00:00').getDay()]
+}
 
 const STATUS_STYLES: Record<string, string> = {
   'غياب': 'status-badge bg-gray-100/50 text-gray-600 border-gray-200 dark:bg-gray-700/40 dark:text-gray-400 dark:border-gray-700',
@@ -141,6 +147,7 @@ export default function SessionAttendancePage() {
   const params = useParams()
   const router = useRouter()
   const [data, setData] = useState<SessionAttendance | null>(null)
+  const [allSessions, setAllSessions] = useState<Session[]>([])
   const [savingIds, setSavingIds] = useState<Set<number>>(new Set())
   const [loading, setLoading] = useState(true)
   const [editingDate, setEditingDate] = useState(false)
@@ -149,11 +156,29 @@ export default function SessionAttendancePage() {
   const flushTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    api.getSessionAttendance(Number(params.id))
-      .then(setData)
-      .catch(console.error)
+    Promise.all([
+      api.getSessionAttendance(Number(params.id)),
+      api.getAllSessions(),
+    ]).then(([sessionData, sessions]) => {
+      setData(sessionData)
+      setAllSessions(sessions)
+    }).catch(console.error)
       .finally(() => setLoading(false))
   }, [params.id])
+
+  const circleSessions = useMemo(() => {
+    if (!data) return []
+    return allSessions
+      .filter((s) => s.circle_id === data.circle_id)
+      .sort((a, b) => a.date.localeCompare(b.date))
+  }, [allSessions, data])
+
+  const currentIndex = useMemo(() => {
+    return circleSessions.findIndex((s) => s.id === Number(params.id))
+  }, [circleSessions, params.id])
+
+  const prevSession = currentIndex > 0 ? circleSessions[currentIndex - 1] : null
+  const nextSession = currentIndex < circleSessions.length - 1 ? circleSessions[currentIndex + 1] : null
 
   const flushUpdates = useCallback(async () => {
     const updates = pendingUpdates.current
@@ -186,16 +211,12 @@ export default function SessionAttendancePage() {
     }
   }, [data])
 
-  const scheduleFlush = useCallback(() => {
-    if (flushTimer.current) clearTimeout(flushTimer.current)
-    flushTimer.current = setTimeout(flushUpdates, 400)
-  }, [flushUpdates])
-
   const queueUpdate = useCallback((studentId: number, update: { status?: string; notes?: string; sheikh_id?: number }) => {
     const existing = pendingUpdates.current.get(studentId) || {}
     pendingUpdates.current.set(studentId, { ...existing, ...update })
-    scheduleFlush()
-  }, [scheduleFlush])
+    if (flushTimer.current) clearTimeout(flushTimer.current)
+    flushTimer.current = setTimeout(flushUpdates, 50)
+  }, [flushUpdates])
 
   const handleUpdateStatus = useCallback((studentId: number, newStatus: string) => {
     setData((prev) => {
@@ -274,27 +295,45 @@ export default function SessionAttendancePage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-deep-800">تسجيل الحضور</h1>
-          <p className="text-deep-600/60 text-sm mt-1">
-            {editingDate ? (
-              <span className="inline-flex items-center gap-2">
-                <input
-                  type="date"
-                  value={editDateVal}
-                  onChange={(e) => setEditDateVal(e.target.value)}
-                  className="px-2 py-1 text-xs bg-white/50 dark:bg-slate-800/50 border border-water-300 rounded-xl"
-                  autoFocus
-                />
-                <button onClick={handleSaveDate} className="text-xs water-btn text-white px-2 py-1 rounded-lg">حفظ</button>
-                <button onClick={() => setEditingDate(false)} className="text-xs text-deep-400 px-2 py-1">إلغاء</button>
-              </span>
-            ) : (
-              <button onClick={() => { setEditDateVal(data.date); setEditingDate(true) }} className="hover:text-cyan-600 transition cursor-pointer">
-                {data.date}
-              </button>
-            )}
-            {' — '}{data.circle_name || `حلقة #${data.circle_id}`} — {presentCount}/{totalCount} حاضر
-          </p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => prevSession && router.push(`/sessions/${prevSession.id}`)}
+              disabled={!prevSession}
+              className={`text-xl p-2 rounded-xl transition ${prevSession ? 'hover:bg-water-200/50 text-deep-600 cursor-pointer' : 'text-deep-300/40'}`}
+            >
+              ‹
+            </button>
+            <div>
+              <h1 className="text-2xl font-bold text-deep-800">تسجيل الحضور</h1>
+              <p className="text-deep-600/60 text-sm mt-1">
+                {editingDate ? (
+                  <span className="inline-flex items-center gap-2">
+                    <input
+                      type="date"
+                      value={editDateVal}
+                      onChange={(e) => setEditDateVal(e.target.value)}
+                      className="px-2 py-1 text-xs bg-white/50 dark:bg-slate-800/50 border border-water-300 rounded-xl"
+                      autoFocus
+                    />
+                    <button onClick={handleSaveDate} className="text-xs water-btn text-white px-2 py-1 rounded-lg">حفظ</button>
+                    <button onClick={() => setEditingDate(false)} className="text-xs text-deep-400 px-2 py-1">إلغاء</button>
+                  </span>
+                ) : (
+                  <button onClick={() => { setEditDateVal(data.date); setEditingDate(true) }} className="hover:text-cyan-600 transition cursor-pointer">
+                    {getArabicDay(data.date)} — {data.date}
+                  </button>
+                )}
+                {' — '}{data.circle_name || `حلقة #${data.circle_id}`} — {presentCount}/{totalCount} حاضر
+              </p>
+            </div>
+            <button
+              onClick={() => nextSession && router.push(`/sessions/${nextSession.id}`)}
+              disabled={!nextSession}
+              className={`text-xl p-2 rounded-xl transition ${nextSession ? 'hover:bg-water-200/50 text-deep-600 cursor-pointer' : 'text-deep-300/40'}`}
+            >
+              ›
+            </button>
+          </div>
         </div>
         <div className="flex gap-3">
           <button

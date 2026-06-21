@@ -2,26 +2,19 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/api'
-import type { Circle, CircleAttendanceRate, SheikhInfo, StudentInfo, StudentStreak } from '@/lib/types'
+import type { Circle, CircleAttendanceRate, StudentStatsItem } from '@/lib/types'
 
 export default function ReportsPage() {
   const [circles, setCircles] = useState<Circle[]>([])
-  const [sheikhs, setSheikhs] = useState<SheikhInfo[]>([])
   const [selectedCircle, setSelectedCircle] = useState<number | null>(null)
   const [circleRate, setCircleRate] = useState<CircleAttendanceRate | null>(null)
-  const [students, setStudents] = useState<Record<number, StudentInfo>>({})
-  const [studentSheikhMap, setStudentSheikhMap] = useState<Record<number, string>>({})
-  const [studentStreaks, setStudentStreaks] = useState<Record<number, StudentStreak>>({})
+  const [studentStats, setStudentStats] = useState<StudentStatsItem[]>([])
   const [loading, setLoading] = useState(true)
   const [sortAsc, setSortAsc] = useState(false)
 
   const load = useCallback(async () => {
-    const [circlesData, sheikhsData] = await Promise.all([
-      api.getCircles(),
-      api.getSheikhs(),
-    ])
+    const circlesData = await api.getCircles()
     setCircles(circlesData)
-    setSheikhs(sheikhsData)
     setLoading(false)
   }, [])
 
@@ -30,33 +23,12 @@ export default function ReportsPage() {
   const handleSelectCircle = async (circleId: number) => {
     setSelectedCircle(circleId)
 
-    const [rate, _sheikhs] = await Promise.all([
+    const [rate, stats] = await Promise.all([
       api.getCircleAttendanceRate(circleId),
-      api.getSheikhs(),
+      api.getCircleStudentStats(circleId),
     ])
     setCircleRate(rate)
-    setSheikhs(_sheikhs)
-
-    const circleSheikhs = _sheikhs.filter((s: SheikhInfo) => s.circle_id === circleId)
-    const studentMap: Record<number, StudentInfo> = {}
-    const sheikhNameMap: Record<number, string> = {}
-
-    for (const sh of circleSheikhs) {
-      const studentList = await api.getSheikhStudents(sh.id)
-      for (const st of studentList) {
-        studentMap[st.id] = st
-        sheikhNameMap[st.id] = sh.name
-      }
-    }
-    setStudents(studentMap)
-    setStudentSheikhMap(sheikhNameMap)
-
-    const streaks: Record<number, StudentStreak> = {}
-    for (const stId of Object.keys(studentMap)) {
-      const streak = await api.getStudentStreak(Number(stId))
-      streaks[Number(stId)] = streak
-    }
-    setStudentStreaks(streaks)
+    setStudentStats(stats.students)
   }
 
   if (loading) return null
@@ -100,16 +72,16 @@ export default function ReportsPage() {
               </div>
             </div>
             <div className="mt-4 text-center">
-              <button onClick={() => setSortAsc(!sortAsc)} className="text-3xl font-bold text-cyan-700 dark:text-cyan-400 hover:underline cursor-pointer">
-                {circleRate.attendance_rate}% {sortAsc ? '↑' : '↓'}
-              </button>
+              <div className="text-3xl font-bold text-cyan-700 dark:text-cyan-400">
+                {circleRate.attendance_rate}%
+              </div>
               <div className="text-xs text-deep-500 mt-1">نسبة الحضور</div>
             </div>
           </div>
 
           <div className="glass-card rounded-2xl p-5">
             <h2 className="text-lg font-bold text-deep-800 mb-4">نسب حضور الطلاب</h2>
-            {Object.keys(studentStreaks).length === 0 ? (
+            {studentStats.length === 0 ? (
               <div className="text-center text-deep-500 py-4">لا يوجد طلاب</div>
             ) : (
               <div className="overflow-x-auto">
@@ -129,24 +101,20 @@ export default function ReportsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {Object.entries(studentStreaks)
-                      .sort(([, a], [, b]) => sortAsc ? a.attendance_rate - b.attendance_rate : b.attendance_rate - a.attendance_rate)
-                      .map(([studentId, streak]) => {
-                        const sid = Number(studentId)
-                        const student = students[sid]
-                        return (
-                          <tr key={studentId} className="border-b border-water-200/20 hover:bg-water-100/20">
-                            <td className="py-2 px-3 text-deep-800">{student?.name || `#${studentId}`}</td>
-                            <td className="py-2 px-3 text-center text-deep-500">{studentSheikhMap[sid] || ''}</td>
-                            <td className="py-2 px-3 text-center text-green-700 dark:text-green-400">{streak.total_attended}</td>
-                            <td className="py-2 px-3 text-center text-yellow-700 dark:text-yellow-400">{streak.total_excused}</td>
-                            <td className="py-2 px-3 text-center text-red-600 dark:text-red-400">{streak.total_absent}</td>
-                            <td className="py-2 px-3 text-center font-bold text-cyan-700 dark:text-cyan-400">
-                              {streak.attendance_rate}%
-                            </td>
-                          </tr>
-                        )
-                      })}
+                    {[...studentStats]
+                      .sort((a, b) => sortAsc ? a.attendance_rate - b.attendance_rate : b.attendance_rate - a.attendance_rate)
+                      .map((s) => (
+                        <tr key={s.student_id} className="border-b border-water-200/20 hover:bg-water-100/20">
+                          <td className="py-2 px-3 text-deep-800">{s.student_name}</td>
+                          <td className="py-2 px-3 text-center text-deep-500">{s.sheikh_name}</td>
+                          <td className="py-2 px-3 text-center text-green-700 dark:text-green-400">{s.present}</td>
+                          <td className="py-2 px-3 text-center text-yellow-700 dark:text-yellow-400">{s.excused}</td>
+                          <td className="py-2 px-3 text-center text-red-600 dark:text-red-400">{s.absent}</td>
+                          <td className="py-2 px-3 text-center font-bold text-cyan-700 dark:text-cyan-400">
+                            {s.attendance_rate}%
+                          </td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
               </div>
