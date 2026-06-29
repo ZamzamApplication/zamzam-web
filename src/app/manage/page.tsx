@@ -10,6 +10,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 function picUrl(path: string | null | undefined): string | null {
   if (!path) return null
   if (path.startsWith('http')) return path
+  if (path.startsWith('/')) return `${API_BASE}${path}`
   return `${API_BASE}${path}`
 }
 
