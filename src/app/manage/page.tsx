@@ -1288,6 +1288,27 @@ export default function ManagePage() {
           onMoved={() => { setMoveStudent(null); load() }}
         />
       )}
+
+      <div className="mt-8 pt-6 border-t border-water-200/30 flex justify-center">
+        <button
+          onClick={async () => {
+            try {
+              const blob = await api.exportDb()
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url
+              a.download = 'zamzam_backup.db'
+              a.click()
+              URL.revokeObjectURL(url)
+            } catch (err) {
+              alert('فشل تصدير قاعدة البيانات')
+            }
+          }}
+          className="water-btn-outline px-6 py-3 rounded-xl text-sm"
+        >
+          📥 تصدير قاعدة البيانات
+        </button>
+      </div>
     </div>
   )
 }

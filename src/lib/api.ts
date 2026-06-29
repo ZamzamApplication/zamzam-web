@@ -240,6 +240,17 @@ export const api = {
     return request(`/reports/student/${studentId}/streak`)
   },
 
+  exportDb() {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+    const url = `${API_BASE}/management/export-db`
+    return fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    }).then((res) => {
+      if (!res.ok) throw new Error('فشل التصدير')
+      return res.blob()
+    })
+  },
+
   getAttendanceGrid(sheikhId?: number, circleId?: number) {
     const params = new URLSearchParams()
     if (sheikhId) params.set('sheikh_id', String(sheikhId))
