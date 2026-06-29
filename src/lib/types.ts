@@ -117,6 +117,12 @@ export interface FilterRule {
   connector?: 'and' | 'or'
 }
 
+export interface FilterGroup {
+  id: string
+  connector?: 'and' | 'or'
+  rules: FilterRule[]
+}
+
 export interface AttendanceGridStudent {
   id: number
   name: string

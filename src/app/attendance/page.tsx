@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api } from '@/lib/api'
-import type { SheikhInfo, AttendanceGrid, FilterRule } from '@/lib/types'
+import type { SheikhInfo, AttendanceGrid, FilterRule, FilterGroup } from '@/lib/types'
 import AttendanceFilter from '@/components/AttendanceFilter'
 
 const STATUS_COLORS: Record<string, string> = {
@@ -18,15 +18,28 @@ function matchesRule(student: { records: Record<string, string> }, rule: FilterR
   return rule.operator === 'is' ? hasMatch : !hasMatch
 }
 
-function filterByRules(students: AttendanceGrid['students'], rules: FilterRule[]): AttendanceGrid['students'] {
-  if (rules.length === 0) return students
+function evaluateGroup(student: { records: Record<string, string> }, group: FilterGroup): boolean {
+  if (group.rules.length === 0) return true
+  let result = matchesRule(student, group.rules[0])
+  for (let i = 1; i < group.rules.length; i++) {
+    if (group.rules[i].connector === 'or') {
+      result = result || matchesRule(student, group.rules[i])
+    } else {
+      result = result && matchesRule(student, group.rules[i])
+    }
+  }
+  return result
+}
+
+function filterByGroups(students: AttendanceGrid['students'], groups: FilterGroup[]): AttendanceGrid['students'] {
+  if (groups.length === 0) return students
   return students.filter((st) => {
-    let result = matchesRule(st, rules[0])
-    for (let i = 1; i < rules.length; i++) {
-      if (rules[i].connector === 'or') {
-        result = result || matchesRule(st, rules[i])
+    let result = evaluateGroup(st, groups[0])
+    for (let i = 1; i < groups.length; i++) {
+      if (groups[i].connector === 'or') {
+        result = result || evaluateGroup(st, groups[i])
       } else {
-        result = result && matchesRule(st, rules[i])
+        result = result && evaluateGroup(st, groups[i])
       }
     }
     return result
@@ -40,7 +53,7 @@ export default function AttendancePage() {
   const [loading, setLoading] = useState(false)
 
   const [showFilter, setShowFilter] = useState(false)
-  const [filterRules, setFilterRules] = useState<FilterRule[]>([])
+  const [filterGroups, setFilterGroups] = useState<FilterGroup[]>([])
   const [searchQuery, setSearchQuery] = useState('')
 
   const loadGrid = useCallback(async (sheikhId: number | '') => {
@@ -64,18 +77,18 @@ export default function AttendancePage() {
     loadGrid(selectedSheikh)
   }, [selectedSheikh, loadGrid])
 
-  const hasActiveFilter = filterRules.length > 0
+  const hasActiveFilter = filterGroups.some((g) => g.rules.length > 0)
 
   const filteredSessions = useMemo(() => {
     if (!grid || !hasActiveFilter) return grid?.sessions || []
-    const ruleSessionIds = new Set(filterRules.map((r) => r.sessionId))
+    const ruleSessionIds = new Set(filterGroups.flatMap((g) => g.rules.map((r) => r.sessionId)))
     return grid.sessions.filter((s) => ruleSessionIds.has(s.id))
-  }, [grid, filterRules, hasActiveFilter])
+  }, [grid, filterGroups, hasActiveFilter])
 
   const ruleFilteredStudents = useMemo(() => {
     if (!grid) return []
-    return filterByRules(grid.students, filterRules)
-  }, [grid, filterRules])
+    return filterByGroups(grid.students, filterGroups)
+  }, [grid, filterGroups])
 
   const searchedStudents = useMemo(() => {
     if (!searchQuery.trim()) return ruleFilteredStudents
@@ -86,13 +99,13 @@ export default function AttendancePage() {
   const displaySessions = hasActiveFilter ? filteredSessions : grid?.sessions || []
   const displayStudents = searchedStudents
 
-  const handleApplyFilter = (rules: FilterRule[]) => {
-    setFilterRules(rules)
+  const handleApplyFilter = (groups: FilterGroup[]) => {
+    setFilterGroups(groups)
     setShowFilter(false)
   }
 
   const clearFilter = () => {
-    setFilterRules([])
+    setFilterGroups([])
   }
 
   return (
@@ -138,7 +151,7 @@ export default function AttendancePage() {
         {showFilter && grid && (
           <AttendanceFilter
             sessions={grid.sessions}
-            initialRules={filterRules}
+            initialGroups={filterGroups}
             onApply={handleApplyFilter}
             onCancel={() => setShowFilter(false)}
           />
