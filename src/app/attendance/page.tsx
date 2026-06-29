@@ -79,6 +79,12 @@ export default function AttendancePage() {
 
   const hasActiveFilter = filterGroups.some((g) => g.rules.length > 0)
 
+  const lastWeekCutoff = useMemo(() => {
+    const d = new Date()
+    d.setDate(d.getDate() - 7)
+    return d.toISOString().split('T')[0]
+  }, [])
+
   const filteredSessions = useMemo(() => {
     if (!grid || !hasActiveFilter) return grid?.sessions || []
     const ruleSessionIds = new Set(filterGroups.flatMap((g) => g.rules.map((r) => r.sessionId)))
@@ -96,7 +102,11 @@ export default function AttendancePage() {
     return ruleFilteredStudents.filter((st) => st.name.toLowerCase().includes(q))
   }, [ruleFilteredStudents, searchQuery])
 
-  const displaySessions = hasActiveFilter ? filteredSessions : grid?.sessions || []
+  const displaySessions = useMemo(() => {
+    const sessions = hasActiveFilter ? filteredSessions : grid?.sessions || []
+    return sessions.filter((s) => s.date >= lastWeekCutoff)
+  }, [grid, filteredSessions, hasActiveFilter, lastWeekCutoff])
+
   const displayStudents = searchedStudents
 
   const handleApplyFilter = (groups: FilterGroup[]) => {
@@ -172,7 +182,7 @@ export default function AttendancePage() {
 
       {grid && displaySessions.length === 0 && (
         <div className="glass-card rounded-2xl p-8 text-center text-deep-600/60">
-          {hasActiveFilter ? 'لا توجد جلسات تطابق التصفية' : 'لا توجد جلسات مؤكدة بعد'}
+          {hasActiveFilter ? 'لا توجد جلسات تطابق التصفية' : 'لا توجد جلسات في آخر 7 أيام'}
         </div>
       )}
 
