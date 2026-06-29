@@ -228,12 +228,20 @@ export const api = {
     return request(`/users/${id}`, { method: 'DELETE' })
   },
 
-  getCircleAttendanceRate(circleId: number) {
-    return request(`/reports/circle/${circleId}/rate`)
+  getCircleAttendanceRate(circleId: number, dateFrom?: string, dateTo?: string) {
+    const params = new URLSearchParams()
+    if (dateFrom) params.set('date_from', dateFrom)
+    if (dateTo) params.set('date_to', dateTo)
+    const qs = params.toString()
+    return request(`/reports/circle/${circleId}/rate${qs ? `?${qs}` : ''}`)
   },
 
-  getCircleStudentStats(circleId: number) {
-    return request(`/reports/circle/${circleId}/student-stats`)
+  getCircleStudentStats(circleId: number, dateFrom?: string, dateTo?: string) {
+    const params = new URLSearchParams()
+    if (dateFrom) params.set('date_from', dateFrom)
+    if (dateTo) params.set('date_to', dateTo)
+    const qs = params.toString()
+    return request(`/reports/circle/${circleId}/student-stats${qs ? `?${qs}` : ''}`)
   },
 
   getStudentStreak(studentId: number) {

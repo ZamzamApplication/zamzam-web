@@ -11,6 +11,8 @@ export default function ReportsPage() {
   const [studentStats, setStudentStats] = useState<StudentStatsItem[]>([])
   const [loading, setLoading] = useState(true)
   const [sortAsc, setSortAsc] = useState(false)
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
 
   const load = useCallback(async () => {
     const circlesData = await api.getCircles()
@@ -22,10 +24,24 @@ export default function ReportsPage() {
 
   const handleSelectCircle = async (circleId: number) => {
     setSelectedCircle(circleId)
+    setDateFrom('')
+    setDateTo('')
 
     const [rate, stats] = await Promise.all([
       api.getCircleAttendanceRate(circleId),
       api.getCircleStudentStats(circleId),
+    ])
+    setCircleRate(rate)
+    setStudentStats(stats.students)
+  }
+
+  const handleFilterByDate = async () => {
+    if (!selectedCircle) return
+    const df = dateFrom || undefined
+    const dt = dateTo || undefined
+    const [rate, stats] = await Promise.all([
+      api.getCircleAttendanceRate(selectedCircle, df, dt),
+      api.getCircleStudentStats(selectedCircle, df, dt),
     ])
     setCircleRate(rate)
     setStudentStats(stats.students)
@@ -48,6 +64,56 @@ export default function ReportsPage() {
           {circles.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
       </div>
+
+      {selectedCircle && (
+        <div className="glass-card rounded-2xl p-5 mb-6">
+          <label className="block text-sm font-medium text-deep-700 mb-2">نطاق التاريخ</label>
+          <div className="flex gap-3 items-end">
+            <div className="flex-1">
+              <label className="block text-xs text-deep-500 mb-1">من</label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="w-full px-3 py-2 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-water-400"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs text-deep-500 mb-1">إلى</label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="w-full px-3 py-2 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-water-400"
+              />
+            </div>
+            <button
+              onClick={handleFilterByDate}
+              className="px-4 py-2 water-btn text-white rounded-xl text-sm font-medium whitespace-nowrap"
+            >
+              تصفية
+            </button>
+            {(dateFrom || dateTo) && (
+              <button
+                onClick={async () => {
+                  setDateFrom('')
+                  setDateTo('')
+                  if (!selectedCircle) return
+                  const [rate, stats] = await Promise.all([
+                    api.getCircleAttendanceRate(selectedCircle),
+                    api.getCircleStudentStats(selectedCircle),
+                  ])
+                  setCircleRate(rate)
+                  setStudentStats(stats.students)
+                }}
+                className="px-3 py-2 rounded-xl text-sm border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50/50 dark:hover:bg-red-900/30 transition whitespace-nowrap"
+              >
+                إلغاء
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {circleRate && (
         <>
