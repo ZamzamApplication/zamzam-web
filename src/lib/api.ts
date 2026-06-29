@@ -242,7 +242,7 @@ export const api = {
 
   exportDb() {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-    const url = `${API_BASE}/management/export-db`
+    const url = `${API_BASE}/export-db`
     return fetch(url, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     }).then((res) => {
