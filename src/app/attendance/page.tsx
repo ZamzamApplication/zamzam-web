@@ -18,11 +18,18 @@ function matchesRule(student: { records: Record<string, string> }, rule: FilterR
   return rule.operator === 'is' ? hasMatch : !hasMatch
 }
 
-function filterByRules(students: AttendanceGrid['students'], rules: FilterRule[], logic: 'and' | 'or'): AttendanceGrid['students'] {
+function filterByRules(students: AttendanceGrid['students'], rules: FilterRule[]): AttendanceGrid['students'] {
   if (rules.length === 0) return students
   return students.filter((st) => {
-    if (logic === 'and') return rules.every((r) => matchesRule(st, r))
-    return rules.some((r) => matchesRule(st, r))
+    let result = matchesRule(st, rules[0])
+    for (let i = 1; i < rules.length; i++) {
+      if (rules[i].connector === 'or') {
+        result = result || matchesRule(st, rules[i])
+      } else {
+        result = result && matchesRule(st, rules[i])
+      }
+    }
+    return result
   })
 }
 
@@ -34,7 +41,6 @@ export default function AttendancePage() {
 
   const [showFilter, setShowFilter] = useState(false)
   const [filterRules, setFilterRules] = useState<FilterRule[]>([])
-  const [filterLogic, setFilterLogic] = useState<'and' | 'or'>('and')
   const [searchQuery, setSearchQuery] = useState('')
 
   const loadGrid = useCallback(async (sheikhId: number | '') => {
@@ -68,8 +74,8 @@ export default function AttendancePage() {
 
   const ruleFilteredStudents = useMemo(() => {
     if (!grid) return []
-    return filterByRules(grid.students, filterRules, filterLogic)
-  }, [grid, filterRules, filterLogic])
+    return filterByRules(grid.students, filterRules)
+  }, [grid, filterRules])
 
   const searchedStudents = useMemo(() => {
     if (!searchQuery.trim()) return ruleFilteredStudents
@@ -80,15 +86,13 @@ export default function AttendancePage() {
   const displaySessions = hasActiveFilter ? filteredSessions : grid?.sessions || []
   const displayStudents = searchedStudents
 
-  const handleApplyFilter = (rules: FilterRule[], logic: 'and' | 'or') => {
+  const handleApplyFilter = (rules: FilterRule[]) => {
     setFilterRules(rules)
-    setFilterLogic(logic)
     setShowFilter(false)
   }
 
   const clearFilter = () => {
     setFilterRules([])
-    setFilterLogic('and')
   }
 
   return (
@@ -135,7 +139,6 @@ export default function AttendancePage() {
           <AttendanceFilter
             sessions={grid.sessions}
             initialRules={filterRules}
-            initialLogic={filterLogic}
             onApply={handleApplyFilter}
             onCancel={() => setShowFilter(false)}
           />

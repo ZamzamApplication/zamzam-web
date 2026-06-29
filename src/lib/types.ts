@@ -114,6 +114,7 @@ export interface FilterRule {
   sessionId: number
   operator: 'is' | 'is_not'
   status: string
+  connector?: 'and' | 'or'
 }
 
 export interface AttendanceGridStudent {
