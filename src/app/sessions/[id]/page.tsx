@@ -200,6 +200,14 @@ export default function SessionAttendancePage() {
   const prevSession = currentIndex > 0 ? circleSessions[currentIndex - 1] : null
   const nextSession = currentIndex < circleSessions.length - 1 ? circleSessions[currentIndex + 1] : null
 
+  function getStudentStatus(sessionData: SessionAttendance, studentId: number): string {
+    for (const g of sessionData.sheikh_groups) {
+      const s = g.students.find((st) => st.id === studentId)
+      if (s) return s.status
+    }
+    return 'غياب'
+  }
+
   const flushUpdates = useCallback(async () => {
     const updates = pendingUpdates.current
     if (updates.size === 0) return
@@ -217,7 +225,8 @@ export default function SessionAttendancePage() {
       updates.forEach((update, studentId) => {
         if (!data) return
         const sheikhId = update.sheikh_id !== undefined ? update.sheikh_id : undefined
-        promises.push(api.upsertAttendance(data.session_id, studentId, update.status || 'غياب', update.notes, sheikhId))
+        const status = update.status !== undefined ? update.status : getStudentStatus(data, studentId)
+        promises.push(api.upsertAttendance(data.session_id, studentId, status, update.notes, sheikhId))
       })
       await Promise.all(promises)
     } catch (err) {
