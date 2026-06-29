@@ -13,7 +13,7 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 function matchesRule(student: { records: Record<string, string> }, rule: FilterRule): boolean {
-  const status = student.records[String(rule.sessionId)] || 'غياب'
+  const status = student.records[String(rule.sessionId)] || 'لا ينطبق'
   const hasMatch = status === rule.status
   return rule.operator === 'is' ? hasMatch : !hasMatch
 }
@@ -176,7 +176,7 @@ export default function AttendancePage() {
                 <tr key={student.id} className="border-b border-water-200/20 hover:bg-water-100/20">
                   <td className="py-2.5 px-3 text-deep-800 font-medium sticky right-0 bg-white/40 dark:bg-slate-800/40 backdrop-blur-sm z-10">{student.name}</td>
                   {displaySessions.map((s) => {
-                    const status = student.records[String(s.id)] || 'غياب'
+                    const status = student.records[String(s.id)] || 'لا ينطبق'
                     return (
                       <td key={s.id} className="text-center py-2 px-2">
                         <span className={`inline-block px-2 py-1 rounded-lg text-xs font-medium ${STATUS_COLORS[status] || STATUS_COLORS['غياب']}`}>
