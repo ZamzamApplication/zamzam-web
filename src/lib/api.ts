@@ -74,10 +74,10 @@ export const api = {
     return request(`/sessions/${sessionId}`, { method: 'DELETE' })
   },
 
-  createSession(sessionDate: string, circleId: number) {
+  createSession(sessionDate: string, circleId: number, defaultStatus?: string) {
     return request('/sessions/', {
       method: 'POST',
-      body: JSON.stringify({ session_date: sessionDate, circle_id: circleId }),
+      body: JSON.stringify({ session_date: sessionDate, circle_id: circleId, default_status: defaultStatus || 'غياب' }),
     })
   },
 

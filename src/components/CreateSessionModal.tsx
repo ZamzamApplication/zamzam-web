@@ -13,6 +13,7 @@ export default function CreateSessionModal({
 }) {
   const [sessionDate, setSessionDate] = useState('')
   const [circleId, setCircleId] = useState<number | ''>('')
+  const [defaultStatus, setDefaultStatus] = useState('غياب')
   const [circles, setCircles] = useState<Circle[]>([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -27,7 +28,7 @@ export default function CreateSessionModal({
     setError('')
     setLoading(true)
     try {
-      const res = await api.createSession(sessionDate, Number(circleId))
+      const res = await api.createSession(sessionDate, Number(circleId), defaultStatus)
       onCreated(res.id)
     } catch (err: any) {
       setError(err.message || 'فشل إنشاء الجلسة')
@@ -69,6 +70,19 @@ export default function CreateSessionModal({
               className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400"
               required
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-deep-700 mb-1">الحالة الافتراضية</label>
+            <select
+              value={defaultStatus}
+              onChange={(e) => setDefaultStatus(e.target.value)}
+              className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400"
+            >
+              <option value="غياب">غياب</option>
+              <option value="حاضر">حاضر</option>
+              <option value="غياب بعذر">غياب بعذر</option>
+              <option value="لا ينطبق">لا ينطبق</option>
+            </select>
           </div>
 
           <div className="flex gap-3 pt-2">
