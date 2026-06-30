@@ -759,27 +759,21 @@ function MoveSheikhModal({ student, currentSheikhName, sheikhs, onClose, onMoved
 
 // ─── Student Profile Overlay ─────────────────────────────────────────────────
 
-function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete, onMove }: {
+function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete, onMove, onZoomPic }: {
   student: StudentInfo
   sheikhName: string
   onClose: () => void
   onEdit: () => void
   onDelete: () => void
   onMove: () => void
+  onZoomPic?: (url: string) => void
 }) {
-  const [showPic, setShowPic] = useState(false)
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={onClose}>
-      {showPic && student.profile_pic && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowPic(false)}>
-          <img src={picUrl(student.profile_pic)!} alt="" className="max-w-[90vw] max-h-[90vh] rounded-2xl shadow-2xl" onClick={(e) => e.stopPropagation()} />
-        </div>
-      )}
       <div className="glass-strong rounded-2xl p-6 w-full max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-col items-center mb-4">
           {student.profile_pic ? (
-            <img src={picUrl(student.profile_pic)!} alt="" className="w-20 h-20 rounded-full object-cover border-2 border-water-300 mb-3 cursor-pointer hover:opacity-80 transition" onClick={() => setShowPic(true)} />
+            <img src={picUrl(student.profile_pic)!} alt="" className="w-20 h-20 rounded-full object-cover border-2 border-water-300 mb-3 cursor-pointer hover:opacity-80 transition" onClick={() => onZoomPic?.(picUrl(student.profile_pic)!)} />
           ) : (
             <div className="w-20 h-20 rounded-full bg-water-200/50 flex items-center justify-center text-deep-400 text-2xl border-2 border-water-300 mb-3">
               {student.name.charAt(0)}
@@ -889,6 +883,7 @@ function StudentStatusTabs({
   onDragStart,
   onDropReorder,
   onDropOnSheikh,
+  onZoomPic,
 }: {
   students: StudentInfo[]
   sheikhName: string
@@ -899,6 +894,7 @@ function StudentStatusTabs({
   onDragStart: (studentId: number, fromSheikhId: number) => void
   onDropReorder: (sheikhId: number, targetStudentId?: number) => void
   onDropOnSheikh: (sheikhId: number) => void
+  onZoomPic?: (url: string) => void
 }) {
   const [openTab, setOpenTab] = useState('مقيد')
 
@@ -967,7 +963,7 @@ function StudentStatusTabs({
                 >
                   <div className="flex items-center gap-3 cursor-pointer" onClick={() => onViewStudent(s)}>
                     {s.profile_pic ? (
-                      <img src={picUrl(s.profile_pic)!} alt="" className="w-8 h-8 rounded-full object-cover border border-water-300" />
+                      <img src={picUrl(s.profile_pic)!} alt="" className="w-8 h-8 rounded-full object-cover border border-water-300 cursor-pointer hover:opacity-80 transition" onClick={(e) => { e.stopPropagation(); onZoomPic?.(picUrl(s.profile_pic)!) }} />
                     ) : (
                       <div className="w-8 h-8 rounded-full bg-water-200/50 flex items-center justify-center text-deep-400 text-xs border border-water-300">
                         {s.name.charAt(0)}
@@ -1206,6 +1202,7 @@ export default function ManagePage() {
                       onDragStart={handleDragStart}
                       onDropReorder={handleDropReorder}
                       onDropOnSheikh={handleDropOnSheikh}
+                      onZoomPic={(url) => setPreviewPic(url)}
                     />
                    )}
                 </div>
@@ -1319,6 +1316,7 @@ export default function ManagePage() {
             setMoveStudent(viewStudent)
             setViewStudent(null)
           }}
+          onZoomPic={(url) => setPreviewPic(url)}
         />
       )}
       {moveStudent && (
