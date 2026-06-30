@@ -767,12 +767,19 @@ function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete, onMo
   onDelete: () => void
   onMove: () => void
 }) {
+  const [showPic, setShowPic] = useState(false)
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={onClose}>
+      {showPic && student.profile_pic && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowPic(false)}>
+          <img src={picUrl(student.profile_pic)!} alt="" className="max-w-[90vw] max-h-[90vh] rounded-2xl shadow-2xl" onClick={(e) => e.stopPropagation()} />
+        </div>
+      )}
       <div className="glass-strong rounded-2xl p-6 w-full max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-col items-center mb-4">
           {student.profile_pic ? (
-            <img src={picUrl(student.profile_pic)!} alt="" className="w-20 h-20 rounded-full object-cover border-2 border-water-300 mb-3" />
+            <img src={picUrl(student.profile_pic)!} alt="" className="w-20 h-20 rounded-full object-cover border-2 border-water-300 mb-3 cursor-pointer hover:opacity-80 transition" onClick={() => setShowPic(true)} />
           ) : (
             <div className="w-20 h-20 rounded-full bg-water-200/50 flex items-center justify-center text-deep-400 text-2xl border-2 border-water-300 mb-3">
               {student.name.charAt(0)}
