@@ -85,17 +85,22 @@ export const api = {
     return request('/sheikhs')
   },
 
-  createSheikh(name: string, circleId: number, phone?: string) {
+  createSheikh(name: string, circleId: number, phone?: string, whatsappGroupId?: string) {
     return request('/sheikhs', {
       method: 'POST',
-      body: JSON.stringify({ name, circle_id: circleId, phone: phone || null }),
+      body: JSON.stringify({ name, circle_id: circleId, phone: phone || null, whatsapp_group_id: whatsappGroupId || null }),
     })
   },
 
-  updateSheikh(id: number, name?: string, phone?: string, circleId?: number) {
+  updateSheikh(id: number, name?: string, phone?: string, whatsappGroupId?: string, circleId?: number) {
+    const body: Record<string, unknown> = {}
+    if (name !== undefined) body.name = name
+    if (phone !== undefined) body.phone = phone ?? null
+    if (whatsappGroupId !== undefined) body.whatsapp_group_id = whatsappGroupId ?? null
+    if (circleId !== undefined) body.circle_id = circleId
     return request(`/sheikhs/${id}`, {
       method: 'PUT',
-      body: JSON.stringify({ name, phone: phone ?? null, circle_id: circleId }),
+      body: JSON.stringify(body),
     })
   },
 
@@ -199,17 +204,21 @@ export const api = {
     return request('/reports/circles')
   },
 
-  createCircle(name: string, description?: string) {
+  createCircle(name: string, description?: string, maxWarnings?: number) {
     return request('/circles', {
       method: 'POST',
-      body: JSON.stringify({ name, description: description || null }),
+      body: JSON.stringify({ name, description: description || null, max_warnings: maxWarnings ?? 3 }),
     })
   },
 
-  updateCircle(id: number, name?: string, description?: string) {
+  updateCircle(id: number, name?: string, description?: string, maxWarnings?: number) {
+    const body: Record<string, unknown> = {}
+    if (name !== undefined) body.name = name
+    if (description !== undefined) body.description = description ?? null
+    if (maxWarnings !== undefined) body.max_warnings = maxWarnings
     return request(`/circles/${id}`, {
       method: 'PUT',
-      body: JSON.stringify({ name, description: description ?? null }),
+      body: JSON.stringify(body),
     })
   },
 
@@ -299,5 +308,19 @@ export const api = {
     if (sessionIds && sessionIds.length > 0) params.set('session_ids', sessionIds.join(','))
     const qs = params.toString()
     return request(`/reports/attendance-grid${qs ? `?${qs}` : ''}`)
+  },
+
+  getWarnings(sheikhId?: number) {
+    const params = new URLSearchParams()
+    if (sheikhId) params.set('sheikh_id', String(sheikhId))
+    const qs = params.toString()
+    return request(`/warnings${qs ? `?${qs}` : ''}`)
+  },
+
+  sendWarnings(warningIds: number[]) {
+    return request('/warnings/send', {
+      method: 'POST',
+      body: JSON.stringify({ warning_ids: warningIds }),
+    })
   },
 }

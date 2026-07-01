@@ -9,6 +9,7 @@ export interface Circle {
   id: number
   name: string
   description?: string
+  max_warnings?: number
 }
 
 export interface Session {
@@ -48,6 +49,7 @@ export interface SheikhInfo {
   id: number
   name: string
   phone?: string
+  whatsapp_group_id?: string
   circle_id: number
   circle_name: string
 }
@@ -62,6 +64,22 @@ export interface ParentPhone {
 export interface WarningInfo {
   id: number
   reason: string
+  warning_number: number
+  sent: boolean
+  sent_at?: string
+  created_at: string
+}
+
+export interface WarningRow {
+  id: number
+  student_id: number
+  student_name: string
+  sheikh_id: number | null
+  sheikh_name: string | null
+  reason: string
+  warning_number: number
+  sent: boolean
+  sent_at: string | null
   created_at: string
 }
 

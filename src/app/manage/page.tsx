@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
-import type { Circle, SheikhInfo, StudentInfo, UserInfo, WarningInfo } from '@/lib/types'
+import type { Circle, SheikhInfo, StudentInfo, UserInfo, WarningInfo, WarningRow } from '@/lib/types'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -39,6 +39,7 @@ function ErrorMsg({ error }: { error: string }) {
 function AddCircleModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [maxWarnings, setMaxWarnings] = useState(3)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -48,7 +49,7 @@ function AddCircleModal({ onClose, onCreated }: { onClose: () => void; onCreated
     setLoading(true)
     setError('')
     try {
-      await api.createCircle(name, description || undefined)
+      await api.createCircle(name, description || undefined, maxWarnings)
       onCreated()
     } catch (err: any) {
       setError(err.message || 'فشل الإضافة')
@@ -63,6 +64,7 @@ function AddCircleModal({ onClose, onCreated }: { onClose: () => void; onCreated
       <form onSubmit={handleSubmit} className="space-y-4">
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="اسم الحلقة" required className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
         <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="وصف (اختياري)" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        <input value={maxWarnings} onChange={(e) => setMaxWarnings(Number(e.target.value))} type="number" min="1" placeholder="الحد الأقصى للإنذارات" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
         <div className="flex gap-3 pt-2">
           <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 water-btn-outline rounded-xl text-sm">إلغاء</button>
           <button type="submit" disabled={loading} className="flex-1 px-4 py-2.5 water-btn text-white rounded-xl text-sm font-medium disabled:opacity-50">{loading ? 'جاري...' : 'إضافة'}</button>
@@ -75,6 +77,7 @@ function AddCircleModal({ onClose, onCreated }: { onClose: () => void; onCreated
 function EditCircleModal({ circle, onClose, onUpdated }: { circle: Circle; onClose: () => void; onUpdated: () => void }) {
   const [name, setName] = useState(circle.name)
   const [description, setDescription] = useState(circle.description || '')
+  const [maxWarnings, setMaxWarnings] = useState(circle.max_warnings || 3)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -84,7 +87,7 @@ function EditCircleModal({ circle, onClose, onUpdated }: { circle: Circle; onClo
     setLoading(true)
     setError('')
     try {
-      await api.updateCircle(circle.id, name, description || undefined)
+      await api.updateCircle(circle.id, name, description || undefined, maxWarnings)
       onUpdated()
     } catch (err: any) {
       setError(err.message || 'فشل التحديث')
@@ -99,6 +102,7 @@ function EditCircleModal({ circle, onClose, onUpdated }: { circle: Circle; onClo
       <form onSubmit={handleSubmit} className="space-y-4">
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="اسم الحلقة" required className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
         <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="وصف (اختياري)" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        <input value={maxWarnings} onChange={(e) => setMaxWarnings(Number(e.target.value))} type="number" min="1" placeholder="الحد الأقصى للإنذارات" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
         <div className="flex gap-3 pt-2">
           <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 water-btn-outline rounded-xl text-sm">إلغاء</button>
           <button type="submit" disabled={loading} className="flex-1 px-4 py-2.5 water-btn text-white rounded-xl text-sm font-medium disabled:opacity-50">{loading ? 'جاري...' : 'حفظ'}</button>
@@ -114,6 +118,7 @@ function AddSheikhModal({ circles, onClose, onCreated }: { circles: Circle[]; on
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [circleId, setCircleId] = useState(circles[0]?.id || 1)
+  const [whatsappGroupId, setWhatsappGroupId] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -123,7 +128,7 @@ function AddSheikhModal({ circles, onClose, onCreated }: { circles: Circle[]; on
     setLoading(true)
     setError('')
     try {
-      await api.createSheikh(name, circleId, phone || undefined)
+      await api.createSheikh(name, circleId, phone || undefined, whatsappGroupId || undefined)
       onCreated()
     } catch (err: any) {
       setError(err.message || 'فشل الإضافة')
@@ -141,6 +146,7 @@ function AddSheikhModal({ circles, onClose, onCreated }: { circles: Circle[]; on
         <select value={circleId} onChange={(e) => setCircleId(Number(e.target.value))} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
           {circles.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
+        <input value={whatsappGroupId} onChange={(e) => setWhatsappGroupId(e.target.value)} placeholder="معرف مجموعة واتساب (اختياري)" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
         <div className="flex gap-3 pt-2">
           <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 water-btn-outline rounded-xl text-sm">إلغاء</button>
           <button type="submit" disabled={loading} className="flex-1 px-4 py-2.5 water-btn text-white rounded-xl text-sm font-medium disabled:opacity-50">{loading ? 'جاري...' : 'إضافة'}</button>
@@ -154,6 +160,7 @@ function EditSheikhModal({ sheikh, circles, onClose, onUpdated }: { sheikh: Shei
   const [name, setName] = useState(sheikh.name)
   const [phone, setPhone] = useState(sheikh.phone || '')
   const [circleId, setCircleId] = useState(sheikh.circle_id)
+  const [whatsappGroupId, setWhatsappGroupId] = useState(sheikh.whatsapp_group_id || '')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -163,7 +170,7 @@ function EditSheikhModal({ sheikh, circles, onClose, onUpdated }: { sheikh: Shei
     setLoading(true)
     setError('')
     try {
-      await api.updateSheikh(sheikh.id, name, phone || undefined, circleId)
+      await api.updateSheikh(sheikh.id, name, phone || undefined, whatsappGroupId || undefined, circleId)
       onUpdated()
     } catch (err: any) {
       setError(err.message || 'فشل التحديث')
@@ -181,6 +188,7 @@ function EditSheikhModal({ sheikh, circles, onClose, onUpdated }: { sheikh: Shei
         <select value={circleId} onChange={(e) => setCircleId(Number(e.target.value))} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
           {circles.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
+        <input value={whatsappGroupId} onChange={(e) => setWhatsappGroupId(e.target.value)} placeholder="معرف مجموعة واتساب (اختياري)" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
         <div className="flex gap-3 pt-2">
           <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 water-btn-outline rounded-xl text-sm">إلغاء</button>
           <button type="submit" disabled={loading} className="flex-1 px-4 py-2.5 water-btn text-white rounded-xl text-sm font-medium disabled:opacity-50">{loading ? 'جاري...' : 'حفظ'}</button>
@@ -370,7 +378,7 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
     setError('')
     try {
       const result = await api.addWarning(student.id, newWarningReason)
-      setWarnings([{ id: result.id, reason: result.reason, created_at: result.created_at }, ...warnings])
+      setWarnings([{ id: result.id, reason: result.reason, warning_number: result.warning_number, sent: result.sent, sent_at: result.sent_at, created_at: result.created_at }, ...warnings])
       setNewWarningReason('')
     } catch (err: any) {
       setError(err.message || 'فشل إضافة الإنذار')
@@ -1036,6 +1044,143 @@ function StudentStatusTabs({
 }
 
 
+// ─── Warnings Tab ────────────────────────────────────────────────────────────
+
+function WarningsTab({ sheikhs }: { sheikhs: SheikhInfo[] }) {
+  const [warnings, setWarnings] = useState<WarningRow[]>([])
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [sending, setSending] = useState(false)
+  const [sheikhFilter, setSheikhFilter] = useState<number | ''>('')
+  const [loading, setLoading] = useState(true)
+  const [result, setResult] = useState<{ success: number; failed: number } | null>(null)
+
+  const loadWarnings = useCallback(async () => {
+    setLoading(true)
+    try {
+      const data = await api.getWarnings(sheikhFilter || undefined)
+      setWarnings(data)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoading(false)
+    }
+  }, [sheikhFilter])
+
+  useEffect(() => { loadWarnings() }, [loadWarnings])
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleAll = () => {
+    if (selectedIds.size === warnings.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(warnings.map((w) => w.id)))
+    }
+  }
+
+  const handleSend = async () => {
+    if (selectedIds.size === 0) return
+    if (!confirm('إرسال الإنذارات المحددة؟')) return
+    setSending(true)
+    setResult(null)
+    try {
+      const res = await api.sendWarnings(Array.from(selectedIds))
+      const success = res.results.filter((r: any) => r.success).length
+      const failed = res.results.filter((r: any) => !r.success).length
+      setResult({ success, failed })
+      setSelectedIds(new Set())
+      loadWarnings()
+    } catch (e: any) {
+      setResult({ success: 0, failed: selectedIds.size })
+    } finally {
+      setSending(false)
+    }
+  }
+
+  if (loading) return <div className="text-center py-8 text-deep-400">جاري التحميل...</div>
+
+  return (
+    <div>
+      <div className="flex items-center gap-3 mb-4">
+        <select
+          value={sheikhFilter}
+          onChange={(e) => setSheikhFilter(e.target.value ? Number(e.target.value) : '')}
+          className="px-4 py-2 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400 text-sm"
+        >
+          <option value="">كل الشيوخ</option>
+          {sheikhs.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+        </select>
+        <button
+          onClick={handleSend}
+          disabled={selectedIds.size === 0 || sending}
+          className="water-btn text-white px-4 py-2 rounded-xl text-sm font-medium disabled:opacity-50"
+        >
+          {sending ? 'جاري الإرسال...' : `إرسال المحدد (${selectedIds.size})`}
+        </button>
+      </div>
+
+      {result && (
+        <div className={`mb-4 px-4 py-2 rounded-xl text-sm text-center ${
+          result.failed > 0 ? 'bg-red-50/80 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800' : 'bg-emerald-50/80 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+        }`}>
+          تم إرسال {result.success} إنذارات بنجاح{result.failed > 0 ? `، فشل ${result.failed}` : ''}
+        </div>
+      )}
+
+      <div className="glass-card rounded-2xl overflow-hidden">
+        {warnings.length === 0 ? (
+          <div className="p-8 text-center text-deep-400">لا يوجد إنذارات</div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-water-100/30 border-b border-water-200/30">
+                <th className="px-3 py-3 text-right">
+                  <input type="checkbox" checked={selectedIds.size === warnings.length && warnings.length > 0} onChange={toggleAll} className="rounded" />
+                </th>
+                <th className="px-3 py-3 text-right text-deep-600 font-medium">#</th>
+                <th className="px-3 py-3 text-right text-deep-600 font-medium">الطالب</th>
+                <th className="px-3 py-3 text-right text-deep-600 font-medium">الشيخ</th>
+                <th className="px-3 py-3 text-right text-deep-600 font-medium">السبب</th>
+                <th className="px-3 py-3 text-right text-deep-600 font-medium">التاريخ</th>
+                <th className="px-3 py-3 text-right text-deep-600 font-medium">الحالة</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-water-200/30">
+              {warnings.map((w) => (
+                <tr key={w.id} className="hover:bg-water-100/30">
+                  <td className="px-3 py-3">
+                    <input type="checkbox" checked={selectedIds.has(w.id)} onChange={() => toggleSelect(w.id)} className="rounded" />
+                  </td>
+                  <td className="px-3 py-3 text-deep-800 font-medium">{w.warning_number}</td>
+                  <td className="px-3 py-3 text-deep-800">{w.student_name}</td>
+                  <td className="px-3 py-3 text-deep-600">{w.sheikh_name || '-'}</td>
+                  <td className="px-3 py-3 text-deep-600 max-w-[200px] truncate">{w.reason}</td>
+                  <td className="px-3 py-3 text-deep-600 text-xs">{new Date(w.created_at).toLocaleDateString('ar-SA')}</td>
+                  <td className="px-3 py-3">
+                    {w.sent ? (
+                      <span className="text-emerald-600 bg-emerald-50/80 dark:bg-emerald-900/30 dark:text-emerald-300 px-2 py-0.5 rounded-full text-xs">تم الإرسال{w.sent_at ? ` (${new Date(w.sent_at).toLocaleDateString('ar-SA')})` : ''}</span>
+                    ) : (
+                      <span className="text-deep-400 bg-water-100/50 px-2 py-0.5 rounded-full text-xs">غير مرسل</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  )
+}
+
+
 // ─── Main Page ──────────────────────────────────────────────────────────────
 
 export default function ManagePage() {
@@ -1043,7 +1188,7 @@ export default function ManagePage() {
   const [sheikhs, setSheikhs] = useState<(SheikhInfo & { students: StudentInfo[] })[]>([])
   const [circles, setCircles] = useState<Circle[]>([])
   const [users, setUsers] = useState<UserInfo[]>([])
-  const [activeTab, setActiveTab] = useState<'sheikhs' | 'users' | 'circles'>('sheikhs')
+  const [activeTab, setActiveTab] = useState<'sheikhs' | 'users' | 'circles' | 'warnings'>('sheikhs')
   const [loading, setLoading] = useState(true)
   const [expandedSheikhs, setExpandedSheikhs] = useState<Set<number>>(new Set())
 
@@ -1183,6 +1328,7 @@ export default function ManagePage() {
     { key: 'sheikhs', label: 'الشيوخ والطلاب' },
     { key: 'users', label: 'المستخدمين' },
     { key: 'circles', label: 'الحلقات' },
+    { key: 'warnings', label: 'الإنذارات' },
   ] as const
 
   return (
@@ -1294,6 +1440,11 @@ export default function ManagePage() {
             </div>
           )}
         </div>
+      )}
+
+      {/* ─── Warnings Tab ────────────────────────────────────────────────── */}
+      {activeTab === 'warnings' && (
+        <WarningsTab sheikhs={sheikhs} />
       )}
 
       {/* ─── Circles Tab ────────────────────────────────────────────────── */}
