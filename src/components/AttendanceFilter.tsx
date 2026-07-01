@@ -3,6 +3,14 @@
 import { useState } from 'react'
 import type { AttendanceGridSession, FilterRule, FilterGroup } from '@/lib/types'
 
+const WEEKDAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
+
+function formatDateWithWeekday(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00')
+  const wd = (d.getDay() + 1) % 7
+  return `${WEEKDAY_NAMES[wd]} ${dateStr}`
+}
+
 const STATUS_OPTIONS = ['حاضر', 'غياب', 'غياب بعذر', 'لا ينطبق']
 const OPERATORS = [
   { value: 'is', label: 'يساوي' },
@@ -151,7 +159,7 @@ export default function AttendanceFilter({ sessions, initialGroups, onApply, onC
                   onChange={(e) => updateRule(gi, ri, 'sessionId', Number(e.target.value))}
                   className="flex-1 min-w-0 px-2.5 py-1.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-water-400"
                 >
-                  {sessions.map((s) => <option key={s.id} value={s.id}>{s.date}</option>)}
+                  {sessions.map((s) => <option key={s.id} value={s.id}>{formatDateWithWeekday(s.date)}</option>)}
                 </select>
                 <select
                   value={rule.operator}

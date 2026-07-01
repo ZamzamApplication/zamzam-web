@@ -11,6 +11,14 @@ interface SavedFilter {
   groups: FilterGroup[]
 }
 
+const WEEKDAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
+
+function formatDateWithWeekday(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00')
+  const wd = (d.getDay() + 1) % 7
+  return `${WEEKDAY_NAMES[wd]} ${dateStr}`
+}
+
 const STATUS_COLORS: Record<string, string> = {
   'حاضر': 'bg-green-200/60 text-green-800 dark:bg-green-900/40 dark:text-green-300',
   'غياب': 'bg-gray-200/50 text-gray-600 dark:bg-gray-700/40 dark:text-gray-400',
@@ -293,7 +301,7 @@ export default function AttendancePage() {
               <tr className="border-b border-water-200/30">
                 <th className="text-right py-3 px-3 text-deep-700 sticky right-0 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm z-10 min-w-[120px]">الطالب</th>
                 {displaySessions.map((s) => (
-                  <th key={s.id} className="text-center py-3 px-2 text-deep-600 text-xs whitespace-nowrap min-w-[70px]">{s.date}</th>
+                  <th key={s.id} className="text-center py-3 px-2 text-deep-600 text-xs whitespace-nowrap min-w-[90px]">{formatDateWithWeekday(s.date)}</th>
                 ))}
               </tr>
             </thead>
