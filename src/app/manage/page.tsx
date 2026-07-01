@@ -336,7 +336,8 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
   const [editingWarningId, setEditingWarningId] = useState<number | null>(null)
   const [editingWarningText, setEditingWarningText] = useState('')
   const [savingWarningEdit, setSavingWarningEdit] = useState(false)
-  const [uploadingPic, setUploadingPic] = useState(false)
+  const [profilePicFile, setProfilePicFile] = useState<File | null>(null)
+  const [profilePicPreview, setProfilePicPreview] = useState('')
   const [parentPhones, setParentPhones] = useState<{ phone_number?: string; parent_type?: string; name?: string }[]>(
     student.parent_phones?.map((p) => ({ phone_number: p.phone_number, parent_type: p.parent_type, name: p.name || '' })) || []
   )
@@ -432,10 +433,16 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
     setLoading(true)
     setError('')
     try {
+      const hasExistingPic = !!student.profile_pic
+      const picCleared = !profilePicFile && profilePic === '' && hasExistingPic
+      const picToSave = profilePicFile ? undefined : (picCleared ? '' : profilePic || undefined)
       await Promise.all([
-        api.updateStudent(student.id, name, phone || undefined, birthday || undefined, studentId || undefined, profilePic || undefined, status, parentPhones, registrationDate || undefined),
+        api.updateStudent(student.id, name, phone || undefined, birthday || undefined, studentId || undefined, picToSave, status, parentPhones, registrationDate || undefined),
         api.updateExcusedWeekdays(student.id, excusedWeekdays),
       ])
+      if (profilePicFile) {
+        await api.uploadStudentPic(student.id, profilePicFile)
+      }
       onUpdated()
     } catch (err: any) {
       setError(err.message || 'فشل التحديث')
@@ -462,37 +469,30 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
         <div>
           <label className="block text-sm text-deep-600 mb-1">الصورة الشخصية</label>
           <div className="flex items-center gap-3">
-            {(student.profile_pic || profilePic) && (
-              <img src={picUrl(profilePic) || profilePic} alt="preview" className="w-14 h-14 rounded-full object-cover border border-water-300 shrink-0" />
+            {(student.profile_pic || profilePicPreview || profilePic) && (
+              <img src={profilePicPreview || picUrl(profilePic)!} alt="preview" className="w-14 h-14 rounded-full object-cover border border-water-300 shrink-0" />
             )}
-            <label className={`flex-1 flex items-center justify-center px-4 py-2.5 border border-dashed border-water-300 rounded-xl cursor-pointer hover:bg-water-100/30 transition text-sm text-deep-500 ${uploadingPic ? 'opacity-50 pointer-events-none' : ''}`}>
+            <label className="flex-1 flex items-center justify-center px-4 py-2.5 border border-dashed border-water-300 rounded-xl cursor-pointer hover:bg-water-100/30 transition text-sm text-deep-500">
               <input
                 type="file"
                 accept="image/*"
-                disabled={uploadingPic}
-                onChange={async (e) => {
+                onChange={(e) => {
                   const file = e.target.files?.[0]
                   if (!file) return
-                  setUploadingPic(true)
-                  try {
-                    const result = await api.uploadStudentPic(student.id, file)
-                    setProfilePic(result.url)
-                  } catch (err: any) {
-                    setError(err.message || 'فشل رفع الصورة')
-                  } finally {
-                    setUploadingPic(false)
-                  }
+                  setProfilePicFile(file)
+                  setProfilePicPreview(URL.createObjectURL(file))
                 }}
                 className="hidden"
               />
-              {uploadingPic ? 'جاري الرفع...' : (student.profile_pic || profilePic ? 'تغيير الصورة' : 'اختيار صورة')}
+              {profilePicPreview || profilePic ? 'تغيير الصورة' : 'اختيار صورة'}
             </label>
-            {(student.profile_pic || profilePic) && (
+            {(student.profile_pic || profilePic || profilePicPreview) && (
               <button
                 type="button"
-                onClick={async () => {
+                onClick={() => {
+                  setProfilePicFile(null)
+                  setProfilePicPreview('')
                   setProfilePic('')
-                  await api.updateStudent(student.id, undefined, undefined, undefined, undefined, '', undefined, undefined, undefined)
                 }}
                 className="text-xs text-red-500 hover:text-red-700 shrink-0"
               >
