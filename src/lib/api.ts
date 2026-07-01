@@ -270,6 +270,28 @@ export const api = {
     })
   },
 
+  getSavedFilters() {
+    return request('/saved-filters/')
+  },
+
+  createSavedFilter(name: string, data: string) {
+    return request('/saved-filters/', {
+      method: 'POST',
+      body: JSON.stringify({ name, data }),
+    })
+  },
+
+  updateSavedFilter(id: number, name?: string, data?: string) {
+    return request(`/saved-filters/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ name, data }),
+    })
+  },
+
+  deleteSavedFilter(id: number) {
+    return request(`/saved-filters/${id}`, { method: 'DELETE' })
+  },
+
   getAttendanceGrid(sheikhId?: number, circleId?: number) {
     const params = new URLSearchParams()
     if (sheikhId) params.set('sheikh_id', String(sheikhId))

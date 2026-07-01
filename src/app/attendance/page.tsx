@@ -5,6 +5,12 @@ import { api } from '@/lib/api'
 import type { SheikhInfo, AttendanceGrid, FilterRule, FilterGroup } from '@/lib/types'
 import AttendanceFilter from '@/components/AttendanceFilter'
 
+interface SavedFilter {
+  id: number
+  name: string
+  groups: FilterGroup[]
+}
+
 const STATUS_COLORS: Record<string, string> = {
   'حاضر': 'bg-green-200/60 text-green-800 dark:bg-green-900/40 dark:text-green-300',
   'غياب': 'bg-gray-200/50 text-gray-600 dark:bg-gray-700/40 dark:text-gray-400',
@@ -55,6 +61,45 @@ export default function AttendancePage() {
   const [showFilter, setShowFilter] = useState(false)
   const [filterGroups, setFilterGroups] = useState<FilterGroup[]>([])
   const [searchQuery, setSearchQuery] = useState('')
+
+  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([])
+  const [showSaveModal, setShowSaveModal] = useState(false)
+  const [saveFilterName, setSaveFilterName] = useState('')
+
+  useEffect(() => {
+    api.getSavedFilters().then((data: any[]) => {
+      setSavedFilters(data.map((f: any) => ({ ...f, groups: JSON.parse(f.data) })))
+    }).catch(() => {})
+  }, [])
+
+  const refreshSavedFilters = () => {
+    api.getSavedFilters().then((data: any[]) => {
+      setSavedFilters(data.map((f: any) => ({ ...f, groups: JSON.parse(f.data) })))
+    }).catch(() => {})
+  }
+
+  const handleSaveFilter = async () => {
+    const name = saveFilterName.trim()
+    if (!name || filterGroups.length === 0) return
+    try {
+      await api.createSavedFilter(name, JSON.stringify(filterGroups))
+      refreshSavedFilters()
+      setShowSaveModal(false)
+      setSaveFilterName('')
+    } catch {}
+  }
+
+  const handleLoadFilter = (f: SavedFilter) => {
+    setFilterGroups(f.groups)
+    setShowFilter(false)
+  }
+
+  const handleDeleteSavedFilter = async (id: number) => {
+    try {
+      await api.deleteSavedFilter(id)
+      refreshSavedFilters()
+    } catch {}
+  }
 
   const loadGrid = useCallback(async (sheikhId: number | '') => {
     setLoading(true)
@@ -138,7 +183,7 @@ export default function AttendancePage() {
           </select>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex gap-2 flex-wrap items-center">
           <button
             onClick={() => setShowFilter(!showFilter)}
             className={`px-4 py-2 rounded-xl text-sm font-medium transition ${
@@ -157,7 +202,51 @@ export default function AttendancePage() {
               إلغاء التصفية
             </button>
           )}
+          {hasActiveFilter && (
+            <button
+              onClick={() => setShowSaveModal(true)}
+              className="px-3 py-2 rounded-xl text-sm water-btn-outline"
+            >
+              💾 حفظ التصفية
+            </button>
+          )}
+          {savedFilters.map((f) => (
+            <div key={f.id} className="flex items-center">
+              <button
+                onClick={() => handleLoadFilter(f)}
+                className="px-3 py-2 rounded-r-xl text-sm bg-water-100/50 hover:bg-water-200/50 text-deep-700 border border-water-300 transition"
+              >
+                {f.name}
+              </button>
+              <button
+                onClick={() => handleDeleteSavedFilter(f.id)}
+                className="px-2 py-2 rounded-l-xl text-sm border border-r-0 border-water-300 text-red-400 hover:text-red-600 hover:bg-red-50/50 dark:hover:bg-red-900/30 transition"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
         </div>
+
+        {showSaveModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={() => setShowSaveModal(false)}>
+            <div className="glass-strong rounded-2xl p-6 w-full max-w-xs mx-4" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-sm font-bold text-deep-800 mb-3">حفظ التصفية</h3>
+              <input
+                autoFocus
+                value={saveFilterName}
+                onChange={(e) => setSaveFilterName(e.target.value)}
+                placeholder="اسم التصفية"
+                className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400 text-sm mb-3"
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSaveFilter() }}
+              />
+              <div className="flex gap-3">
+                <button onClick={() => setShowSaveModal(false)} className="flex-1 px-4 py-2 water-btn-outline rounded-xl text-sm">إلغاء</button>
+                <button onClick={handleSaveFilter} disabled={!saveFilterName.trim()} className="flex-1 px-4 py-2 water-btn text-white rounded-xl text-sm font-medium disabled:opacity-50">حفظ</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {showFilter && grid && (
           <AttendanceFilter
