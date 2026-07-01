@@ -292,10 +292,11 @@ export const api = {
     return request(`/saved-filters/${id}`, { method: 'DELETE' })
   },
 
-  getAttendanceGrid(sheikhId?: number, circleId?: number) {
+  getAttendanceGrid(sheikhId?: number, circleId?: number, sessionIds?: number[]) {
     const params = new URLSearchParams()
     if (sheikhId) params.set('sheikh_id', String(sheikhId))
     if (circleId) params.set('circle_id', String(circleId))
+    if (sessionIds && sessionIds.length > 0) params.set('session_ids', sessionIds.join(','))
     const qs = params.toString()
     return request(`/reports/attendance-grid${qs ? `?${qs}` : ''}`)
   },

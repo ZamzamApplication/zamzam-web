@@ -89,9 +89,14 @@ export default function AttendancePage() {
     } catch {}
   }
 
-  const handleLoadFilter = (f: SavedFilter) => {
+  const handleLoadFilter = async (f: SavedFilter) => {
     setFilterGroups(f.groups)
     setShowFilter(false)
+    const ruleSessionIds = f.groups.flatMap((g) => g.rules.map((r) => r.sessionId))
+    try {
+      const data = await api.getAttendanceGrid(selectedSheikh || undefined, undefined, ruleSessionIds.length > 0 ? ruleSessionIds : undefined)
+      setGrid(data)
+    } catch {}
   }
 
   const handleDeleteSavedFilter = async (id: number) => {
@@ -153,9 +158,14 @@ export default function AttendancePage() {
 
   const displayStudents = searchedStudents
 
-  const handleApplyFilter = (groups: FilterGroup[]) => {
+  const handleApplyFilter = async (groups: FilterGroup[]) => {
     setFilterGroups(groups)
     setShowFilter(false)
+    const ruleSessionIds = groups.flatMap((g) => g.rules.map((r) => r.sessionId))
+    try {
+      const data = await api.getAttendanceGrid(selectedSheikh || undefined, undefined, ruleSessionIds.length > 0 ? ruleSessionIds : undefined)
+      setGrid(data)
+    } catch {}
   }
 
   const clearFilter = () => {
