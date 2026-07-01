@@ -143,8 +143,13 @@ export default function AttendancePage() {
   }, [ruleFilteredStudents, searchQuery])
 
   const displaySessions = useMemo(() => {
-    return (grid?.sessions || []).filter((s) => s.date >= weekStart)
-  }, [grid, weekStart])
+    if (!grid) return []
+    if (hasActiveFilter) {
+      const ruleSessionIds = new Set(filterGroups.flatMap((g) => g.rules.map((r) => r.sessionId)))
+      return grid.sessions.filter((s) => ruleSessionIds.has(s.id))
+    }
+    return grid.sessions.filter((s) => s.date >= weekStart)
+  }, [grid, filterGroups, hasActiveFilter, weekStart])
 
   const displayStudents = searchedStudents
 
