@@ -7,6 +7,8 @@ import type { Circle, SheikhInfo, StudentInfo, UserInfo, WarningInfo } from '@/l
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
+const WEEKDAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
+
 function picUrl(path: string | null | undefined): string | null {
   if (!path) return null
   if (path.startsWith('http')) return path
@@ -332,6 +334,21 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
   )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [excusedWeekdays, setExcusedWeekdays] = useState<number[]>(student.excused_weekdays || [])
+
+  useEffect(() => {
+    if (!student.excused_weekdays) {
+      api.getExcusedWeekdays(student.id).then((data) => {
+        setExcusedWeekdays(data.map((d: { weekday: number }) => d.weekday))
+      }).catch(() => {})
+    }
+  }, [student.id, student.excused_weekdays])
+
+  const toggleExcusedWeekday = (wd: number) => {
+    setExcusedWeekdays((prev) =>
+      prev.includes(wd) ? prev.filter((d) => d !== wd) : [...prev, wd]
+    )
+  }
 
   const addParentPhone = () => {
     setParentPhones([...parentPhones, { phone_number: '', parent_type: 'أب' }])
@@ -407,7 +424,10 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
     setLoading(true)
     setError('')
     try {
-      await api.updateStudent(student.id, name, phone || undefined, birthday || undefined, studentId || undefined, profilePic || undefined, status, parentPhones, registrationDate || undefined)
+      await Promise.all([
+        api.updateStudent(student.id, name, phone || undefined, birthday || undefined, studentId || undefined, profilePic || undefined, status, parentPhones, registrationDate || undefined),
+        api.updateExcusedWeekdays(student.id, excusedWeekdays),
+      ])
       onUpdated()
     } catch (err: any) {
       setError(err.message || 'فشل التحديث')
@@ -482,6 +502,25 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
             <option value="ضيف">ضيف</option>
             <option value="غير مقيد">غير مقيد</option>
           </select>
+        </div>
+        <div className="border-t border-water-200/30 pt-3">
+          <span className="text-sm font-medium text-deep-700 block mb-2">أيام الإعفاء</span>
+          <div className="flex gap-1.5 flex-wrap">
+            {WEEKDAY_NAMES.map((name, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => toggleExcusedWeekday(i)}
+                className={`px-2.5 py-1.5 rounded-xl text-xs font-medium transition border ${
+                  excusedWeekdays.includes(i)
+                    ? 'bg-yellow-100/60 text-yellow-700 border-yellow-300 dark:bg-yellow-900/40 dark:text-yellow-300 dark:border-yellow-700'
+                    : 'bg-white/50 text-deep-500 border-water-300 dark:bg-slate-800/50 dark:text-deep-400 hover:bg-water-100/30'
+                }`}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="border-t border-water-200/30 pt-3">
           <div className="flex items-center justify-between mb-2">
@@ -817,6 +856,14 @@ function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete, onMo
               {student.status}
             </span>
           </div>
+          {student.excused_weekdays && student.excused_weekdays.length > 0 && (
+            <div className="flex justify-between items-center py-1 border-b border-water-100/50">
+              <span className="text-deep-500">أيام الإعفاء</span>
+              <span className="text-deep-800 font-medium text-xs">
+                {student.excused_weekdays.map((d) => WEEKDAY_NAMES[d]).join('، ')}
+              </span>
+            </div>
+          )}
           <div className="py-1 border-b border-water-100/50">
             <div className="flex justify-between items-center mb-1">
               <span className="text-deep-500">الإنذارات</span>

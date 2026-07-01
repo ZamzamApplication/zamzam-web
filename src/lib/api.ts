@@ -123,6 +123,17 @@ export const api = {
     })
   },
 
+  getExcusedWeekdays(studentId: number) {
+    return request(`/students/${studentId}/excused-weekdays`)
+  },
+
+  updateExcusedWeekdays(studentId: number, weekdays: number[]) {
+    return request(`/students/${studentId}/excused-weekdays`, {
+      method: 'PUT',
+      body: JSON.stringify({ weekdays }),
+    })
+  },
+
   uploadStudentPic(studentId: number, file: File) {
     const formData = new FormData()
     formData.append('file', file)

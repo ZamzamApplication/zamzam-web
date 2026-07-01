@@ -77,6 +77,7 @@ export interface StudentInfo {
   warnings: WarningInfo[]
   sheikh?: { id: number; name: string }
   parent_phones?: ParentPhone[]
+  excused_weekdays?: number[]
 }
 
 export interface UserInfo {
