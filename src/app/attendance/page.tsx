@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api } from '@/lib/api'
-import type { SheikhInfo, AttendanceGrid, FilterRule, FilterGroup } from '@/lib/types'
+import type { SheikhInfo, AttendanceGrid, AttendanceGridSession, FilterRule, FilterGroup } from '@/lib/types'
 import AttendanceFilter from '@/components/AttendanceFilter'
 
 interface SavedFilter {
@@ -56,6 +56,7 @@ export default function AttendancePage() {
   const [sheikhs, setSheikhs] = useState<SheikhInfo[]>([])
   const [selectedSheikh, setSelectedSheikh] = useState<number | ''>('')
   const [grid, setGrid] = useState<AttendanceGrid | null>(null)
+  const [allSessions, setAllSessions] = useState<AttendanceGridSession[]>([])
   const [loading, setLoading] = useState(false)
 
   const [showFilter, setShowFilter] = useState(false)
@@ -111,6 +112,7 @@ export default function AttendancePage() {
     try {
       const data = await api.getAttendanceGrid(sheikhId || undefined)
       setGrid(data)
+      setAllSessions(data.sessions)
     } catch (err) {
       console.error(err)
     } finally {
@@ -256,9 +258,9 @@ export default function AttendancePage() {
           </div>
         )}
 
-        {showFilter && grid && (
+        {showFilter && allSessions.length > 0 && (
           <AttendanceFilter
-            sessions={grid.sessions}
+            sessions={allSessions}
             initialGroups={filterGroups}
             onApply={handleApplyFilter}
             onCancel={() => setShowFilter(false)}
