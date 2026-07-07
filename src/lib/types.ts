@@ -24,6 +24,7 @@ export interface StudentAttendance {
   id: number
   name: string
   phone?: string
+  profile_pic?: string
   attendance_id: number | null
   status: string
   notes?: string
