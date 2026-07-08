@@ -85,6 +85,10 @@ export const api = {
     return request('/sheikhs')
   },
 
+  getWhatsAppGroups() {
+    return request('/whatsend/groups')
+  },
+
   createSheikh(name: string, circleId: number, phone?: string, whatsappGroupId?: string) {
     return request('/sheikhs', {
       method: 'POST',

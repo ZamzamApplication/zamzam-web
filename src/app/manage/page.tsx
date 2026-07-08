@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { mediaUrl } from '@/lib/format'
 import { compressProfileImage } from '@/lib/image'
-import type { Circle, ExcusedWeekdayInfo, SheikhInfo, StudentInfo, UserInfo, WarningInfo, WarningRow } from '@/lib/types'
+import type { Circle, ExcusedWeekdayInfo, SheikhInfo, StudentInfo, UserInfo, WarningInfo, WarningRow, WhatsAppGroup } from '@/lib/types'
 
 const WEEKDAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
 
@@ -31,6 +31,47 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 function ErrorMsg({ error }: { error: string }) {
   if (!error) return null
   return <div className="bg-red-50/80 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-4 py-2 rounded-xl mb-4 text-sm text-center border border-red-200 dark:border-red-800">{error}</div>
+}
+
+function WhatsAppGroupSelect({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const [groups, setGroups] = useState<WhatsAppGroup[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    api.getWhatsAppGroups()
+      .then((res) => {
+        if (!cancelled) setGroups(res.groups || [])
+      })
+      .catch((err: any) => {
+        if (!cancelled) setError(err.message || 'فشل تحميل مجموعات واتساب')
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [])
+
+  const hasCurrent = value && groups.some((group) => group.id === value)
+
+  return (
+    <div className="space-y-2">
+      <select value={value} onChange={(e) => onChange(e.target.value)} disabled={loading && groups.length === 0} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400 disabled:opacity-60">
+        <option value="">{loading ? 'جاري تحميل مجموعات واتساب...' : 'لا توجد مجموعة واتساب'}</option>
+        {!hasCurrent && value && <option value={value}>المجموعة الحالية: {value}</option>}
+        {groups.map((group) => (
+          <option key={group.id} value={group.id}>{group.name} — {group.id}</option>
+        ))}
+      </select>
+      {error && (
+        <p className="text-xs text-red-600 dark:text-red-300">
+          {error}
+        </p>
+      )}
+    </div>
+  )
 }
 
 // ─── Circle Modals ──────────────────────────────────────────────────────────
@@ -145,7 +186,7 @@ function AddSheikhModal({ circles, onClose, onCreated }: { circles: Circle[]; on
         <select value={circleId} onChange={(e) => setCircleId(Number(e.target.value))} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
           {circles.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        <input value={whatsappGroupId} onChange={(e) => setWhatsappGroupId(e.target.value)} placeholder="معرف مجموعة واتساب (اختياري)" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        <WhatsAppGroupSelect value={whatsappGroupId} onChange={setWhatsappGroupId} />
         <div className="flex gap-3 pt-2">
           <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 water-btn-outline rounded-xl text-sm">إلغاء</button>
           <button type="submit" disabled={loading} className="flex-1 px-4 py-2.5 water-btn text-white rounded-xl text-sm font-medium disabled:opacity-50">{loading ? 'جاري...' : 'إضافة'}</button>
@@ -187,7 +228,7 @@ function EditSheikhModal({ sheikh, circles, onClose, onUpdated }: { sheikh: Shei
         <select value={circleId} onChange={(e) => setCircleId(Number(e.target.value))} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
           {circles.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        <input value={whatsappGroupId} onChange={(e) => setWhatsappGroupId(e.target.value)} placeholder="معرف مجموعة واتساب (اختياري)" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        <WhatsAppGroupSelect value={whatsappGroupId} onChange={setWhatsappGroupId} />
         <div className="flex gap-3 pt-2">
           <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 water-btn-outline rounded-xl text-sm">إلغاء</button>
           <button type="submit" disabled={loading} className="flex-1 px-4 py-2.5 water-btn text-white rounded-xl text-sm font-medium disabled:opacity-50">{loading ? 'جاري...' : 'حفظ'}</button>

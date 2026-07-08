@@ -55,6 +55,11 @@ export interface SheikhInfo {
   circle_name: string
 }
 
+export interface WhatsAppGroup {
+  id: string
+  name: string
+}
+
 export interface ParentPhone {
   id: number
   phone_number: string
