@@ -84,6 +84,12 @@ export interface WarningRow {
   created_at: string
 }
 
+export interface ExcusedWeekdayInfo {
+  id?: number
+  weekday: number
+  note?: string | null
+}
+
 export interface StudentInfo {
   id: number
   name: string
@@ -96,7 +102,7 @@ export interface StudentInfo {
   warnings: WarningInfo[]
   sheikh?: { id: number; name: string }
   parent_phones?: ParentPhone[]
-  excused_weekdays?: number[]
+  excused_weekdays?: ExcusedWeekdayInfo[]
 }
 
 export interface UserInfo {

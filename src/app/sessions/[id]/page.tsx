@@ -355,6 +355,18 @@ export default function SessionAttendancePage() {
     (acc, g) => acc + g.students.filter((s) => s.status === 'حاضر').length,
     0
   )
+  const absentCount = data.sheikh_groups.reduce(
+    (acc, g) => acc + g.students.filter((s) => s.status === 'غياب').length,
+    0
+  )
+  const notApplicableCount = data.sheikh_groups.reduce(
+    (acc, g) => acc + g.students.filter((s) => s.status === 'لا ينطبق').length,
+    0
+  )
+  const excusedAbsentCount = data.sheikh_groups.reduce(
+    (acc, g) => acc + g.students.filter((s) => s.status === 'غياب بعذر').length,
+    0
+  )
   const totalCount = data.sheikh_groups.reduce((acc, g) => acc + g.students.length, 0)
   return (
     <div>
@@ -390,6 +402,9 @@ export default function SessionAttendancePage() {
                 )}
                 <span>{data.circle_name || `حلقة #${data.circle_id}`}</span>
                 <span>{presentCount}/{totalCount} حاضر</span>
+                <span>{absentCount} غياب</span>
+                <span>{notApplicableCount} لا ينطبق</span>
+                <span>{excusedAbsentCount} غياب بعذر</span>
               </div>
             </div>
             <button

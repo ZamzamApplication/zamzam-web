@@ -132,7 +132,7 @@ export const api = {
     return request(`/students/${studentId}/excused-weekdays`)
   },
 
-  updateExcusedWeekdays(studentId: number, weekdays: number[]) {
+  updateExcusedWeekdays(studentId: number, weekdays: { weekday: number; note?: string | null }[]) {
     return request(`/students/${studentId}/excused-weekdays`, {
       method: 'PUT',
       body: JSON.stringify({ weekdays }),

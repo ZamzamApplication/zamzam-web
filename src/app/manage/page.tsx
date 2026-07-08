@@ -5,9 +5,15 @@ import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { mediaUrl } from '@/lib/format'
 import { compressProfileImage } from '@/lib/image'
-import type { Circle, SheikhInfo, StudentInfo, UserInfo, WarningInfo, WarningRow } from '@/lib/types'
+import type { Circle, ExcusedWeekdayInfo, SheikhInfo, StudentInfo, UserInfo, WarningInfo, WarningRow } from '@/lib/types'
 
 const WEEKDAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
+
+function normalizeExcusedWeekdays(days: (ExcusedWeekdayInfo | number)[] | undefined): ExcusedWeekdayInfo[] {
+  return (days || []).map((day) => (
+    typeof day === 'number' ? { weekday: day, note: '' } : { ...day, note: day.note || '' }
+  ))
+}
 
 // ─── Modal Wrapper ─────────────────────────────────────────────────────────
 
@@ -335,19 +341,27 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
   )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [excusedWeekdays, setExcusedWeekdays] = useState<number[]>(student.excused_weekdays || [])
+  const [excusedWeekdays, setExcusedWeekdays] = useState<ExcusedWeekdayInfo[]>(normalizeExcusedWeekdays(student.excused_weekdays))
 
   useEffect(() => {
     if (!student.excused_weekdays) {
       api.getExcusedWeekdays(student.id).then((data) => {
-        setExcusedWeekdays(data.map((d: { weekday: number }) => d.weekday))
+        setExcusedWeekdays(normalizeExcusedWeekdays(data))
       }).catch(() => {})
     }
   }, [student.id, student.excused_weekdays])
 
   const toggleExcusedWeekday = (wd: number) => {
     setExcusedWeekdays((prev) =>
-      prev.includes(wd) ? prev.filter((d) => d !== wd) : [...prev, wd]
+      prev.some((d) => d.weekday === wd)
+        ? prev.filter((d) => d.weekday !== wd)
+        : [...prev, { weekday: wd, note: '' }]
+    )
+  }
+
+  const updateExcusedWeekdayNote = (wd: number, note: string) => {
+    setExcusedWeekdays((prev) =>
+      prev.map((d) => d.weekday === wd ? { ...d, note } : d)
     )
   }
 
@@ -515,7 +529,7 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
                 type="button"
                 onClick={() => toggleExcusedWeekday(i)}
                 className={`px-2.5 py-1.5 rounded-xl text-xs font-medium transition border ${
-                  excusedWeekdays.includes(i)
+                  excusedWeekdays.some((d) => d.weekday === i)
                     ? 'bg-yellow-100/60 text-yellow-700 border-yellow-300 dark:bg-yellow-900/40 dark:text-yellow-300 dark:border-yellow-700'
                     : 'bg-white/50 text-deep-500 border-water-300 dark:bg-slate-800/50 dark:text-deep-400 hover:bg-water-100/30'
                 }`}
@@ -524,6 +538,24 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
               </button>
             ))}
           </div>
+          {excusedWeekdays.length > 0 && (
+            <div className="space-y-2 mt-3">
+              {excusedWeekdays
+                .slice()
+                .sort((a, b) => a.weekday - b.weekday)
+                .map((day) => (
+                  <label key={day.weekday} className="block">
+                    <span className="block text-xs text-deep-500 mb-1">{WEEKDAY_NAMES[day.weekday]} - سبب عدم الانطباق</span>
+                    <input
+                      value={day.note || ''}
+                      onChange={(e) => updateExcusedWeekdayNote(day.weekday, e.target.value)}
+                      placeholder="مثال: لديه دوام ثابت في هذا اليوم"
+                      className="w-full px-3 py-2 text-sm bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400"
+                    />
+                  </label>
+                ))}
+            </div>
+          )}
         </div>
         <div className="border-t border-water-200/30 pt-3">
           <div className="flex items-center justify-between mb-2">
@@ -860,11 +892,16 @@ function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete, onMo
             </span>
           </div>
           {student.excused_weekdays && student.excused_weekdays.length > 0 && (
-            <div className="flex justify-between items-center py-1 border-b border-water-100/50">
-              <span className="text-deep-500">أيام الإعفاء</span>
-              <span className="text-deep-800 font-medium text-xs">
-                {student.excused_weekdays.map((d) => WEEKDAY_NAMES[d]).join('، ')}
-              </span>
+            <div className="py-1 border-b border-water-100/50">
+              <span className="text-deep-500 block mb-1">أيام الإعفاء</span>
+              <div className="space-y-1">
+                {normalizeExcusedWeekdays(student.excused_weekdays).map((d) => (
+                  <div key={d.weekday} className="text-xs text-deep-800">
+                    <span className="font-medium">{WEEKDAY_NAMES[d.weekday]}</span>
+                    {d.note && <span className="text-deep-500"> - {d.note}</span>}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
           <div className="py-1 border-b border-water-100/50">
