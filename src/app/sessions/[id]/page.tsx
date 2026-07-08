@@ -52,45 +52,60 @@ function StudentRow({
   }, [student.notes])
 
   return (
-    <div className="grid grid-cols-[36px_1fr_90px_120px_1fr] gap-2 items-center py-2.5 px-4 hover:bg-water-100/30 rounded-xl transition">
-      {student.profile_pic ? (
-        <img
-          src={mediaUrl(student.profile_pic)!}
-          alt=""
-          className="w-8 h-8 rounded-full object-cover border border-water-300 shrink-0 cursor-pointer hover:opacity-80 transition"
-          onClick={() => onZoomPic(mediaUrl(student.profile_pic)!)}
-        />
-      ) : (
-        <div className="w-8 h-8 rounded-full bg-water-200/50 flex items-center justify-center text-deep-400 text-xs border border-water-300 shrink-0">
-          {student.name.charAt(0)}
+    <div className="py-3 px-3 md:grid md:grid-cols-[36px_1fr_90px_120px_1fr] md:gap-2 md:items-center md:py-2.5 md:px-4 hover:bg-water-100/30 rounded-xl transition">
+      <div className="flex items-center gap-3 md:contents">
+        {student.profile_pic ? (
+          <img
+            src={mediaUrl(student.profile_pic)!}
+            alt=""
+            className="w-10 h-10 md:w-8 md:h-8 rounded-full object-cover border border-water-300 shrink-0 cursor-pointer hover:opacity-80 transition"
+            onClick={() => onZoomPic(mediaUrl(student.profile_pic)!)}
+          />
+        ) : (
+          <div className="w-10 h-10 md:w-8 md:h-8 rounded-full bg-water-200/50 flex items-center justify-center text-deep-400 text-sm md:text-xs border border-water-300 shrink-0">
+            {student.name.charAt(0)}
+          </div>
+        )}
+        <div className="min-w-0 flex-1 md:contents">
+          <span className="block font-medium text-deep-800 truncate">{student.name}</span>
         </div>
-      )}
-      <span className="font-medium text-deep-800 truncate">{student.name}</span>
+      </div>
+      <div className="grid grid-cols-1 gap-2 mt-3 md:contents">
+        <label className="block md:contents">
+          <span className="block md:hidden text-[11px] text-deep-500 mb-1">الحالة</span>
       <select
         value={student.status}
         onChange={(e) => onStatusChange(e.target.value)}
-        className={`px-2 py-1.5 rounded-lg text-sm font-medium transition text-center ${STATUS_STYLES[student.status] || STATUS_STYLES['غياب']} ${saving ? 'opacity-60' : ''}`}
+            className={`w-full px-2 py-2 md:py-1.5 rounded-lg text-sm font-medium transition text-center ${STATUS_STYLES[student.status] || STATUS_STYLES['غياب']} ${saving ? 'opacity-60' : ''}`}
       >
         <option value="غياب" className="bg-gray-100 text-gray-600">غياب</option>
         <option value="حاضر" className="bg-green-100 text-green-700">حاضر</option>
         <option value="غياب بعذر" className="bg-yellow-100 text-yellow-700">غياب بعذر</option>
         <option value="لا ينطبق" className="bg-blue-100 text-blue-700">لا ينطبق</option>
       </select>
+        </label>
+        <label className="block md:contents">
+          <span className="block md:hidden text-[11px] text-deep-500 mb-1">الشيخ</span>
       <select
         value={student.sheikh_id ?? ''}
         onChange={(e) => onSheikhChange(Number(e.target.value))}
-        className="w-full px-2 py-1.5 text-xs bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400"
+            className="w-full px-2 py-2 md:py-1.5 text-sm md:text-xs bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400"
       >
         {circleSheikhs.map((sh) => (
           <option key={sh.id} value={sh.id}>{sh.name}</option>
         ))}
       </select>
+        </label>
+        <label className="block md:contents">
+          <span className="block md:hidden text-[11px] text-deep-500 mb-1">ملاحظات</span>
       <input
         value={notes}
         onChange={(e) => handleNotesChange(e.target.value)}
         placeholder="ملاحظات..."
-        className="w-full px-3 py-1.5 text-xs bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400"
+            className="w-full px-3 py-2 md:py-1.5 text-sm md:text-xs bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400"
       />
+        </label>
+      </div>
     </div>
   )
 }
@@ -131,7 +146,7 @@ function SheikhAccordion({
 
       {expanded && (
         <div className="divide-y divide-water-200/30">
-          <div className="grid grid-cols-[36px_1fr_90px_120px_1fr] gap-2 items-center py-2 px-4 text-xs font-medium text-deep-500 bg-water-100/20">
+          <div className="hidden md:grid grid-cols-[36px_1fr_90px_120px_1fr] gap-2 items-center py-2 px-4 text-xs font-medium text-deep-500 bg-water-100/20">
             <span></span>
             <span>الطالب</span>
             <span className="text-center">الحالة</span>
@@ -343,21 +358,21 @@ export default function SessionAttendancePage() {
   const totalCount = data.sheikh_groups.reduce((acc, g) => acc + g.students.length, 0)
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center mb-6">
+        <div className="min-w-0">
+          <div className="flex items-start md:items-center gap-2 md:gap-3">
             <button
               onClick={() => prevSession && router.push(`/sessions/${prevSession.id}`)}
               disabled={!prevSession}
-              className={`text-xl p-2 rounded-xl transition ${prevSession ? 'hover:bg-water-200/50 text-deep-600 cursor-pointer' : 'text-deep-300/40'}`}
+              className={`text-xl p-2 rounded-xl transition shrink-0 ${prevSession ? 'hover:bg-water-200/50 text-deep-600 cursor-pointer' : 'text-deep-300/40'}`}
             >
               ‹
             </button>
-            <div>
-              <h1 className="text-2xl font-bold text-deep-800">تسجيل الحضور</h1>
-              <p className="text-deep-600/60 text-sm mt-1">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-xl md:text-2xl font-bold text-deep-800">تسجيل الحضور</h1>
+              <div className="text-deep-600/60 text-sm mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1">
                 {editingDate ? (
-                  <span className="inline-flex items-center gap-2">
+                  <span className="inline-flex flex-wrap items-center gap-2">
                     <input
                       type="date"
                       value={editDateVal}
@@ -373,29 +388,30 @@ export default function SessionAttendancePage() {
                     {getArabicDay(data.date)} — {data.date}
                   </button>
                 )}
-                {' — '}{data.circle_name || `حلقة #${data.circle_id}`} — {presentCount}/{totalCount} حاضر
-              </p>
+                <span>{data.circle_name || `حلقة #${data.circle_id}`}</span>
+                <span>{presentCount}/{totalCount} حاضر</span>
+              </div>
             </div>
             <button
               onClick={() => nextSession && router.push(`/sessions/${nextSession.id}`)}
               disabled={!nextSession}
-              className={`text-xl p-2 rounded-xl transition ${nextSession ? 'hover:bg-water-200/50 text-deep-600 cursor-pointer' : 'text-deep-300/40'}`}
+              className={`text-xl p-2 rounded-xl transition shrink-0 ${nextSession ? 'hover:bg-water-200/50 text-deep-600 cursor-pointer' : 'text-deep-300/40'}`}
             >
               ›
             </button>
           </div>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
           <button
             onClick={() => router.push('/sessions')}
-            className="water-btn-outline px-4 py-2 rounded-xl text-sm"
+            className="water-btn-outline px-4 py-2 rounded-xl text-sm flex-1 md:flex-none"
           >
             رجوع
           </button>
           {!data.is_confirmed && userRole === 'admin' && (
             <button
               onClick={handleConfirm}
-              className="water-btn text-white px-4 py-2 rounded-xl text-sm font-medium"
+              className="water-btn text-white px-4 py-2 rounded-xl text-sm font-medium flex-1 md:flex-none"
             >
               تأكيد الجلسة
             </button>

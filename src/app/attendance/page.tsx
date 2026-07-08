@@ -181,7 +181,7 @@ export default function AttendancePage() {
         <h1 className="text-2xl font-bold text-deep-800">سجل الحضور</h1>
       </div>
 
-      <div className="glass-card rounded-2xl p-5 mb-6 space-y-4">
+      <div className="glass-card rounded-2xl p-4 md:p-5 mb-6 space-y-4">
         <div>
           <label className="block text-sm font-medium text-deep-700 mb-2">اختر الشيخ</label>
           <select
@@ -197,7 +197,7 @@ export default function AttendancePage() {
         <div className="flex gap-2 flex-wrap items-center">
           <button
             onClick={() => setShowFilter(!showFilter)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition ${
+            className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-sm font-medium transition ${
               hasActiveFilter
                 ? 'bg-cyan-600 text-white shadow-md dark:bg-cyan-700'
                 : 'water-btn-outline'
@@ -208,7 +208,7 @@ export default function AttendancePage() {
           {hasActiveFilter && (
             <button
               onClick={clearFilter}
-              className="px-3 py-2 rounded-xl text-sm border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50/50 dark:hover:bg-red-900/30 transition"
+              className="flex-1 sm:flex-none px-3 py-2 rounded-xl text-sm border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50/50 dark:hover:bg-red-900/30 transition"
             >
               إلغاء التصفية
             </button>
@@ -216,7 +216,7 @@ export default function AttendancePage() {
           {hasActiveFilter && (
             <button
               onClick={() => setShowSaveModal(true)}
-              className="px-3 py-2 rounded-xl text-sm water-btn-outline"
+              className="flex-1 sm:flex-none px-3 py-2 rounded-xl text-sm water-btn-outline"
             >
               💾 حفظ التصفية
             </button>
@@ -288,7 +288,31 @@ export default function AttendancePage() {
       )}
 
       {grid && displaySessions.length > 0 && (
-        <div className="glass-card rounded-2xl p-5 overflow-x-auto">
+        <div className="glass-card rounded-2xl p-3 md:p-5">
+          <div className="md:hidden space-y-3">
+            {displayStudents.map((student) => (
+              <div key={student.id} className="rounded-xl border border-water-200/50 bg-white/30 dark:bg-slate-800/30 overflow-hidden">
+                <div className="px-4 py-3 border-b border-water-200/30">
+                  <h3 className="font-semibold text-deep-800 truncate">{student.name}</h3>
+                </div>
+                <div className="divide-y divide-water-200/20">
+                  {displaySessions.map((s) => {
+                    const status = student.records[String(s.id)] || 'لا ينطبق'
+                    return (
+                      <div key={s.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                        <span className="text-xs text-deep-600 truncate">{formatDateWithWeekday(s.date)}</span>
+                        <span className={`shrink-0 inline-block px-2 py-1 rounded-lg text-xs font-medium ${STATUS_COLORS[status] || STATUS_COLORS['غياب']}`}>
+                          {status}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="border-b border-water-200/30">
@@ -316,6 +340,7 @@ export default function AttendancePage() {
               ))}
             </tbody>
           </table>
+          </div>
           <div className="mt-3 text-center text-sm text-deep-500">
             عدد الطلاب: {displayStudents.length} من {grid.students.length}
           </div>
