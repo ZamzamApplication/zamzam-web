@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/api'
+import { mediaUrl } from '@/lib/format'
 import type { Circle, CircleAttendanceRate, StudentStatsItem } from '@/lib/types'
 
 export default function ReportsPage() {
@@ -13,6 +14,16 @@ export default function ReportsPage() {
   const [sortAsc, setSortAsc] = useState(false)
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+
+  const studentAvatar = (name: string, profilePic?: string | null) => (
+    profilePic ? (
+      <img src={mediaUrl(profilePic)!} alt="" className="w-8 h-8 rounded-full object-cover border border-water-300 shrink-0" />
+    ) : (
+      <div className="w-8 h-8 rounded-full bg-water-200/50 flex items-center justify-center text-deep-400 text-xs border border-water-300 shrink-0">
+        {name.charAt(0)}
+      </div>
+    )
+  )
 
   const load = useCallback(async () => {
     const circlesData = await api.getCircles()
@@ -171,7 +182,12 @@ export default function ReportsPage() {
                       .sort((a, b) => sortAsc ? a.attendance_rate - b.attendance_rate : b.attendance_rate - a.attendance_rate)
                       .map((s) => (
                         <tr key={s.student_id} className="border-b border-water-200/20 hover:bg-water-100/20">
-                          <td className="py-2 px-3 text-deep-800">{s.student_name}</td>
+                          <td className="py-2 px-3 text-deep-800">
+                            <div className="flex items-center gap-3 min-w-[160px]">
+                              {studentAvatar(s.student_name, s.profile_pic)}
+                              <span className="truncate">{s.student_name}</span>
+                            </div>
+                          </td>
                           <td className="py-2 px-3 text-center text-deep-500">{s.sheikh_name}</td>
                           <td className="py-2 px-3 text-center text-green-700 dark:text-green-400">{s.present}</td>
                           <td className="py-2 px-3 text-center text-yellow-700 dark:text-yellow-400">{s.excused}</td>

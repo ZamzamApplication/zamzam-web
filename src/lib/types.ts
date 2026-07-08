@@ -159,6 +159,7 @@ export interface FilterGroup {
 export interface AttendanceGridStudent {
   id: number
   name: string
+  profile_pic?: string | null
   sheikh_id: number | null
   records: Record<string, string>
 }
@@ -171,6 +172,7 @@ export interface AttendanceGrid {
 export interface StudentStatsItem {
   student_id: number
   student_name: string
+  profile_pic?: string | null
   sheikh_name: string
   total_sessions: number
   present: number

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api } from '@/lib/api'
-import { formatDateWithWeekday } from '@/lib/format'
+import { formatDateWithWeekday, mediaUrl } from '@/lib/format'
 import type { User, SheikhInfo, AttendanceGrid, AttendanceGridSession, AttendanceGridStudent, FilterRule, FilterGroup } from '@/lib/types'
 import AttendanceFilter from '@/components/AttendanceFilter'
 
@@ -17,6 +17,16 @@ const STATUS_COLORS: Record<string, string> = {
   'غياب': 'bg-gray-200/50 text-gray-600 dark:bg-gray-700/40 dark:text-gray-400',
   'غياب بعذر': 'bg-yellow-200/60 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300',
   'لا ينطبق': 'bg-blue-200/60 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
+}
+
+function StudentAvatar({ name, profilePic, className = 'w-8 h-8' }: { name: string; profilePic?: string | null; className?: string }) {
+  return profilePic ? (
+    <img src={mediaUrl(profilePic)!} alt="" className={`${className} rounded-full object-cover border border-water-300 shrink-0`} />
+  ) : (
+    <div className={`${className} rounded-full bg-water-200/50 flex items-center justify-center text-deep-400 text-xs border border-water-300 shrink-0`}>
+      {name.charAt(0)}
+    </div>
+  )
 }
 
 function getSessionWeekday(dateStr: string): number {
@@ -393,7 +403,10 @@ export default function AttendancePage() {
             {displayStudents.map((student) => (
               <div key={student.id} className="rounded-xl border border-water-200/50 bg-white/30 dark:bg-slate-800/30 overflow-hidden">
                 <div className="px-4 py-3 border-b border-water-200/30 flex items-center justify-between gap-3">
-                  <h3 className="font-semibold text-deep-800 truncate">{student.name}</h3>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <StudentAvatar name={student.name} profilePic={student.profile_pic} className="w-9 h-9" />
+                    <h3 className="font-semibold text-deep-800 truncate">{student.name}</h3>
+                  </div>
                   {canSendWarnings && (
                     <button
                       onClick={() => {
@@ -438,7 +451,10 @@ export default function AttendancePage() {
                 <tr key={student.id} className="border-b border-water-200/20 hover:bg-water-100/20">
                   <td className="py-2.5 px-3 text-deep-800 font-medium sticky right-0 bg-white/40 dark:bg-slate-800/40 backdrop-blur-sm z-10">
                     <div className="flex items-center justify-between gap-3">
-                      <span>{student.name}</span>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <StudentAvatar name={student.name} profilePic={student.profile_pic} />
+                        <span className="truncate">{student.name}</span>
+                      </div>
                       {canSendWarnings && (
                         <button
                           onClick={() => {
