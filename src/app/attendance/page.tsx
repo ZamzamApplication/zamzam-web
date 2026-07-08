@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api } from '@/lib/api'
 import { formatDateWithWeekday } from '@/lib/format'
-import type { SheikhInfo, AttendanceGrid, AttendanceGridSession, AttendanceGridStudent, FilterRule, FilterGroup } from '@/lib/types'
+import type { User, SheikhInfo, AttendanceGrid, AttendanceGridSession, AttendanceGridStudent, FilterRule, FilterGroup } from '@/lib/types'
 import AttendanceFilter from '@/components/AttendanceFilter'
 
 interface SavedFilter {
@@ -61,6 +61,7 @@ function filterByGroups(students: AttendanceGrid['students'], groups: FilterGrou
 }
 
 export default function AttendancePage() {
+  const [user, setUser] = useState<User | null>(null)
   const [sheikhs, setSheikhs] = useState<SheikhInfo[]>([])
   const [selectedSheikh, setSelectedSheikh] = useState<number | ''>('')
   const [grid, setGrid] = useState<AttendanceGrid | null>(null)
@@ -78,6 +79,7 @@ export default function AttendancePage() {
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   useEffect(() => {
+    api.getMe().then(setUser).catch(() => {})
     api.getSavedFilters().then((data: any[]) => {
       setSavedFilters(data.map((f: any) => ({ ...f, groups: JSON.parse(f.data) })))
     }).catch(() => {})
@@ -171,6 +173,7 @@ export default function AttendancePage() {
   }, [grid, filterGroups, hasActiveFilter, weekStart])
 
   const displayStudents = searchedStudents
+  const canSendWarnings = user?.role === 'admin'
   const warningSessions = useMemo(() => {
     if (!grid) return []
     return grid.sessions.filter((s) => s.date >= weekStart && s.date <= today)
@@ -329,15 +332,17 @@ export default function AttendancePage() {
                   <td className="py-2.5 px-3 text-deep-800 font-medium sticky right-0 bg-white/40 dark:bg-slate-800/40 backdrop-blur-sm z-10">
                     <div className="flex items-center justify-between gap-3">
                       <span>{student.name}</span>
-                      <button
-                        onClick={() => {
-                          setNotice(null)
-                          setWarningStudent(student)
-                        }}
-                        className="shrink-0 px-3 py-1.5 rounded-xl text-xs border border-red-200 dark:border-red-800 text-red-600 dark:text-red-300 hover:bg-red-50/70 dark:hover:bg-red-900/30 transition"
-                      >
-                        إضافة إنذار
-                      </button>
+                      {canSendWarnings && (
+                        <button
+                          onClick={() => {
+                            setNotice(null)
+                            setWarningStudent(student)
+                          }}
+                          className="shrink-0 px-3 py-1.5 rounded-xl text-xs border border-red-200 dark:border-red-800 text-red-600 dark:text-red-300 hover:bg-red-50/70 dark:hover:bg-red-900/30 transition"
+                        >
+                          إضافة إنذار
+                        </button>
+                      )}
                     </div>
                   </td>
                   {displaySessions.map((s) => {
