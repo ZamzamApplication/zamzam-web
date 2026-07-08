@@ -28,6 +28,7 @@ function StudentRow({
   onStatusChange,
   onNotesChange,
   onSheikhChange,
+  onZoomPic,
   saving,
 }: {
   student: { id: number; name: string; status: string; notes?: string; sheikh_id: number | null; profile_pic?: string | null }
@@ -35,6 +36,7 @@ function StudentRow({
   onStatusChange: (status: string) => void
   onNotesChange: (notes: string) => void
   onSheikhChange: (sheikhId: number) => void
+  onZoomPic: (url: string) => void
   saving: boolean
 }) {
   const [notes, setNotes] = useState(student.notes || '')
@@ -52,7 +54,12 @@ function StudentRow({
   return (
     <div className="grid grid-cols-[36px_1fr_90px_120px_1fr] gap-2 items-center py-2.5 px-4 hover:bg-water-100/30 rounded-xl transition">
       {student.profile_pic ? (
-        <img src={mediaUrl(student.profile_pic)!} alt="" className="w-8 h-8 rounded-full object-cover border border-water-300 shrink-0" />
+        <img
+          src={mediaUrl(student.profile_pic)!}
+          alt=""
+          className="w-8 h-8 rounded-full object-cover border border-water-300 shrink-0 cursor-pointer hover:opacity-80 transition"
+          onClick={() => onZoomPic(mediaUrl(student.profile_pic)!)}
+        />
       ) : (
         <div className="w-8 h-8 rounded-full bg-water-200/50 flex items-center justify-center text-deep-400 text-xs border border-water-300 shrink-0">
           {student.name.charAt(0)}
@@ -94,6 +101,7 @@ function SheikhAccordion({
   onUpdateStatus,
   onUpdateNotes,
   onUpdateSheikh,
+  onZoomPic,
   savingIds,
   expanded,
   onToggle,
@@ -103,6 +111,7 @@ function SheikhAccordion({
   onUpdateStatus: (studentId: number, newStatus: string) => void
   onUpdateNotes: (studentId: number, notes: string) => void
   onUpdateSheikh: (studentId: number, sheikhId: number) => void
+  onZoomPic: (url: string) => void
   savingIds: Set<number>
   expanded: boolean
   onToggle: () => void
@@ -137,11 +146,20 @@ function SheikhAccordion({
               onStatusChange={(status) => onUpdateStatus(student.id, status)}
               onNotesChange={(notes) => onUpdateNotes(student.id, notes)}
               onSheikhChange={(sheikhId) => onUpdateSheikh(student.id, sheikhId)}
+              onZoomPic={onZoomPic}
               saving={savingIds.has(student.id)}
             />
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+function ImagePreviewModal({ src, onClose }: { src: string; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <img src={src} alt="صورة الطالب" className="max-w-[90vw] max-h-[90vh] rounded-2xl shadow-2xl" onClick={(e) => e.stopPropagation()} />
     </div>
   )
 }
@@ -159,6 +177,7 @@ export default function SessionAttendancePage() {
   const flushTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [expandedSheikhs, setExpandedSheikhs] = useState<Set<number>>(new Set())
   const [userRole, setUserRole] = useState<string>('')
+  const [previewPic, setPreviewPic] = useState<string | null>(null)
 
   useEffect(() => {
     try {
@@ -401,6 +420,7 @@ export default function SessionAttendancePage() {
             onUpdateStatus={handleUpdateStatus}
             onUpdateNotes={handleUpdateNotes}
             onUpdateSheikh={handleUpdateSheikh}
+            onZoomPic={(url) => setPreviewPic(url)}
             savingIds={savingIds}
             expanded={expandedSheikhs.has(group.sheikh.id)}
             onToggle={() => toggleSheikh(group.sheikh.id)}
@@ -413,6 +433,8 @@ export default function SessionAttendancePage() {
           تم تأكيد هذه الجلسة
         </div>
       )}
+
+      {previewPic && <ImagePreviewModal src={previewPic} onClose={() => setPreviewPic(null)} />}
     </div>
   )
 }
