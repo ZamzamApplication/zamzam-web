@@ -73,6 +73,7 @@ export default function AttendancePage() {
   const [searchQuery, setSearchQuery] = useState('')
 
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([])
+  const [activeSavedFilter, setActiveSavedFilter] = useState<SavedFilter | null>(null)
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [saveFilterName, setSaveFilterName] = useState('')
   const [warningStudent, setWarningStudent] = useState<AttendanceGridStudent | null>(null)
@@ -95,16 +96,24 @@ export default function AttendancePage() {
     const name = saveFilterName.trim()
     if (!name || filterGroups.length === 0) return
     try {
-      await api.createSavedFilter(name, JSON.stringify(filterGroups))
+      const data = JSON.stringify(filterGroups)
+      if (activeSavedFilter) {
+        const updated = await api.updateSavedFilter(activeSavedFilter.id, name, data)
+        setActiveSavedFilter({ ...updated, groups: JSON.parse(updated.data) })
+      } else {
+        const created = await api.createSavedFilter(name, data)
+        setActiveSavedFilter({ ...created, groups: JSON.parse(created.data) })
+      }
       refreshSavedFilters()
       setShowSaveModal(false)
       setSaveFilterName('')
     } catch {}
   }
 
-  const handleLoadFilter = async (f: SavedFilter) => {
+  const handleLoadFilter = async (f: SavedFilter, openBuilder = false) => {
     setFilterGroups(f.groups)
-    setShowFilter(false)
+    setActiveSavedFilter(f)
+    setShowFilter(openBuilder)
     const ruleSessionIds = f.groups.flatMap((g) => g.rules.map((r) => r.sessionId))
     try {
       const data = await api.getAttendanceGrid(selectedSheikh || undefined, undefined, ruleSessionIds.length > 0 ? ruleSessionIds : undefined)
@@ -115,6 +124,10 @@ export default function AttendancePage() {
   const handleDeleteSavedFilter = async (id: number) => {
     try {
       await api.deleteSavedFilter(id)
+      if (activeSavedFilter?.id === id) {
+        setActiveSavedFilter(null)
+        setFilterGroups([])
+      }
       refreshSavedFilters()
     } catch {}
   }
@@ -191,6 +204,7 @@ export default function AttendancePage() {
 
   const clearFilter = () => {
     setFilterGroups([])
+    setActiveSavedFilter(null)
   }
 
   return (
@@ -243,19 +257,32 @@ export default function AttendancePage() {
           )}
           {hasActiveFilter && (
             <button
-              onClick={() => setShowSaveModal(true)}
+              onClick={() => {
+                setSaveFilterName(activeSavedFilter?.name || '')
+                setShowSaveModal(true)
+              }}
               className="flex-1 sm:flex-none px-3 py-2 rounded-xl text-sm water-btn-outline"
             >
-              💾 حفظ التصفية
+              {activeSavedFilter ? '💾 حفظ التعديلات' : '💾 حفظ التصفية'}
             </button>
           )}
           {savedFilters.map((f) => (
             <div key={f.id} className="flex items-center">
               <button
                 onClick={() => handleLoadFilter(f)}
-                className="px-3 py-2 rounded-r-xl text-sm bg-water-100/50 hover:bg-water-200/50 text-deep-700 border border-water-300 transition"
+                className={`px-3 py-2 rounded-r-xl text-sm border border-water-300 transition ${
+                  activeSavedFilter?.id === f.id
+                    ? 'bg-cyan-100/70 dark:bg-cyan-900/40 text-cyan-800 dark:text-cyan-200'
+                    : 'bg-water-100/50 hover:bg-water-200/50 text-deep-700'
+                }`}
               >
                 {f.name}
+              </button>
+              <button
+                onClick={() => handleLoadFilter(f, true)}
+                className="px-2 py-2 text-sm border-y border-water-300 text-deep-500 hover:text-deep-800 hover:bg-water-100/50 transition"
+              >
+                تعديل
               </button>
               <button
                 onClick={() => handleDeleteSavedFilter(f.id)}
@@ -270,7 +297,7 @@ export default function AttendancePage() {
         {showSaveModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={() => setShowSaveModal(false)}>
             <div className="glass-strong rounded-2xl p-6 w-full max-w-xs mx-4" onClick={(e) => e.stopPropagation()}>
-              <h3 className="text-sm font-bold text-deep-800 mb-3">حفظ التصفية</h3>
+              <h3 className="text-sm font-bold text-deep-800 mb-3">{activeSavedFilter ? 'حفظ تعديلات التصفية' : 'حفظ التصفية'}</h3>
               <input
                 autoFocus
                 value={saveFilterName}
@@ -289,6 +316,7 @@ export default function AttendancePage() {
 
         {showFilter && allSessions.length > 0 && (
           <AttendanceFilter
+            key={activeSavedFilter?.id ?? 'custom-filter'}
             sessions={allSessions}
             initialGroups={filterGroups}
             onApply={handleApplyFilter}
