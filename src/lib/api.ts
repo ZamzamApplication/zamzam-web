@@ -189,6 +189,13 @@ export const api = {
     })
   },
 
+  sendStudentWarning(studentId: number, absentDates: string[]) {
+    return request(`/students/${studentId}/warnings/send`, {
+      method: 'POST',
+      body: JSON.stringify({ absent_dates: absentDates }),
+    })
+  },
+
   deleteWarning(warningId: number) {
     return request(`/warnings/${warningId}`, { method: 'DELETE' })
   },
