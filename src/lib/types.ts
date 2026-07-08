@@ -146,6 +146,7 @@ export interface FilterGroup {
 export interface AttendanceGridStudent {
   id: number
   name: string
+  sheikh_id: number | null
   records: Record<string, string>
 }
 
