@@ -3,18 +3,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
+import { mediaUrl } from '@/lib/format'
 import type { Circle, SheikhInfo, StudentInfo, UserInfo, WarningInfo, WarningRow } from '@/lib/types'
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-
 const WEEKDAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
-
-function picUrl(path: string | null | undefined): string | null {
-  if (!path) return null
-  if (path.startsWith('http')) return path
-  if (path.startsWith('/')) return `${API_BASE}${path}`
-  return `${API_BASE}${path}`
-}
 
 // ─── Modal Wrapper ─────────────────────────────────────────────────────────
 
@@ -462,8 +454,8 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
         <div>
           <label className="block text-sm text-deep-600 mb-1">الصورة الشخصية</label>
           <div className="flex items-center gap-3">
-            {(student.profile_pic || profilePic) && (
-              <img src={picUrl(profilePic) || profilePic} alt="preview" className="w-14 h-14 rounded-full object-cover border border-water-300 shrink-0" />
+            {profilePic && (
+              <img src={mediaUrl(profilePic) || profilePic} alt="preview" className="w-14 h-14 rounded-full object-cover border border-water-300 shrink-0" />
             )}
             <label className={`flex-1 flex items-center justify-center px-4 py-2.5 border border-dashed border-water-300 rounded-xl cursor-pointer hover:bg-water-100/30 transition text-sm text-deep-500 ${uploadingPic ? 'opacity-50 pointer-events-none' : ''}`}>
               <input
@@ -485,9 +477,9 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
                 }}
                 className="hidden"
               />
-              {uploadingPic ? 'جاري الرفع...' : (student.profile_pic || profilePic ? 'تغيير الصورة' : 'اختيار صورة')}
+              {uploadingPic ? 'جاري الرفع...' : (profilePic ? 'تغيير الصورة' : 'اختيار صورة')}
             </label>
-            {(student.profile_pic || profilePic) && (
+            {profilePic && (
               <button
                 type="button"
                 onClick={async () => {
@@ -820,7 +812,7 @@ function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete, onMo
       <div className="glass-strong rounded-2xl p-6 w-full max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-col items-center mb-4">
           {student.profile_pic ? (
-            <img src={picUrl(student.profile_pic)!} alt="" className="w-20 h-20 rounded-full object-cover border-2 border-water-300 mb-3 cursor-pointer hover:opacity-80 transition" onClick={() => onZoomPic?.(picUrl(student.profile_pic)!)} />
+            <img src={mediaUrl(student.profile_pic)!} alt="" className="w-20 h-20 rounded-full object-cover border-2 border-water-300 mb-3 cursor-pointer hover:opacity-80 transition" onClick={() => onZoomPic?.(mediaUrl(student.profile_pic)!)} />
           ) : (
             <div className="w-20 h-20 rounded-full bg-water-200/50 flex items-center justify-center text-deep-400 text-2xl border-2 border-water-300 mb-3">
               {student.name.charAt(0)}
@@ -1018,7 +1010,7 @@ function StudentStatusTabs({
                 >
                   <div className="flex items-center gap-3 cursor-pointer" onClick={() => onViewStudent(s)}>
                     {s.profile_pic ? (
-                      <img src={picUrl(s.profile_pic)!} alt="" className="w-8 h-8 rounded-full object-cover border border-water-300 cursor-pointer hover:opacity-80 transition" onClick={(e) => { e.stopPropagation(); onZoomPic?.(picUrl(s.profile_pic)!) }} />
+                      <img src={mediaUrl(s.profile_pic)!} alt="" className="w-8 h-8 rounded-full object-cover border border-water-300 cursor-pointer hover:opacity-80 transition" onClick={(e) => { e.stopPropagation(); onZoomPic?.(mediaUrl(s.profile_pic)!) }} />
                     ) : (
                       <div className="w-8 h-8 rounded-full bg-water-200/50 flex items-center justify-center text-deep-400 text-xs border border-water-300">
                         {s.name.charAt(0)}

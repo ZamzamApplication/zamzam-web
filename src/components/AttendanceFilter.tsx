@@ -1,15 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { formatDateWithWeekday } from '@/lib/format'
 import type { AttendanceGridSession, FilterRule, FilterGroup } from '@/lib/types'
-
-const WEEKDAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
-
-function formatDateWithWeekday(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00')
-  const wd = (d.getDay() + 1) % 7
-  return `${WEEKDAY_NAMES[wd]} ${dateStr}`
-}
 
 const STATUS_OPTIONS = ['حاضر', 'غياب', 'غياب بعذر', 'لا ينطبق']
 const OPERATORS = [

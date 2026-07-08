@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api } from '@/lib/api'
+import { formatDateWithWeekday } from '@/lib/format'
 import type { SheikhInfo, AttendanceGrid, AttendanceGridSession, FilterRule, FilterGroup } from '@/lib/types'
 import AttendanceFilter from '@/components/AttendanceFilter'
 
@@ -9,14 +10,6 @@ interface SavedFilter {
   id: number
   name: string
   groups: FilterGroup[]
-}
-
-const WEEKDAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
-
-function formatDateWithWeekday(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00')
-  const wd = (d.getDay() + 1) % 7
-  return `${WEEKDAY_NAMES[wd]} ${dateStr}`
 }
 
 const STATUS_COLORS: Record<string, string> = {

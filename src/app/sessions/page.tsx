@@ -4,14 +4,9 @@ import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
+import { formatDateWithWeekday } from '@/lib/format'
 import type { Session } from '@/lib/types'
 import CreateSessionModal from '@/components/CreateSessionModal'
-
-const ARABIC_DAYS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
-
-function getArabicDay(dateStr: string): string {
-  return ARABIC_DAYS[new Date(dateStr + 'T12:00:00').getDay()]
-}
 
 export default function SessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([])
@@ -87,7 +82,7 @@ export default function SessionsPage() {
             >
               <div className="flex justify-between items-center">
                 <div>
-                  <h3 className="font-semibold text-lg text-deep-800">جلسة {getArabicDay(s.date)} {s.date}</h3>
+                  <h3 className="font-semibold text-lg text-deep-800">جلسة {formatDateWithWeekday(s.date)}</h3>
                   {s.circle_name && <p className="text-xs text-deep-500 mt-0.5">{s.circle_name}</p>}
                 </div>
                 <div className="flex items-center gap-3">

@@ -3,22 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
+import { getArabicDay, mediaUrl } from '@/lib/format'
 import type { Session, SessionAttendance, SheikhGroup } from '@/lib/types'
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-
-function picUrl(path: string | null | undefined): string | null {
-  if (!path) return null
-  if (path.startsWith('http')) return path
-  if (path.startsWith('/')) return `${API_BASE}${path}`
-  return `${API_BASE}/${path}`
-}
-
-const ARABIC_DAYS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
-
-function getArabicDay(dateStr: string): string {
-  return ARABIC_DAYS[new Date(dateStr + 'T12:00:00').getDay()]
-}
 
 const STATUS_STYLES: Record<string, string> = {
   'غياب': 'status-badge bg-gray-100/50 text-gray-600 border-gray-200 dark:bg-gray-700/40 dark:text-gray-400 dark:border-gray-700',
@@ -66,7 +52,7 @@ function StudentRow({
   return (
     <div className="grid grid-cols-[36px_1fr_90px_120px_1fr] gap-2 items-center py-2.5 px-4 hover:bg-water-100/30 rounded-xl transition">
       {student.profile_pic ? (
-        <img src={picUrl(student.profile_pic)!} alt="" className="w-8 h-8 rounded-full object-cover border border-water-300 shrink-0" />
+        <img src={mediaUrl(student.profile_pic)!} alt="" className="w-8 h-8 rounded-full object-cover border border-water-300 shrink-0" />
       ) : (
         <div className="w-8 h-8 rounded-full bg-water-200/50 flex items-center justify-center text-deep-400 text-xs border border-water-300 shrink-0">
           {student.name.charAt(0)}
