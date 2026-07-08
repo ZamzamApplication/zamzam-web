@@ -5,16 +5,16 @@ import { formatDateWithWeekday } from '@/lib/format'
 import type { AttendanceGridSession, FilterRule, FilterGroup } from '@/lib/types'
 
 const STATUS_OPTIONS = ['حاضر', 'غياب', 'غياب بعذر', 'لا ينطبق']
+const WEEKDAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
 const OPERATORS = [
   { value: 'is', label: 'يساوي' },
   { value: 'is_not', label: 'لا يساوي' },
 ]
 
 let groupCounter = 0
-let ruleCounter = 0
 
 function makeRule(sessionId: number, connector?: 'and' | 'or'): FilterRule {
-  return { sessionId, operator: 'is', status: 'حاضر', connector }
+  return { target: 'session', sessionId, operator: 'is', status: 'حاضر', connector }
 }
 
 function makeGroup(sessionId: number): FilterGroup {
@@ -48,6 +48,28 @@ export default function AttendanceFilter({ sessions, initialGroups, onApply, onC
           ? {
               ...g,
               rules: g.rules.map((r, j) => (j === ri ? { ...r, [field]: value } : r)),
+            }
+          : g
+      )
+    )
+  }
+
+  const updateRuleTarget = (gi: number, ri: number, target: 'session' | 'weekday') => {
+    setGroups((prev) =>
+      prev.map((g, i) =>
+        i === gi
+          ? {
+              ...g,
+              rules: g.rules.map((r, j) => (
+                j === ri
+                  ? {
+                      ...r,
+                      target,
+                      sessionId: target === 'session' ? (r.sessionId || sessions[0]?.id || 0) : r.sessionId,
+                      weekday: target === 'weekday' ? (r.weekday ?? 0) : r.weekday,
+                    }
+                  : r
+              )),
             }
           : g
       )
@@ -126,7 +148,7 @@ export default function AttendanceFilter({ sessions, initialGroups, onApply, onC
 
           <div className="border-r-2 border-water-300/40 pr-3 space-y-1.5">
             {group.rules.map((rule, ri) => (
-              <div key={ri} className="flex items-center gap-1.5">
+              <div key={ri} className="flex flex-wrap items-center gap-1.5">
                 {ri > 0 && (
                   <div className="flex bg-white/60 dark:bg-slate-800/60 rounded-md p-0.5 border border-water-200/50 shrink-0">
                     <button
@@ -147,12 +169,32 @@ export default function AttendanceFilter({ sessions, initialGroups, onApply, onC
                     </button>
                   </div>
                 )}
+                <div className="flex bg-white/60 dark:bg-slate-800/60 rounded-md p-0.5 border border-water-200/50 shrink-0">
+                  <button
+                    onClick={() => updateRuleTarget(gi, ri, 'session')}
+                    className={`px-2 py-0.5 text-[11px] rounded transition font-medium ${
+                      (rule.target || 'session') === 'session' ? 'bg-water-400/30 text-deep-800' : 'text-deep-500 hover:text-deep-700'
+                    }`}
+                  >
+                    جلسة
+                  </button>
+                  <button
+                    onClick={() => updateRuleTarget(gi, ri, 'weekday')}
+                    className={`px-2 py-0.5 text-[11px] rounded transition font-medium ${
+                      rule.target === 'weekday' ? 'bg-water-400/30 text-deep-800' : 'text-deep-500 hover:text-deep-700'
+                    }`}
+                  >
+                    يوم
+                  </button>
+                </div>
                 <select
-                  value={rule.sessionId}
-                  onChange={(e) => updateRule(gi, ri, 'sessionId', Number(e.target.value))}
-                  className="flex-1 min-w-0 px-2.5 py-1.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-water-400"
+                  value={(rule.target || 'session') === 'weekday' ? (rule.weekday ?? 0) : rule.sessionId}
+                  onChange={(e) => updateRule(gi, ri, (rule.target || 'session') === 'weekday' ? 'weekday' : 'sessionId', Number(e.target.value))}
+                  className="flex-1 min-w-[130px] px-2.5 py-1.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-water-400"
                 >
-                  {sessions.map((s) => <option key={s.id} value={s.id}>{formatDateWithWeekday(s.date)}</option>)}
+                  {(rule.target || 'session') === 'weekday'
+                    ? WEEKDAY_NAMES.map((name, i) => <option key={i} value={i}>{name}</option>)
+                    : sessions.map((s) => <option key={s.id} value={s.id}>{formatDateWithWeekday(s.date)}</option>)}
                 </select>
                 <select
                   value={rule.operator}

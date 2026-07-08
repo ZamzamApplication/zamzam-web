@@ -137,7 +137,9 @@ export interface AttendanceGridSession {
 }
 
 export interface FilterRule {
+  target?: 'session' | 'weekday'
   sessionId: number
+  weekday?: number
   operator: 'is' | 'is_not'
   status: string
   connector?: 'and' | 'or'

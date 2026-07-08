@@ -19,6 +19,22 @@ const STATUS_COLORS: Record<string, string> = {
   'لا ينطبق': 'bg-blue-200/60 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
 }
 
+function getSessionWeekday(dateStr: string): number {
+  return new Date(`${dateStr}T12:00:00`).getDay()
+}
+
+function hasWeekdayRules(groups: FilterGroup[]): boolean {
+  return groups.some((g) => g.rules.some((r) => r.target === 'weekday'))
+}
+
+function getSessionRuleIds(groups: FilterGroup[]): number[] {
+  return groups.flatMap((g) =>
+    g.rules
+      .filter((r) => (r.target || 'session') === 'session')
+      .map((r) => r.sessionId)
+  )
+}
+
 function toLocalDateString(date: Date): string {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -26,34 +42,47 @@ function toLocalDateString(date: Date): string {
   return `${year}-${month}-${day}`
 }
 
-function matchesRule(student: { records: Record<string, string> }, rule: FilterRule): boolean {
-  const status = student.records[String(rule.sessionId)] || 'لا ينطبق'
+function statusMatches(status: string, rule: FilterRule): boolean {
   const hasMatch = status === rule.status
   return rule.operator === 'is' ? hasMatch : !hasMatch
 }
 
-function evaluateGroup(student: { records: Record<string, string> }, group: FilterGroup): boolean {
+function matchesRule(student: { records: Record<string, string> }, rule: FilterRule, sessions: AttendanceGridSession[]): boolean {
+  if (rule.target === 'weekday') {
+    const matchingSessions = sessions.filter((s) => getSessionWeekday(s.date) === (rule.weekday ?? 0))
+    if (matchingSessions.length === 0) return false
+    return matchingSessions.some((session) => {
+      const status = student.records[String(session.id)] || 'لا ينطبق'
+      return statusMatches(status, rule)
+    })
+  }
+
+  const status = student.records[String(rule.sessionId)] || 'لا ينطبق'
+  return statusMatches(status, rule)
+}
+
+function evaluateGroup(student: { records: Record<string, string> }, group: FilterGroup, sessions: AttendanceGridSession[]): boolean {
   if (group.rules.length === 0) return true
-  let result = matchesRule(student, group.rules[0])
+  let result = matchesRule(student, group.rules[0], sessions)
   for (let i = 1; i < group.rules.length; i++) {
     if (group.rules[i].connector === 'or') {
-      result = result || matchesRule(student, group.rules[i])
+      result = result || matchesRule(student, group.rules[i], sessions)
     } else {
-      result = result && matchesRule(student, group.rules[i])
+      result = result && matchesRule(student, group.rules[i], sessions)
     }
   }
   return result
 }
 
-function filterByGroups(students: AttendanceGrid['students'], groups: FilterGroup[]): AttendanceGrid['students'] {
+function filterByGroups(students: AttendanceGrid['students'], groups: FilterGroup[], sessions: AttendanceGridSession[]): AttendanceGrid['students'] {
   if (groups.length === 0) return students
   return students.filter((st) => {
-    let result = evaluateGroup(st, groups[0])
+    let result = evaluateGroup(st, groups[0], sessions)
     for (let i = 1; i < groups.length; i++) {
       if (groups[i].connector === 'or') {
-        result = result || evaluateGroup(st, groups[i])
+        result = result || evaluateGroup(st, groups[i], sessions)
       } else {
-        result = result && evaluateGroup(st, groups[i])
+        result = result && evaluateGroup(st, groups[i], sessions)
       }
     }
     return result
@@ -114,9 +143,9 @@ export default function AttendancePage() {
     setFilterGroups(f.groups)
     setActiveSavedFilter(f)
     setShowFilter(openBuilder)
-    const ruleSessionIds = f.groups.flatMap((g) => g.rules.map((r) => r.sessionId))
+    const ruleSessionIds = getSessionRuleIds(f.groups)
     try {
-      const data = await api.getAttendanceGrid(selectedSheikh || undefined, undefined, ruleSessionIds.length > 0 ? ruleSessionIds : undefined)
+      const data = await api.getAttendanceGrid(selectedSheikh || undefined, undefined, !hasWeekdayRules(f.groups) && ruleSessionIds.length > 0 ? ruleSessionIds : undefined)
       setGrid(data)
     } catch {}
   }
@@ -165,10 +194,15 @@ export default function AttendancePage() {
 
   const today = useMemo(() => toLocalDateString(new Date()), [])
 
+  const weekdayRuleSessions = useMemo(() => {
+    if (!grid) return []
+    return grid.sessions.filter((s) => s.date >= weekStart)
+  }, [grid, weekStart])
+
   const ruleFilteredStudents = useMemo(() => {
     if (!grid) return []
-    return filterByGroups(grid.students, filterGroups)
-  }, [grid, filterGroups])
+    return filterByGroups(grid.students, filterGroups, weekdayRuleSessions)
+  }, [grid, filterGroups, weekdayRuleSessions])
 
   const searchedStudents = useMemo(() => {
     if (!searchQuery.trim()) return ruleFilteredStudents
@@ -179,8 +213,18 @@ export default function AttendancePage() {
   const displaySessions = useMemo(() => {
     if (!grid) return []
     if (hasActiveFilter) {
-      const ruleSessionIds = new Set(filterGroups.flatMap((g) => g.rules.map((r) => r.sessionId)))
-      return grid.sessions.filter((s) => ruleSessionIds.has(s.id))
+      const sessionRuleIds = new Set(getSessionRuleIds(filterGroups))
+      const weekdays = new Set(
+        filterGroups.flatMap((g) =>
+          g.rules
+            .filter((r) => r.target === 'weekday')
+            .map((r) => r.weekday ?? 0)
+        )
+      )
+      return grid.sessions.filter((s) => (
+        sessionRuleIds.has(s.id) ||
+        (s.date >= weekStart && weekdays.has(getSessionWeekday(s.date)))
+      ))
     }
     return grid.sessions.filter((s) => s.date >= weekStart)
   }, [grid, filterGroups, hasActiveFilter, weekStart])
@@ -195,9 +239,9 @@ export default function AttendancePage() {
   const handleApplyFilter = async (groups: FilterGroup[]) => {
     setFilterGroups(groups)
     setShowFilter(false)
-    const ruleSessionIds = groups.flatMap((g) => g.rules.map((r) => r.sessionId))
+    const ruleSessionIds = getSessionRuleIds(groups)
     try {
-      const data = await api.getAttendanceGrid(selectedSheikh || undefined, undefined, ruleSessionIds.length > 0 ? ruleSessionIds : undefined)
+      const data = await api.getAttendanceGrid(selectedSheikh || undefined, undefined, !hasWeekdayRules(groups) && ruleSessionIds.length > 0 ? ruleSessionIds : undefined)
       setGrid(data)
     } catch {}
   }
