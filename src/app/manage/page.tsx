@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { mediaUrl } from '@/lib/format'
+import { compressProfileImage } from '@/lib/image'
 import type { Circle, SheikhInfo, StudentInfo, UserInfo, WarningInfo, WarningRow } from '@/lib/types'
 
 const WEEKDAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
@@ -466,8 +467,10 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
                   const file = e.target.files?.[0]
                   if (!file) return
                   setUploadingPic(true)
+                  setError('')
                   try {
-                    const result = await api.uploadStudentPic(student.id, file)
+                    const compressed = await compressProfileImage(file)
+                    const result = await api.uploadStudentPic(student.id, compressed)
                     setProfilePic(result.url)
                   } catch (err: any) {
                     setError(err.message || 'فشل رفع الصورة')
