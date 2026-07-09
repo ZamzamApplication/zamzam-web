@@ -263,8 +263,11 @@ export default function AttendancePage() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-deep-800">سجل الحضور</h1>
+      <div className="flex justify-between items-center mb-5">
+        <div>
+          <h1 className="text-2xl font-bold text-deep-900">سجل الحضور</h1>
+          <p className="text-sm text-deep-500 mt-1">متابعة حضور الطلاب حسب الجلسات والتصفيات المحفوظة</p>
+        </div>
       </div>
 
       {notice && (
@@ -277,13 +280,13 @@ export default function AttendancePage() {
         </div>
       )}
 
-      <div className="glass-card rounded-2xl p-4 md:p-5 mb-6 space-y-4">
+      <div className="glass-card rounded-lg p-4 md:p-5 mb-6 space-y-4">
         <div>
-          <label className="block text-sm font-medium text-deep-700 mb-2">اختر الشيخ</label>
+          <label className="block text-sm font-semibold text-deep-800 mb-2">اختر الشيخ</label>
           <select
             value={selectedSheikh}
             onChange={(e) => setSelectedSheikh(e.target.value ? Number(e.target.value) : '')}
-            className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400"
+            className="surface-field w-full px-4 py-2.5 rounded-lg text-sm"
           >
             <option value="">كل الشيوخ</option>
             {sheikhs.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -293,18 +296,18 @@ export default function AttendancePage() {
         <div className="flex gap-2 flex-wrap items-center">
           <button
             onClick={() => setShowFilter(!showFilter)}
-            className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-sm font-medium transition ${
+            className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-semibold transition ${
               hasActiveFilter
                 ? 'bg-cyan-600 text-white shadow-md dark:bg-cyan-700'
                 : 'water-btn-outline'
             }`}
           >
-            {hasActiveFilter ? '🔍 تصفية مفعلة' : '🔍 تصفية'}
+            {hasActiveFilter ? 'تصفية مفعلة' : 'تصفية'}
           </button>
           {hasActiveFilter && (
             <button
               onClick={clearFilter}
-              className="flex-1 sm:flex-none px-3 py-2 rounded-xl text-sm border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50/50 dark:hover:bg-red-900/30 transition"
+              className="flex-1 sm:flex-none px-3 py-2 rounded-lg text-sm font-medium border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50/70 dark:hover:bg-red-900/30 transition"
             >
               إلغاء التصفية
             </button>
@@ -317,30 +320,30 @@ export default function AttendancePage() {
               }}
               className="flex-1 sm:flex-none px-3 py-2 rounded-xl text-sm water-btn-outline"
             >
-              {activeSavedFilter ? '💾 حفظ التعديلات' : '💾 حفظ التصفية'}
+              {activeSavedFilter ? 'حفظ التعديلات' : 'حفظ التصفية'}
             </button>
           )}
           {savedFilters.map((f) => (
             <div key={f.id} className="flex items-center">
               <button
                 onClick={() => handleLoadFilter(f)}
-                className={`px-3 py-2 rounded-r-xl text-sm border border-water-300 transition ${
+                className={`px-3 py-2 rounded-r-lg text-sm border border-water-300 transition ${
                   activeSavedFilter?.id === f.id
                     ? 'bg-cyan-100/70 dark:bg-cyan-900/40 text-cyan-800 dark:text-cyan-200'
-                    : 'bg-water-100/50 hover:bg-water-200/50 text-deep-700'
+                    : 'bg-white/80 dark:bg-slate-800/70 hover:bg-water-100/80 text-deep-700'
                 }`}
               >
                 {f.name}
               </button>
               <button
                 onClick={() => handleLoadFilter(f, true)}
-                className="px-2 py-2 text-sm border-y border-water-300 text-deep-500 hover:text-deep-800 hover:bg-water-100/50 transition"
+                className="px-2 py-2 text-sm border-y border-water-300 bg-white/70 dark:bg-slate-800/60 text-deep-600 hover:text-deep-900 hover:bg-water-100/80 transition"
               >
                 تعديل
               </button>
               <button
                 onClick={() => handleDeleteSavedFilter(f.id)}
-                className="px-2 py-2 rounded-l-xl text-sm border border-r-0 border-water-300 text-red-400 hover:text-red-600 hover:bg-red-50/50 dark:hover:bg-red-900/30 transition"
+                className="px-2 py-2 rounded-l-lg text-sm border border-r-0 border-water-300 bg-white/70 dark:bg-slate-800/60 text-red-500 hover:text-red-700 hover:bg-red-50/70 dark:hover:bg-red-900/30 transition"
               >
                 ✕
               </button>
@@ -350,19 +353,19 @@ export default function AttendancePage() {
 
         {showSaveModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={() => setShowSaveModal(false)}>
-            <div className="glass-strong rounded-2xl p-6 w-full max-w-xs mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="glass-strong rounded-lg p-6 w-full max-w-xs mx-4" onClick={(e) => e.stopPropagation()}>
               <h3 className="text-sm font-bold text-deep-800 mb-3">{activeSavedFilter ? 'حفظ تعديلات التصفية' : 'حفظ التصفية'}</h3>
               <input
                 autoFocus
                 value={saveFilterName}
                 onChange={(e) => setSaveFilterName(e.target.value)}
                 placeholder="اسم التصفية"
-                className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400 text-sm mb-3"
+                className="surface-field w-full px-4 py-2.5 rounded-lg text-sm mb-3"
                 onKeyDown={(e) => { if (e.key === 'Enter') handleSaveFilter() }}
               />
               <div className="flex gap-3">
-                <button onClick={() => setShowSaveModal(false)} className="flex-1 px-4 py-2 water-btn-outline rounded-xl text-sm">إلغاء</button>
-                <button onClick={handleSaveFilter} disabled={!saveFilterName.trim()} className="flex-1 px-4 py-2 water-btn text-white rounded-xl text-sm font-medium disabled:opacity-50">حفظ</button>
+                <button onClick={() => setShowSaveModal(false)} className="flex-1 px-4 py-2 water-btn-outline rounded-lg text-sm">إلغاء</button>
+                <button onClick={handleSaveFilter} disabled={!saveFilterName.trim()} className="flex-1 px-4 py-2 water-btn text-white rounded-lg text-sm font-medium disabled:opacity-50">حفظ</button>
               </div>
             </div>
           </div>
@@ -383,25 +386,25 @@ export default function AttendancePage() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="بحث عن طالب..."
-          className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400 text-sm"
+          className="surface-field w-full px-4 py-2.5 rounded-lg text-sm"
         />
       </div>
 
       {loading && (
-        <div className="glass-card rounded-2xl p-8 text-center text-deep-600/60">جاري التحميل...</div>
+        <div className="glass-card rounded-lg p-8 text-center text-deep-600/80">جاري التحميل...</div>
       )}
 
       {grid && displaySessions.length === 0 && (
-        <div className="glass-card rounded-2xl p-8 text-center text-deep-600/60">
+        <div className="glass-card rounded-lg p-8 text-center text-deep-600/80">
           لا توجد جلسات هذا الأسبوع
         </div>
       )}
 
       {grid && displaySessions.length > 0 && (
-        <div className="glass-card rounded-2xl p-3 md:p-5">
+        <div className="glass-card rounded-lg p-3 md:p-5">
           <div className="md:hidden space-y-3">
             {displayStudents.map((student) => (
-              <div key={student.id} className="rounded-xl border border-water-200/50 bg-white/30 dark:bg-slate-800/30 overflow-hidden">
+              <div key={student.id} className="rounded-lg border border-water-200/80 bg-white/85 dark:bg-slate-800/70 overflow-hidden">
                 <div className="px-4 py-3 border-b border-water-200/30 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <StudentAvatar name={student.name} profilePic={student.profile_pic} className="w-9 h-9" />
@@ -413,7 +416,7 @@ export default function AttendancePage() {
                         setNotice(null)
                         setWarningStudent(student)
                       }}
-                      className="shrink-0 px-3 py-1.5 rounded-xl text-xs border border-red-200 dark:border-red-800 text-red-600 dark:text-red-300 hover:bg-red-50/70 dark:hover:bg-red-900/30 transition"
+                      className="shrink-0 px-3 py-1.5 rounded-lg text-xs border border-red-200 dark:border-red-800 text-red-600 dark:text-red-300 hover:bg-red-50/70 dark:hover:bg-red-900/30 transition"
                     >
                       إضافة إنذار
                     </button>
@@ -440,16 +443,16 @@ export default function AttendancePage() {
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="border-b border-water-200/30">
-                <th className="text-right py-3 px-3 text-deep-700 sticky right-0 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm z-10 min-w-[220px]">الطالب</th>
+                <th className="data-table-header text-right py-3 px-3 text-deep-800 sticky right-0 backdrop-blur-sm z-10 min-w-[240px]">الطالب</th>
                 {displaySessions.map((s) => (
-                  <th key={s.id} className="text-center py-3 px-2 text-deep-600 text-xs whitespace-nowrap min-w-[90px]">{formatDateWithWeekday(s.date)}</th>
+                  <th key={s.id} className="data-table-header text-center py-3 px-2 text-deep-700 text-xs whitespace-nowrap min-w-[96px]">{formatDateWithWeekday(s.date)}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {displayStudents.map((student) => (
-                <tr key={student.id} className="border-b border-water-200/20 hover:bg-water-100/20">
-                  <td className="py-2.5 px-3 text-deep-800 font-medium sticky right-0 bg-white/40 dark:bg-slate-800/40 backdrop-blur-sm z-10">
+                <tr key={student.id} className="border-b border-water-200/40 hover:bg-water-50/80 dark:hover:bg-slate-800/70">
+                  <td className="data-table-sticky py-2.5 px-3 text-deep-900 font-semibold sticky right-0 backdrop-blur-sm z-10">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
                         <StudentAvatar name={student.name} profilePic={student.profile_pic} />
@@ -461,7 +464,7 @@ export default function AttendancePage() {
                             setNotice(null)
                             setWarningStudent(student)
                           }}
-                          className="shrink-0 px-3 py-1.5 rounded-xl text-xs border border-red-200 dark:border-red-800 text-red-600 dark:text-red-300 hover:bg-red-50/70 dark:hover:bg-red-900/30 transition"
+                          className="shrink-0 px-3 py-1.5 rounded-lg text-xs border border-red-200 dark:border-red-800 text-red-600 dark:text-red-300 hover:bg-red-50/70 dark:hover:bg-red-900/30 transition"
                         >
                           إضافة إنذار
                         </button>

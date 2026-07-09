@@ -114,7 +114,7 @@ export default function AttendanceFilter({ sessions, initialGroups, onApply, onC
   }
 
   return (
-    <div className="glass-strong rounded-2xl p-4 space-y-3 border border-water-300/50">
+    <div className="glass-strong rounded-lg p-4 space-y-3 border border-water-300/60">
       <div className="flex items-center justify-between mb-1">
         <h3 className="text-sm font-bold text-deep-800">بناء التصفية</h3>
         <button onClick={onCancel} className="text-deep-400 hover:text-deep-600 transition text-lg leading-none">&times;</button>
@@ -124,7 +124,7 @@ export default function AttendanceFilter({ sessions, initialGroups, onApply, onC
         <div key={group.id}>
           {gi > 0 && (
             <div className="flex items-center gap-2 mb-2">
-              <div className="flex bg-white/60 dark:bg-slate-800/60 rounded-md p-0.5 border border-water-200/50">
+              <div className="flex bg-white/85 dark:bg-slate-800/70 rounded-md p-0.5 border border-water-200/70">
                 <button
                   onClick={() => updateGroupConnector(gi, 'and')}
                   className={`px-2 py-0.5 text-[11px] rounded transition font-medium ${
@@ -150,7 +150,7 @@ export default function AttendanceFilter({ sessions, initialGroups, onApply, onC
             {group.rules.map((rule, ri) => (
               <div key={ri} className="flex flex-wrap items-center gap-1.5">
                 {ri > 0 && (
-                  <div className="flex bg-white/60 dark:bg-slate-800/60 rounded-md p-0.5 border border-water-200/50 shrink-0">
+                  <div className="flex bg-white/85 dark:bg-slate-800/70 rounded-md p-0.5 border border-water-200/70 shrink-0">
                     <button
                       onClick={() => updateRule(gi, ri, 'connector', 'and')}
                       className={`px-2 py-0.5 text-[11px] rounded transition font-medium ${
@@ -169,7 +169,7 @@ export default function AttendanceFilter({ sessions, initialGroups, onApply, onC
                     </button>
                   </div>
                 )}
-                <div className="flex bg-white/60 dark:bg-slate-800/60 rounded-md p-0.5 border border-water-200/50 shrink-0">
+                <div className="flex bg-white/85 dark:bg-slate-800/70 rounded-md p-0.5 border border-water-200/70 shrink-0">
                   <button
                     onClick={() => updateRuleTarget(gi, ri, 'session')}
                     className={`px-2 py-0.5 text-[11px] rounded transition font-medium ${
@@ -190,7 +190,7 @@ export default function AttendanceFilter({ sessions, initialGroups, onApply, onC
                 <select
                   value={(rule.target || 'session') === 'weekday' ? (rule.weekday ?? 0) : rule.sessionId}
                   onChange={(e) => updateRule(gi, ri, (rule.target || 'session') === 'weekday' ? 'weekday' : 'sessionId', Number(e.target.value))}
-                  className="flex-1 min-w-[130px] px-2.5 py-1.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-water-400"
+                  className="surface-field flex-1 min-w-[130px] px-2.5 py-1.5 rounded-lg text-xs"
                 >
                   {(rule.target || 'session') === 'weekday'
                     ? WEEKDAY_NAMES.map((name, i) => <option key={i} value={i}>{name}</option>)
@@ -199,14 +199,14 @@ export default function AttendanceFilter({ sessions, initialGroups, onApply, onC
                 <select
                   value={rule.operator}
                   onChange={(e) => updateRule(gi, ri, 'operator', e.target.value)}
-                  className="w-20 shrink-0 px-2 py-1.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-water-400"
+                  className="surface-field w-20 shrink-0 px-2 py-1.5 rounded-lg text-xs"
                 >
                   {OPERATORS.map((op) => <option key={op.value} value={op.value}>{op.label}</option>)}
                 </select>
                 <select
                   value={rule.status}
                   onChange={(e) => updateRule(gi, ri, 'status', e.target.value)}
-                  className="w-[72px] shrink-0 px-2 py-1.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-water-400"
+                  className="surface-field w-[72px] shrink-0 px-2 py-1.5 rounded-lg text-xs"
                 >
                   {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
