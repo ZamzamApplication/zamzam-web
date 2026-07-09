@@ -1177,7 +1177,7 @@ function WarningsTab({ sheikhs }: { sheikhs: SheikhInfo[] }) {
     }
   }
 
-  if (loading) return <div className="text-center py-8 text-deep-400">جاري التحميل...</div>
+  if (loading) return <div className="page-loading" aria-label="جاري التحميل" />
 
   return (
     <div>
@@ -1395,7 +1395,7 @@ export default function ManagePage() {
     load()
   }
 
-  if (loading) return null
+  if (loading) return <div className="page-loading" aria-label="جاري التحميل" />
 
   const tabs = [
     { key: 'sheikhs', label: 'الشيوخ والطلاب' },

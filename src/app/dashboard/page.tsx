@@ -56,7 +56,7 @@ export default function DashboardPage() {
     router.push(`/sessions/${sessionId}`)
   }
 
-  if (loading) return null
+  if (loading) return <div className="page-loading" aria-label="جاري التحميل" />
 
   return (
     <div>
@@ -80,7 +80,7 @@ export default function DashboardPage() {
           <Link
             key={item.label}
             href={item.href}
-            className={`glass-card rounded-2xl p-5 text-center bg-gradient-to-br ${item.color} text-white hover:brightness-110 transition-all`}
+            className={`glass-card rounded-2xl p-5 text-center bg-gradient-to-br ${item.color} text-white hover:brightness-105`}
           >
             <div className="text-3xl font-bold">{item.value}</div>
             <div className="text-sm mt-1 opacity-80">{item.label}</div>
@@ -121,7 +121,7 @@ export default function DashboardPage() {
             <div
               key={s.id}
               onClick={() => router.push(`/sessions/${s.id}`)}
-              className="glass-card rounded-2xl p-5 cursor-pointer hover:bg-water-100/30 transition"
+              className="glass-card rounded-2xl p-5 cursor-pointer"
             >
               <div className="flex justify-between items-center">
                 <div>

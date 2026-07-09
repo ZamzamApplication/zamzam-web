@@ -12,6 +12,14 @@ interface SavedFilter {
   groups: FilterGroup[]
 }
 
+function parseSavedFilter(f: any): SavedFilter {
+  return { ...f, groups: JSON.parse(f.data) }
+}
+
+function cloneFilterGroups(groups: FilterGroup[]): FilterGroup[] {
+  return JSON.parse(JSON.stringify(groups))
+}
+
 const STATUS_COLORS: Record<string, string> = {
   'حاضر': 'bg-green-200/60 text-green-800 dark:bg-green-900/40 dark:text-green-300',
   'غياب': 'bg-gray-200/50 text-gray-600 dark:bg-gray-700/40 dark:text-gray-400',
@@ -78,7 +86,7 @@ function statusMatches(status: string, rule: FilterRule): boolean {
 function matchesRule(student: { records: Record<string, string> }, rule: FilterRule, sessions: AttendanceGridSession[]): boolean {
   if (rule.target === 'weekday') {
     const matchingSessions = sessions.filter((s) => getSessionWeekday(s.date) === (rule.weekday ?? 0))
-    if (matchingSessions.length === 0) return false
+    if (matchingSessions.length === 0) return true
     return matchingSessions.some((session) => {
       const status = student.records[String(session.id)] || 'لا ينطبق'
       return statusMatches(status, rule)
@@ -140,13 +148,13 @@ export default function AttendancePage() {
   useEffect(() => {
     api.getMe().then(setUser).catch(() => {})
     api.getSavedFilters().then((data: any[]) => {
-      setSavedFilters(data.map((f: any) => ({ ...f, groups: JSON.parse(f.data) })))
+      setSavedFilters(data.map(parseSavedFilter))
     }).catch(() => {})
   }, [])
 
   const refreshSavedFilters = () => {
     api.getSavedFilters().then((data: any[]) => {
-      setSavedFilters(data.map((f: any) => ({ ...f, groups: JSON.parse(f.data) })))
+      setSavedFilters(data.map(parseSavedFilter))
     }).catch(() => {})
   }
 
@@ -157,24 +165,30 @@ export default function AttendancePage() {
       const data = JSON.stringify(filterGroups)
       if (activeSavedFilter) {
         const updated = await api.updateSavedFilter(activeSavedFilter.id, name, data)
-        setActiveSavedFilter({ ...updated, groups: JSON.parse(updated.data) })
+        const parsed = parseSavedFilter(updated)
+        setActiveSavedFilter(parsed)
+        setSavedFilters((prev) => prev.map((f) => (f.id === parsed.id ? parsed : f)))
       } else {
         const created = await api.createSavedFilter(name, data)
-        setActiveSavedFilter({ ...created, groups: JSON.parse(created.data) })
+        const parsed = parseSavedFilter(created)
+        setActiveSavedFilter(parsed)
+        setSavedFilters((prev) => [parsed, ...prev])
       }
       refreshSavedFilters()
       setShowSaveModal(false)
       setSaveFilterName('')
+      setNotice({ type: 'success', text: activeSavedFilter ? 'تم حفظ تعديلات التصفية' : 'تم حفظ التصفية' })
     } catch {}
   }
 
   const handleLoadFilter = async (f: SavedFilter, openBuilder = false) => {
-    setFilterGroups(f.groups)
-    setActiveSavedFilter(f)
+    const groups = cloneFilterGroups(f.groups)
+    setFilterGroups(groups)
+    setActiveSavedFilter({ ...f, groups })
     setShowFilter(openBuilder)
-    const ruleSessionIds = getSessionRuleIds(f.groups)
+    const ruleSessionIds = getSessionRuleIds(groups)
     try {
-      const data = await api.getAttendanceGrid(selectedSheikh || undefined, undefined, !hasWeekdayRules(f.groups) && ruleSessionIds.length > 0 ? ruleSessionIds : undefined)
+      const data = await api.getAttendanceGrid(selectedSheikh || undefined, undefined, !hasWeekdayRules(groups) && ruleSessionIds.length > 0 ? ruleSessionIds : undefined)
       setGrid(data)
     } catch {}
   }
@@ -266,13 +280,23 @@ export default function AttendancePage() {
   }, [grid, today, weekStart])
 
   const handleApplyFilter = async (groups: FilterGroup[]) => {
-    setFilterGroups(groups)
+    const nextGroups = cloneFilterGroups(groups)
+    setFilterGroups(nextGroups)
     setShowFilter(false)
-    const ruleSessionIds = getSessionRuleIds(groups)
+    const ruleSessionIds = getSessionRuleIds(nextGroups)
     try {
-      const data = await api.getAttendanceGrid(selectedSheikh || undefined, undefined, !hasWeekdayRules(groups) && ruleSessionIds.length > 0 ? ruleSessionIds : undefined)
+      if (activeSavedFilter) {
+        const updated = await api.updateSavedFilter(activeSavedFilter.id, activeSavedFilter.name, JSON.stringify(nextGroups))
+        const parsed = parseSavedFilter(updated)
+        setActiveSavedFilter(parsed)
+        setSavedFilters((prev) => prev.map((f) => (f.id === parsed.id ? parsed : f)))
+        setNotice({ type: 'success', text: 'تم حفظ تعديلات التصفية' })
+      }
+      const data = await api.getAttendanceGrid(selectedSheikh || undefined, undefined, !hasWeekdayRules(nextGroups) && ruleSessionIds.length > 0 ? ruleSessionIds : undefined)
       setGrid(data)
-    } catch {}
+    } catch {
+      setNotice({ type: 'error', text: 'فشل حفظ أو تطبيق التصفية' })
+    }
   }
 
   const clearFilter = () => {

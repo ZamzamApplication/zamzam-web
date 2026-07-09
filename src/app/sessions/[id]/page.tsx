@@ -341,7 +341,7 @@ export default function SessionAttendancePage() {
     }
   }
 
-  if (loading) return null
+  if (loading) return <div className="page-loading" aria-label="جاري التحميل" />
 
   if (!data) {
     return (
@@ -368,6 +368,30 @@ export default function SessionAttendancePage() {
     0
   )
   const totalCount = data.sheikh_groups.reduce((acc, g) => acc + g.students.length, 0)
+  const summaryItems = [
+    {
+      label: 'حاضر',
+      value: presentCount,
+      suffix: `/ ${totalCount}`,
+      className: 'border-emerald-200 bg-emerald-50/80 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/25 dark:text-emerald-300',
+    },
+    {
+      label: 'غياب',
+      value: absentCount,
+      className: 'border-slate-200 bg-slate-50/90 text-slate-700 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300',
+    },
+    {
+      label: 'لا ينطبق',
+      value: notApplicableCount,
+      className: 'border-sky-200 bg-sky-50/80 text-sky-700 dark:border-sky-800 dark:bg-sky-900/25 dark:text-sky-300',
+    },
+    {
+      label: 'غياب بعذر',
+      value: excusedAbsentCount,
+      className: 'border-amber-200 bg-amber-50/80 text-amber-700 dark:border-amber-800 dark:bg-amber-900/25 dark:text-amber-300',
+    },
+  ]
+
   return (
     <div>
       <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center mb-6">
@@ -401,10 +425,6 @@ export default function SessionAttendancePage() {
                   </button>
                 )}
                 <span>{data.circle_name || `حلقة #${data.circle_id}`}</span>
-                <span>{presentCount}/{totalCount} حاضر</span>
-                <span>{absentCount} غياب</span>
-                <span>{notApplicableCount} لا ينطبق</span>
-                <span>{excusedAbsentCount} غياب بعذر</span>
               </div>
             </div>
             <button
@@ -432,6 +452,18 @@ export default function SessionAttendancePage() {
             </button>
           )}
         </div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-4">
+        {summaryItems.map((item) => (
+          <div key={item.label} className={`rounded-lg border px-3 py-2.5 ${item.className}`}>
+            <div className="flex items-baseline justify-center gap-1">
+              <span className="text-xl font-bold leading-none">{item.value}</span>
+              {item.suffix && <span className="text-xs opacity-70">{item.suffix}</span>}
+            </div>
+            <div className="mt-1 text-center text-xs font-semibold">{item.label}</div>
+          </div>
+        ))}
       </div>
 
       <div className="flex justify-start mb-2">

@@ -67,7 +67,7 @@ export default function ReportsPage() {
     setStudentStats(stats.students)
   }
 
-  if (loading) return null
+  if (loading) return <div className="page-loading" aria-label="جاري التحميل" />
 
   return (
     <div>

@@ -35,7 +35,7 @@ export default function SessionsPage() {
     router.push(`/sessions/${sessionId}`)
   }
 
-  if (loading) return null
+  if (loading) return <div className="page-loading" aria-label="جاري التحميل" />
 
   return (
     <div>
