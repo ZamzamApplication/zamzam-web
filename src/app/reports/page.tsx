@@ -14,10 +14,19 @@ export default function ReportsPage() {
   const [sortAsc, setSortAsc] = useState(false)
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+  const [previewPic, setPreviewPic] = useState<string | null>(null)
 
   const studentAvatar = (name: string, profilePic?: string | null) => (
     profilePic ? (
-      <img src={mediaUrl(profilePic)!} alt="" className="w-8 h-8 rounded-full object-cover border border-water-300 shrink-0" />
+      <img
+        src={mediaUrl(profilePic)!}
+        alt=""
+        className="w-8 h-8 rounded-full object-cover border border-water-300 shrink-0 cursor-pointer hover:opacity-80 transition"
+        onClick={(e) => {
+          e.stopPropagation()
+          setPreviewPic(mediaUrl(profilePic)!)
+        }}
+      />
     ) : (
       <div className="w-8 h-8 rounded-full bg-water-200/50 flex items-center justify-center text-deep-400 text-xs border border-water-300 shrink-0">
         {name.charAt(0)}
@@ -211,6 +220,16 @@ export default function ReportsPage() {
           اختر حلقة لعرض التقارير
         </div>
       )}
+
+      {previewPic && <ImagePreviewModal src={previewPic} onClose={() => setPreviewPic(null)} />}
+    </div>
+  )
+}
+
+function ImagePreviewModal({ src, onClose }: { src: string; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <img src={src} alt="صورة الطالب" className="max-w-[90vw] max-h-[90vh] rounded-2xl shadow-2xl" onClick={(e) => e.stopPropagation()} />
     </div>
   )
 }

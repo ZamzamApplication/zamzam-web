@@ -19,9 +19,27 @@ const STATUS_COLORS: Record<string, string> = {
   'لا ينطبق': 'bg-blue-200/60 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
 }
 
-function StudentAvatar({ name, profilePic, className = 'w-8 h-8' }: { name: string; profilePic?: string | null; className?: string }) {
+function StudentAvatar({
+  name,
+  profilePic,
+  className = 'w-8 h-8',
+  onZoomPic,
+}: {
+  name: string
+  profilePic?: string | null
+  className?: string
+  onZoomPic?: (url: string) => void
+}) {
   return profilePic ? (
-    <img src={mediaUrl(profilePic)!} alt="" className={`${className} rounded-full object-cover border border-water-300 shrink-0`} />
+    <img
+      src={mediaUrl(profilePic)!}
+      alt=""
+      className={`${className} rounded-full object-cover border border-water-300 shrink-0 cursor-pointer hover:opacity-80 transition`}
+      onClick={(e) => {
+        e.stopPropagation()
+        onZoomPic?.(mediaUrl(profilePic)!)
+      }}
+    />
   ) : (
     <div className={`${className} rounded-full bg-water-200/50 flex items-center justify-center text-deep-400 text-xs border border-water-300 shrink-0`}>
       {name.charAt(0)}
@@ -116,6 +134,7 @@ export default function AttendancePage() {
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [saveFilterName, setSaveFilterName] = useState('')
   const [warningStudent, setWarningStudent] = useState<AttendanceGridStudent | null>(null)
+  const [previewPic, setPreviewPic] = useState<string | null>(null)
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   useEffect(() => {
@@ -407,7 +426,7 @@ export default function AttendancePage() {
               <div key={student.id} className="rounded-lg border border-water-200/80 bg-white/85 dark:bg-slate-800/70 overflow-hidden">
                 <div className="px-4 py-3 border-b border-water-200/30 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <StudentAvatar name={student.name} profilePic={student.profile_pic} className="w-9 h-9" />
+                    <StudentAvatar name={student.name} profilePic={student.profile_pic} className="w-9 h-9" onZoomPic={setPreviewPic} />
                     <h3 className="font-semibold text-deep-800 truncate">{student.name}</h3>
                   </div>
                   {canSendWarnings && (
@@ -455,7 +474,7 @@ export default function AttendancePage() {
                   <td className="data-table-sticky py-2.5 px-3 text-deep-900 font-semibold sticky right-0 backdrop-blur-sm z-10">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
-                        <StudentAvatar name={student.name} profilePic={student.profile_pic} />
+                        <StudentAvatar name={student.name} profilePic={student.profile_pic} onZoomPic={setPreviewPic} />
                         <span className="truncate">{student.name}</span>
                       </div>
                       {canSendWarnings && (
@@ -504,6 +523,16 @@ export default function AttendancePage() {
           onError={(message) => setNotice({ type: 'error', text: message })}
         />
       )}
+
+      {previewPic && <ImagePreviewModal src={previewPic} onClose={() => setPreviewPic(null)} />}
+    </div>
+  )
+}
+
+function ImagePreviewModal({ src, onClose }: { src: string; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <img src={src} alt="صورة الطالب" className="max-w-[90vw] max-h-[90vh] rounded-2xl shadow-2xl" onClick={(e) => e.stopPropagation()} />
     </div>
   )
 }
