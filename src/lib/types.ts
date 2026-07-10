@@ -161,6 +161,7 @@ export interface AttendanceGridStudent {
   name: string
   profile_pic?: string | null
   sheikh_id: number | null
+  sheikh_name?: string | null
   records: Record<string, string>
 }
 

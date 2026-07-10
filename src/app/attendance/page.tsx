@@ -272,7 +272,13 @@ export default function AttendancePage() {
     return grid.sessions.filter((s) => s.date >= weekStart)
   }, [grid, filterGroups, hasActiveFilter, weekStart])
 
-  const displayStudents = searchedStudents
+  const displayStudents = useMemo(() => {
+    return [...searchedStudents].sort((a, b) => {
+      const sheikhCompare = (a.sheikh_name || '').localeCompare(b.sheikh_name || '', 'ar')
+      if (sheikhCompare !== 0) return sheikhCompare
+      return a.name.localeCompare(b.name, 'ar')
+    })
+  }, [searchedStudents])
   const canSendWarnings = user?.role === 'admin'
   const warningSessions = useMemo(() => {
     if (!grid) return []
@@ -451,7 +457,10 @@ export default function AttendancePage() {
                 <div className="px-4 py-3 border-b border-water-200/30 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <StudentAvatar name={student.name} profilePic={student.profile_pic} className="w-9 h-9" onZoomPic={setPreviewPic} />
-                    <h3 className="font-semibold text-deep-800 truncate">{student.name}</h3>
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-deep-800 truncate">{student.name}</h3>
+                      <p className="text-xs text-deep-500 truncate">{student.sheikh_name || 'بدون شيخ'}</p>
+                    </div>
                   </div>
                   {canSendWarnings && (
                     <button
@@ -499,7 +508,10 @@ export default function AttendancePage() {
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
                         <StudentAvatar name={student.name} profilePic={student.profile_pic} onZoomPic={setPreviewPic} />
-                        <span className="truncate">{student.name}</span>
+                        <span className="min-w-0">
+                          <span className="block truncate">{student.name}</span>
+                          <span className="block text-xs font-normal text-deep-500 truncate">{student.sheikh_name || 'بدون شيخ'}</span>
+                        </span>
                       </div>
                       {canSendWarnings && (
                         <button
