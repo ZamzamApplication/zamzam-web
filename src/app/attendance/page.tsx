@@ -235,7 +235,14 @@ export default function AttendancePage() {
     return toLocalDateString(d)
   }, [])
 
-  const today = useMemo(() => toLocalDateString(new Date()), [])
+  const lastWeekRange = useMemo(() => {
+    const d = new Date()
+    const daysSinceSaturday = (d.getDay() + 1) % 7
+    d.setDate(d.getDate() - daysSinceSaturday - 7)
+    const start = toLocalDateString(d)
+    d.setDate(d.getDate() + 6)
+    return { start, end: toLocalDateString(d) }
+  }, [])
 
   const weekdayRuleSessions = useMemo(() => {
     if (!grid) return []
@@ -282,8 +289,8 @@ export default function AttendancePage() {
   const canSendWarnings = user?.role === 'admin'
   const warningSessions = useMemo(() => {
     if (!grid) return []
-    return grid.sessions.filter((s) => s.date >= weekStart && s.date <= today)
-  }, [grid, today, weekStart])
+    return grid.sessions.filter((s) => s.date >= lastWeekRange.start && s.date <= lastWeekRange.end)
+  }, [grid, lastWeekRange])
 
   const handleApplyFilter = async (groups: FilterGroup[]) => {
     const nextGroups = cloneFilterGroups(groups)
@@ -641,10 +648,10 @@ function WarningModal({
         )}
 
         <div className="space-y-3">
-          <p className="text-sm font-medium text-deep-700">اختر حلقات هذا الأسبوع التي غاب عنها الطالب بدون اعتذار</p>
+          <p className="text-sm font-medium text-deep-700">اختر حلقات الأسبوع الماضي التي غاب عنها الطالب بدون اعتذار</p>
           {sessions.length === 0 ? (
             <div className="rounded-xl border border-water-200/50 bg-white/40 dark:bg-slate-800/40 p-4 text-sm text-deep-500 text-center">
-              لا توجد حلقات مؤكدة من السبت إلى اليوم
+              لا توجد حلقات مؤكدة في الأسبوع الماضي
             </div>
           ) : (
             <div className="grid gap-2">
