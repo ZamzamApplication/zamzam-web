@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dar Zamzam Frontend Improvement TODO</title>
+  <style>
+    :root { color-scheme: light dark; --accent: #0891b2; --muted: #64748b; --surface: #fff; --bg: #f1f5f9; --border: #cbd5e1; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, sans-serif; line-height: 1.6; background: var(--bg); color: #0f172a; }
+    main { width: min(100% - 2rem, 960px); margin: 3rem auto; }
+    header, section { background: var(--surface); border: 1px solid var(--border); border-radius: 1rem; padding: 1.5rem; margin-bottom: 1rem; }
+    h1, h2, h3 { line-height: 1.25; }
+    h1 { margin-top: 0; }
+    h2 { color: #0e7490; }
+    h3 { margin-bottom: .35rem; }
+    p { margin-top: .35rem; }
+    ol { padding-left: 1.5rem; }
+    li { margin-bottom: 1.25rem; }
+    li::marker { color: var(--accent); font-weight: 700; }
+    code { padding: .1rem .3rem; border-radius: .25rem; background: #e2e8f0; }
+    .status { display: inline-block; padding: .25rem .65rem; border-radius: 999px; background: #cffafe; color: #155e75; font-weight: 700; font-size: .85rem; }
+    .note { color: var(--muted); }
+    label { cursor: pointer; }
+    input[type="checkbox"] { width: 1.1rem; height: 1.1rem; margin-right: .5rem; accent-color: var(--accent); }
+    @media (prefers-color-scheme: dark) {
+      :root { --surface: #1e293b; --bg: #0f172a; --border: #475569; }
+      body { color: #e2e8f0; }
+      h2 { color: #67e8f9; }
+      code { background: #334155; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <span class="status">Repository review backlog</span>
+      <h1>Dar Zamzam Frontend Improvement TODO</h1>
+      <p>This page records the improvement opportunities identified during the repository-wide review. Checkboxes are intentionally left open so the document can serve as an implementation checklist.</p>
+      <p class="note">Initial review result: the production build and TypeScript validation passed.</p>
+    </header>
+
+    <section>
+      <h2>Highest priority</h2>
+      <ol>
+        <li><label><input type="checkbox"> <strong>Strengthen authentication and authorization.</strong></label><p>Replace tokens stored in <code>localStorage</code> with secure <code>HttpOnly</code>, <code>SameSite</code> cookies; protect routes through middleware or server layouts; load the current user server-side; enforce roles on every backend operation; and add a logout endpoint that invalidates the session.</p></li>
+        <li><label><input type="checkbox"> <strong>Prevent attendance autosave data loss.</strong></label><p>Keep queued updates until acknowledgement, retry failed saves, show save/error state, flush or warn before navigation, add conflict handling, and consider a batch-attendance endpoint instead of one request per student.</p></li>
+        <li><label><input type="checkbox"> <strong>Create typed and validated API boundaries.</strong></label><p>Make <code>request&lt;T&gt;</code> generic, type every endpoint, validate external responses (for example with Zod or generated OpenAPI types), define role/status unions, support cancellation and timeouts, normalize network errors, handle empty 204 responses, and make 401 handling consistent for downloads.</p></li>
+        <li><label><input type="checkbox"> <strong>Split oversized pages into focused features.</strong></label><p>Break up management, attendance, and session-detail pages into feature components, modal/form components, hooks such as <code>useManageData</code> and <code>useSessionAttendance</code>, and shared UI including Modal, StudentAvatar, ImagePreview, and attendance status controls.</p></li>
+        <li><label><input type="checkbox"> <strong>Add automated tests and CI quality gates.</strong></label><p>Add lint, typecheck, test, and build scripts. Cover filter boolean logic, week/date boundaries, 401 and API errors, autosave retry behavior, forms, login, attendance editing, session confirmation, and admin authorization. Run these checks in CI.</p></li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>Performance and data flow</h2>
+      <ol start="6">
+        <li><label><input type="checkbox"> <strong>Eliminate request waterfalls and N+1 requests.</strong></label><p>Add consolidated dashboard and management endpoints, include students with sheikh queries where appropriate, start independent calls concurrently, and consider TanStack Query or SWR for caching, deduplication, retry, and invalidation.</p></li>
+        <li><label><input type="checkbox"> <strong>Remove duplicate attendance loading and stale-response races.</strong></label><p>Remove the duplicate initial grid fetch and abort earlier requests when the selected sheikh or filters change so an older response cannot overwrite current state.</p></li>
+        <li><label><input type="checkbox"> <strong>Improve loading and failure states.</strong></label><p>Stop swallowing request failures or displaying zero-valued statistics as real data. Provide shared error UI, meaningful messages, retry actions, and reliable <code>finally</code> handling so pages cannot remain stuck loading.</p></li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>Architecture and Next.js</h2>
+      <ol start="9">
+        <li><label><input type="checkbox"> <strong>Restore a server root layout.</strong></label><p>Move metadata and the document shell to a server layout, isolate navigation/theme interactivity in a client AppShell, introduce public/authenticated route groups, and use dedicated layouts for landing, login, and authenticated application routes.</p></li>
+        <li><label><input type="checkbox"> <strong>Add route-level boundaries.</strong></label><p>Create <code>error.tsx</code>, <code>not-found.tsx</code>, and appropriate <code>loading.tsx</code> files, including an authenticated-area error boundary where useful.</p></li>
+        <li><label><input type="checkbox"> <strong>Modernize TypeScript configuration.</strong></label><p>Target a modern runtime such as ES2020, consider disabling <code>allowJs</code>, enable stricter options such as <code>noUncheckedIndexedAccess</code> and <code>exactOptionalPropertyTypes</code> after model cleanup, explicitly exclude generated folders, and stop tracking <code>tsconfig.tsbuildinfo</code>.</p></li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>Accessibility and user experience</h2>
+      <ol start="12">
+        <li><label><input type="checkbox"> <strong>Make modals and forms accessible.</strong></label><p>Add dialog roles, accessible titles, focus trapping and restoration, Escape handling, scroll locking, proper <code>htmlFor</code>/<code>id</code> associations, and <code>aria-label</code> text for icon-only controls.</p></li>
+        <li><label><input type="checkbox"> <strong>Replace native alert and confirm dialogs.</strong></label><p>Use shared confirmation dialogs and toast/notice components for consistent styling, accessibility, and operation-specific feedback.</p></li>
+        <li><label><input type="checkbox"> <strong>Improve drag-and-drop.</strong></label><p>Remove the global <code>window.__dragData</code> state, use component state or an accessible maintained library, and provide keyboard, touch, explicit move, and reorder alternatives.</p></li>
+        <li><label><input type="checkbox"> <strong>Optimize images and the hero video.</strong></label><p>Create smaller WebM/MP4 variants and a poster, avoid unnecessary video preload, honor reduced-motion and data-saving preferences, lazy-load noncritical media, and configure <code>next/image</code> for profile images where practical.</p></li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>Deployment and maintenance</h2>
+      <ol start="16">
+        <li><label><input type="checkbox"> <strong>Make the API URL deployment-configurable.</strong></label><p>Replace the hard-coded Docker build value with an explicit build argument or same-origin proxy. A same-origin design can also simplify cookies and CORS.</p></li>
+        <li><label><input type="checkbox"> <strong>Simplify and harden the Docker image.</strong></label><p>Review whether the standalone output needs the full production <code>node_modules</code> copy, use <code>npm ci --omit=dev</code> if retained, run as a non-root user, add health checks, pin the base image for reproducibility, test the 256 MB memory allocation, and document rollback procedures.</p></li>
+        <li><label><input type="checkbox"> <strong>Add project documentation.</strong></label><p>Create a README covering local setup, environment variables, backend/API requirements, authentication, roles and workflows, Arabic/RTL and date conventions, testing, deployment, and database backup/export expectations.</p></li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>Recommended implementation order</h2>
+      <ol>
+        <li>Fix autosave reliability.</li>
+        <li>Secure authentication and session handling.</li>
+        <li>Type and validate the API client.</li>
+        <li>Add tests for attendance, authorization, and dates.</li>
+        <li>Split management, attendance, and session-detail features.</li>
+        <li>Consolidate backend requests and introduce caching.</li>
+        <li>Improve error states and accessibility.</li>
+        <li>Optimize landing media and deployment configuration.</li>
+      </ol>
+    </section>
+  </main>
+</body>
+</html>

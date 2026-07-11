@@ -132,6 +132,7 @@ export default function AttendancePage() {
   const [grid, setGrid] = useState<AttendanceGrid | null>(null)
   const [allSessions, setAllSessions] = useState<AttendanceGridSession[]>([])
   const [loading, setLoading] = useState(false)
+  const [weekPage, setWeekPage] = useState(0)
 
   const [showFilter, setShowFilter] = useState(false)
   const [filterGroups, setFilterGroups] = useState<FilterGroup[]>([])
@@ -228,26 +229,24 @@ export default function AttendancePage() {
 
   const hasActiveFilter = filterGroups.some((g) => g.rules.length > 0)
 
-  const weekStart = useMemo(() => {
+  const weekRange = useMemo(() => {
     const d = new Date()
     const daysSinceSaturday = (d.getDay() + 1) % 7
-    d.setDate(d.getDate() - daysSinceSaturday)
-    return toLocalDateString(d)
-  }, [])
-
-  const lastWeekRange = useMemo(() => {
-    const d = new Date()
-    const daysSinceSaturday = (d.getDay() + 1) % 7
-    d.setDate(d.getDate() - daysSinceSaturday - 7)
+    d.setDate(d.getDate() - daysSinceSaturday - (weekPage * 7))
     const start = toLocalDateString(d)
     d.setDate(d.getDate() + 6)
     return { start, end: toLocalDateString(d) }
-  }, [])
+  }, [weekPage])
+
+  const weekLabel = useMemo(() => {
+    const format = new Intl.DateTimeFormat('ar-EG', { day: 'numeric', month: 'short', year: 'numeric' })
+    return `${format.format(new Date(`${weekRange.start}T12:00:00`))} - ${format.format(new Date(`${weekRange.end}T12:00:00`))}`
+  }, [weekRange])
 
   const weekdayRuleSessions = useMemo(() => {
     if (!grid) return []
-    return grid.sessions.filter((s) => s.date >= weekStart)
-  }, [grid, weekStart])
+    return grid.sessions.filter((s) => s.date >= weekRange.start && s.date <= weekRange.end)
+  }, [grid, weekRange])
 
   const ruleFilteredStudents = useMemo(() => {
     if (!grid) return []
@@ -273,11 +272,13 @@ export default function AttendancePage() {
       )
       return grid.sessions.filter((s) => (
         sessionRuleIds.has(s.id) ||
-        (s.date >= weekStart && weekdays.has(getSessionWeekday(s.date)))
+        (s.date >= weekRange.start &&
+          s.date <= weekRange.end &&
+          weekdays.has(getSessionWeekday(s.date)))
       ))
     }
-    return grid.sessions.filter((s) => s.date >= weekStart)
-  }, [grid, filterGroups, hasActiveFilter, weekStart])
+    return grid.sessions.filter((s) => s.date >= weekRange.start && (weekPage === 0 || s.date <= weekRange.end))
+  }, [grid, filterGroups, hasActiveFilter, weekPage, weekRange])
 
   const displayStudents = useMemo(() => {
     return [...searchedStudents].sort((a, b) => {
@@ -287,10 +288,6 @@ export default function AttendancePage() {
     })
   }, [searchedStudents])
   const canSendWarnings = user?.role === 'admin'
-  const warningSessions = useMemo(() => {
-    if (!grid) return []
-    return grid.sessions.filter((s) => s.date >= lastWeekRange.start && s.date <= lastWeekRange.end)
-  }, [grid, lastWeekRange])
 
   const handleApplyFilter = async (groups: FilterGroup[]) => {
     const nextGroups = cloneFilterGroups(groups)
@@ -450,9 +447,33 @@ export default function AttendancePage() {
         <div className="glass-card rounded-lg p-8 text-center text-deep-600/80">جاري التحميل...</div>
       )}
 
+      {grid && !loading && (
+        <div className="glass-card rounded-lg px-3 py-3 md:px-5 mb-4 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => setWeekPage((page) => page + 1)}
+            className="water-btn-outline rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap"
+          >
+            أسبوع أقدم
+          </button>
+          <div className="text-center min-w-0">
+            <div className="text-sm font-semibold text-deep-800">{weekPage === 0 ? 'الأسبوع الحالي' : `قبل ${weekPage} ${weekPage === 1 ? 'أسبوع' : 'أسابيع'}`}</div>
+            <div className="text-xs text-deep-500 mt-0.5 truncate">{weekLabel}</div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setWeekPage((page) => Math.max(0, page - 1))}
+            disabled={weekPage === 0}
+            className="water-btn-outline rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            أسبوع أحدث
+          </button>
+        </div>
+      )}
+
       {grid && displaySessions.length === 0 && (
         <div className="glass-card rounded-lg p-8 text-center text-deep-600/80">
-          لا توجد جلسات هذا الأسبوع
+          لا توجد جلسات في هذا الأسبوع
         </div>
       )}
 
@@ -557,7 +578,7 @@ export default function AttendancePage() {
       {warningStudent && (
         <WarningModal
           student={warningStudent}
-          sessions={warningSessions}
+          sessions={displaySessions}
           onClose={() => setWarningStudent(null)}
           onSent={() => {
             setWarningStudent(null)
@@ -648,10 +669,10 @@ function WarningModal({
         )}
 
         <div className="space-y-3">
-          <p className="text-sm font-medium text-deep-700">اختر حلقات الأسبوع الماضي التي غاب عنها الطالب بدون اعتذار</p>
+          <p className="text-sm font-medium text-deep-700">اختر الحلقات المعروضة حسب التصفية التي غاب عنها الطالب بدون اعتذار</p>
           {sessions.length === 0 ? (
             <div className="rounded-xl border border-water-200/50 bg-white/40 dark:bg-slate-800/40 p-4 text-sm text-deep-500 text-center">
-              لا توجد حلقات مؤكدة في الأسبوع الماضي
+              لا توجد حلقات مطابقة للتصفية
             </div>
           ) : (
             <div className="grid gap-2">
