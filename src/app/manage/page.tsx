@@ -80,6 +80,7 @@ function AddCircleModal({ onClose, onCreated }: { onClose: () => void; onCreated
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [maxWarnings, setMaxWarnings] = useState(3)
+  const [weekStartDay, setWeekStartDay] = useState(6)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -89,7 +90,7 @@ function AddCircleModal({ onClose, onCreated }: { onClose: () => void; onCreated
     setLoading(true)
     setError('')
     try {
-      await api.createCircle(name, description || undefined, maxWarnings)
+      await api.createCircle(name, description || undefined, maxWarnings, weekStartDay)
       onCreated()
     } catch (err: any) {
       setError(err.message || 'فشل الإضافة')
@@ -102,9 +103,24 @@ function AddCircleModal({ onClose, onCreated }: { onClose: () => void; onCreated
     <Modal title="إضافة حلقة جديدة" onClose={onClose}>
       <ErrorMsg error={error} />
       <form onSubmit={handleSubmit} className="space-y-4">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="اسم الحلقة" required className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
-        <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="وصف (اختياري)" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
-        <input value={maxWarnings} onChange={(e) => setMaxWarnings(Number(e.target.value))} type="number" min="1" placeholder="الحد الأقصى للإنذارات" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        <div>
+          <label htmlFor="add-circle-name" className="block text-sm font-medium text-deep-700 mb-1">اسم الحلقة</label>
+          <input id="add-circle-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="اسم الحلقة" required className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        </div>
+        <div>
+          <label htmlFor="add-circle-description" className="block text-sm font-medium text-deep-700 mb-1">وصف الحلقة</label>
+          <input id="add-circle-description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="وصف (اختياري)" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        </div>
+        <div>
+          <label htmlFor="add-circle-max-warnings" className="block text-sm font-medium text-deep-700 mb-1">الحد الأقصى للإنذارات</label>
+          <input id="add-circle-max-warnings" value={maxWarnings} onChange={(e) => setMaxWarnings(Number(e.target.value))} type="number" min="1" placeholder="الحد الأقصى للإنذارات" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        </div>
+        <div>
+          <label htmlFor="add-circle-week-start" className="block text-sm font-medium text-deep-700 mb-1">بداية الأسبوع</label>
+          <select id="add-circle-week-start" value={weekStartDay} onChange={(e) => setWeekStartDay(Number(e.target.value))} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
+            {WEEKDAY_NAMES.map((day, index) => <option key={day} value={index}>{day}</option>)}
+          </select>
+        </div>
         <div className="flex gap-3 pt-2">
           <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 water-btn-outline rounded-xl text-sm">إلغاء</button>
           <button type="submit" disabled={loading} className="flex-1 px-4 py-2.5 water-btn text-white rounded-xl text-sm font-medium disabled:opacity-50">{loading ? 'جاري...' : 'إضافة'}</button>
@@ -118,6 +134,7 @@ function EditCircleModal({ circle, onClose, onUpdated }: { circle: Circle; onClo
   const [name, setName] = useState(circle.name)
   const [description, setDescription] = useState(circle.description || '')
   const [maxWarnings, setMaxWarnings] = useState(circle.max_warnings || 3)
+  const [weekStartDay, setWeekStartDay] = useState(circle.week_start_day ?? 6)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -127,7 +144,7 @@ function EditCircleModal({ circle, onClose, onUpdated }: { circle: Circle; onClo
     setLoading(true)
     setError('')
     try {
-      await api.updateCircle(circle.id, name, description || undefined, maxWarnings)
+      await api.updateCircle(circle.id, name, description || undefined, maxWarnings, weekStartDay)
       onUpdated()
     } catch (err: any) {
       setError(err.message || 'فشل التحديث')
@@ -140,9 +157,24 @@ function EditCircleModal({ circle, onClose, onUpdated }: { circle: Circle; onClo
     <Modal title={`تعديل الحلقة — ${circle.name}`} onClose={onClose}>
       <ErrorMsg error={error} />
       <form onSubmit={handleSubmit} className="space-y-4">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="اسم الحلقة" required className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
-        <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="وصف (اختياري)" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
-        <input value={maxWarnings} onChange={(e) => setMaxWarnings(Number(e.target.value))} type="number" min="1" placeholder="الحد الأقصى للإنذارات" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        <div>
+          <label htmlFor="edit-circle-name" className="block text-sm font-medium text-deep-700 mb-1">اسم الحلقة</label>
+          <input id="edit-circle-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="اسم الحلقة" required className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        </div>
+        <div>
+          <label htmlFor="edit-circle-description" className="block text-sm font-medium text-deep-700 mb-1">وصف الحلقة</label>
+          <input id="edit-circle-description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="وصف (اختياري)" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        </div>
+        <div>
+          <label htmlFor="edit-circle-max-warnings" className="block text-sm font-medium text-deep-700 mb-1">الحد الأقصى للإنذارات</label>
+          <input id="edit-circle-max-warnings" value={maxWarnings} onChange={(e) => setMaxWarnings(Number(e.target.value))} type="number" min="1" placeholder="الحد الأقصى للإنذارات" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        </div>
+        <div>
+          <label htmlFor="edit-circle-week-start" className="block text-sm font-medium text-deep-700 mb-1">بداية الأسبوع</label>
+          <select id="edit-circle-week-start" value={weekStartDay} onChange={(e) => setWeekStartDay(Number(e.target.value))} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
+            {WEEKDAY_NAMES.map((day, index) => <option key={day} value={index}>{day}</option>)}
+          </select>
+        </div>
         <div className="flex gap-3 pt-2">
           <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 water-btn-outline rounded-xl text-sm">إلغاء</button>
           <button type="submit" disabled={loading} className="flex-1 px-4 py-2.5 water-btn text-white rounded-xl text-sm font-medium disabled:opacity-50">{loading ? 'جاري...' : 'حفظ'}</button>

@@ -228,15 +228,18 @@ export default function AttendancePage() {
   }, [selectedSheikh, loadGrid])
 
   const hasActiveFilter = filterGroups.some((g) => g.rules.length > 0)
+  const weekStartDay = selectedSheikh
+    ? (sheikhs.find((sheikh) => sheikh.id === selectedSheikh)?.week_start_day ?? 6)
+    : 6
 
   const weekRange = useMemo(() => {
     const d = new Date()
-    const daysSinceSaturday = (d.getDay() + 1) % 7
-    d.setDate(d.getDate() - daysSinceSaturday - (weekPage * 7))
+    const daysSinceWeekStart = (d.getDay() - weekStartDay + 7) % 7
+    d.setDate(d.getDate() - daysSinceWeekStart - (weekPage * 7))
     const start = toLocalDateString(d)
     d.setDate(d.getDate() + 6)
     return { start, end: toLocalDateString(d) }
-  }, [weekPage])
+  }, [weekPage, weekStartDay])
 
   const weekLabel = useMemo(() => {
     const format = new Intl.DateTimeFormat('ar-EG', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -621,10 +624,39 @@ function WarningModal({
   const [selectedIds, setSelectedIds] = useState<number[]>(defaultSelected)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [copied, setCopied] = useState(false)
+  const [previewNumbers, setPreviewNumbers] = useState({
+    next: student.next_warning_number ?? null,
+    remaining: student.remaining_warnings ?? null,
+  })
+
+  useEffect(() => {
+    api.getStudentWarningPreview(student.id)
+      .then((data: { next_warning_number: number; remaining_warnings: number }) => {
+        setPreviewNumbers({ next: data.next_warning_number, remaining: data.remaining_warnings })
+      })
+      .catch(() => setError('تعذر تحميل أرقام الإنذار'))
+  }, [student.id])
 
   const selectedLabels = sessions
     .filter((s) => selectedIds.includes(s.id))
     .map((s) => formatDateWithWeekday(s.date))
+
+  const previewMessage = `انذار رقم ${previewNumbers.next ?? '...'} الى الطالب "${student.name}"
+ بسبب غيابه بدون اعتذار عن حلقات:
+${selectedLabels.map((label) => `* ${label}`).join('\n') || '* ...'}
+
+عدد الانذارات المتبقية قبل الاستبعاد: ${previewNumbers.remaining ?? '...'}`
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(previewMessage)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 2000)
+    } catch {
+      setError('تعذر نسخ نص الإنذار')
+    }
+  }
 
   const toggleSession = (sessionId: number) => {
     setSelectedIds((prev) =>
@@ -706,12 +738,24 @@ function WarningModal({
             </div>
           )}
 
-          <div className="rounded-xl bg-white/40 dark:bg-slate-800/40 border border-water-200/60 p-4 text-sm text-deep-700 whitespace-pre-wrap">
-{`انذار رقم x الى الطالب "${student.name}"
- بسبب غيابه بدون اعتذار عن حلقات:
-${selectedLabels.map((label) => `* ${label}`).join('\n') || '* ...'}
-
-عدد الانذارات المتبقية قبل الاستبعاد: x`}
+          <div className="relative rounded-xl bg-white/40 dark:bg-slate-800/40 border border-water-200/60 p-4 pl-12 text-sm text-deep-700 whitespace-pre-wrap">
+            <button
+              type="button"
+              onClick={handleCopy}
+              aria-label="نسخ نص الإنذار"
+              title="نسخ نص الإنذار"
+              className="absolute top-3 left-3 rounded-lg p-1.5 text-deep-500 hover:bg-water-100/60 hover:text-deep-800 transition"
+            >
+              {copied ? (
+                <span className="text-xs text-green-600">تم</span>
+              ) : (
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-5 h-5">
+                  <rect x="9" y="9" width="11" height="11" rx="2" />
+                  <path d="M15 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3" />
+                </svg>
+              )}
+            </button>
+            {previewMessage}
           </div>
         </div>
 

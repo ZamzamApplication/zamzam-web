@@ -10,6 +10,7 @@ export interface Circle {
   name: string
   description?: string
   max_warnings?: number
+  week_start_day?: number
 }
 
 export interface Session {
@@ -53,6 +54,7 @@ export interface SheikhInfo {
   whatsapp_group_id?: string
   circle_id: number
   circle_name: string
+  week_start_day?: number
 }
 
 export interface WhatsAppGroup {
@@ -162,6 +164,8 @@ export interface AttendanceGridStudent {
   profile_pic?: string | null
   sheikh_id: number | null
   sheikh_name?: string | null
+  next_warning_number: number
+  remaining_warnings: number
   records: Record<string, string>
 }
 

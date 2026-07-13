@@ -7,6 +7,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
 import type { User } from '@/lib/types'
+import PwaRegistration from '@/components/PwaRegistration'
 
 const cairoFont = Cairo({ subsets: ['arabic'], display: 'swap', variable: '--font-cairo' })
 
@@ -90,8 +91,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <head>
           <title>دار زمزم</title>
           <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+          <link rel="manifest" href="/manifest.webmanifest" />
+          <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+          <meta name="theme-color" content="#0891b2" />
+          <meta name="mobile-web-app-capable" content="yes" />
+          <meta name="apple-mobile-web-app-capable" content="yes" />
+          <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+          <meta name="apple-mobile-web-app-title" content="دار زمزم" />
         </head>
-        <body className={`${cairoFont.variable} font-cairo`}>{children}</body>
+        <body className={`${cairoFont.variable} font-cairo`}><PwaRegistration />{children}</body>
       </html>
     )
   }
@@ -102,8 +110,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <head>
           <title>دار زمزم لتحفيظ القرآن</title>
           <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+          <link rel="manifest" href="/manifest.webmanifest" />
+          <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+          <meta name="theme-color" content="#0891b2" />
+          <meta name="mobile-web-app-capable" content="yes" />
+          <meta name="apple-mobile-web-app-capable" content="yes" />
+          <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+          <meta name="apple-mobile-web-app-title" content="دار زمزم" />
         </head>
         <body className={`${cairoFont.variable} font-cairo`}>
+          <PwaRegistration />
           <header className="fixed top-0 left-0 right-0 z-50 px-6 py-4 flex justify-between items-center">
             <Link href="/" className="text-xl font-bold text-white drop-shadow-lg">
               💧 دار زمزم
@@ -120,8 +136,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <title>دار زمزم</title>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+        <meta name="theme-color" content="#0891b2" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="دار زمزم" />
       </head>
       <body className={`${cairoFont.variable} font-cairo`}>
+        <PwaRegistration />
         {!loading && user && (
           <nav className="nav-glass px-4 md:px-6 py-3 sticky top-0 z-40">
             <div className="max-w-6xl mx-auto flex flex-col gap-3 md:flex-row md:items-center md:justify-between">

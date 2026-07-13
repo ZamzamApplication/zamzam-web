@@ -1,7 +1,10 @@
+import { getApiRuntime } from './api-runtime'
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 async function request(path: string, options?: RequestInit) {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+  const runtime = getApiRuntime()
+  const token = await runtime.getAccessToken()
   const headers: Record<string, string> = {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options?.headers as Record<string, string> || {}),
@@ -12,9 +15,8 @@ async function request(path: string, options?: RequestInit) {
   }
 
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers })
-  if (res.status === 401 && typeof window !== 'undefined') {
-    localStorage.removeItem('token')
-    window.location.href = '/login'
+  if (res.status === 401) {
+    await runtime.handleUnauthorized()
     throw new Error('Unauthorized')
   }
   if (!res.ok) {
@@ -200,6 +202,10 @@ export const api = {
     })
   },
 
+  getStudentWarningPreview(studentId: number) {
+    return request(`/students/${studentId}/warnings/preview`)
+  },
+
   deleteWarning(warningId: number) {
     return request(`/warnings/${warningId}`, { method: 'DELETE' })
   },
@@ -215,18 +221,19 @@ export const api = {
     return request('/reports/circles')
   },
 
-  createCircle(name: string, description?: string, maxWarnings?: number) {
+  createCircle(name: string, description?: string, maxWarnings?: number, weekStartDay?: number) {
     return request('/circles', {
       method: 'POST',
-      body: JSON.stringify({ name, description: description || null, max_warnings: maxWarnings ?? 3 }),
+      body: JSON.stringify({ name, description: description || null, max_warnings: maxWarnings ?? 3, week_start_day: weekStartDay ?? 6 }),
     })
   },
 
-  updateCircle(id: number, name?: string, description?: string, maxWarnings?: number) {
+  updateCircle(id: number, name?: string, description?: string, maxWarnings?: number, weekStartDay?: number) {
     const body: Record<string, unknown> = {}
     if (name !== undefined) body.name = name
     if (description !== undefined) body.description = description ?? null
     if (maxWarnings !== undefined) body.max_warnings = maxWarnings
+    if (weekStartDay !== undefined) body.week_start_day = weekStartDay
     return request(`/circles/${id}`, {
       method: 'PUT',
       body: JSON.stringify(body),
@@ -279,8 +286,8 @@ export const api = {
     return request(`/reports/student/${studentId}/streak`)
   },
 
-  exportDb() {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+  async exportDb() {
+    const token = await getApiRuntime().getAccessToken()
     const url = `${API_BASE}/export-db`
     return fetch(url, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
