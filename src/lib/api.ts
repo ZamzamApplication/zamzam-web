@@ -1,8 +1,9 @@
 import { getApiRuntime } from './api-runtime'
+import type { QuranProgressInput } from './types'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
-async function request(path: string, options?: RequestInit) {
+async function request<T = any>(path: string, options?: RequestInit): Promise<T> {
   const runtime = getApiRuntime()
   const token = await runtime.getAccessToken()
   const headers: Record<string, string> = {
@@ -17,7 +18,21 @@ async function request(path: string, options?: RequestInit) {
     headers['Content-Type'] = 'application/json'
   }
 
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers })
+  const controller = new AbortController()
+  const timeout = globalThis.setTimeout(() => controller.abort(), 20000)
+  if (options?.signal?.aborted) controller.abort()
+  options?.signal?.addEventListener('abort', () => controller.abort(), { once: true })
+  let res: Response
+  try {
+    res = await fetch(`${API_BASE}${path}`, { ...options, headers, signal: controller.signal })
+  } catch (error: any) {
+    if (error?.name === 'AbortError') {
+      throw new Error('انتهت مهلة الاتصال. تحقق من الشبكة وحاول مرة أخرى.')
+    }
+    throw error
+  } finally {
+    globalThis.clearTimeout(timeout)
+  }
   if (res.status === 401) {
     await runtime.handleUnauthorized()
     throw new Error('Unauthorized')
@@ -83,8 +98,40 @@ export const api = {
     })
   },
 
-  confirmSession(sessionId: number) {
-    return request(`/sessions/${sessionId}/confirm`, { method: 'POST' })
+  batchAttendance(
+    sessionId: number,
+    updates: { student_id: number; status: string; notes?: string | null; sheikh_id?: number | null }[],
+    expectedVersion?: number,
+    idempotencyKey?: string
+  ) {
+    const key = idempotencyKey || (
+      globalThis.crypto?.randomUUID
+        ? globalThis.crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`
+    )
+    return request<{ session_id: number; version: number; saved: number; replayed: boolean }>('/attendance/batch', {
+      method: 'POST',
+      headers: { 'Idempotency-Key': key },
+      body: JSON.stringify({
+        session_id: sessionId,
+        expected_version: expectedVersion ?? null,
+        updates,
+      }),
+    })
+  },
+
+  confirmSession(sessionId: number, expectedVersion?: number) {
+    return request(`/sessions/${sessionId}/confirm`, {
+      method: 'POST',
+      body: JSON.stringify({ expected_version: expectedVersion ?? null }),
+    })
+  },
+
+  reopenSession(sessionId: number, reason: string, expectedVersion?: number) {
+    return request(`/sessions/${sessionId}/reopen`, {
+      method: 'POST',
+      body: JSON.stringify({ reason, expected_version: expectedVersion ?? null }),
+    })
   },
 
   updateSessionDate(sessionId: number, sessionDate: string) {
@@ -122,6 +169,53 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(data),
     })
+  },
+
+  getSessionProgress(sessionId: number) {
+    return request<{ enabled: boolean; entries: import('./types').QuranProgressEntry[] }>(`/sessions/${sessionId}/progress`)
+  },
+
+  saveSessionProgress(sessionId: number, updates: QuranProgressInput[]) {
+    return request<{ session_id: number; saved: number }>(`/sessions/${sessionId}/progress/batch`, {
+      method: 'POST',
+      body: JSON.stringify({ updates }),
+    })
+  },
+
+  getStudentProgress(studentId: number) {
+    return request<{
+      enabled: boolean
+      entries: import('./types').QuranProgressEntry[]
+      goals: import('./types').StudentGoal[]
+      average_quality: number
+      trend: import('./types').QuranProgressTrendPoint[]
+    }>(`/students/${studentId}/progress`)
+  },
+
+  createStudentGoal(studentId: number, data: Record<string, unknown>) {
+    return request<import('./types').StudentGoal>(`/students/${studentId}/goals`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+
+  updateStudentGoal(studentId: number, goalId: number, data: Record<string, unknown>) {
+    return request<import('./types').StudentGoal>(`/students/${studentId}/goals/${goalId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  },
+
+  getProgressReport(dateFrom?: string, dateTo?: string) {
+    const params = new URLSearchParams()
+    if (dateFrom) params.set('date_from', dateFrom)
+    if (dateTo) params.set('date_to', dateTo)
+    const query = params.toString()
+    return request<{
+      enabled: boolean
+      students: { student_id: number; student_name: string; entries: number; average_quality: number; mistakes: number }[]
+      category_totals: Record<string, number>
+    }>(`/reports/quran-progress${query ? `?${query}` : ''}`)
   },
 
   getPlatformTahfiz(status?: string) {
@@ -164,6 +258,10 @@ export const api = {
 
   getSheikhStudents(sheikhId: number) {
     return request(`/sheikhs/${sheikhId}/students`)
+  },
+
+  getStudents() {
+    return request('/students')
   },
 
   createStudent(name: string, sheikhId: number, phone?: string, birthday?: string, customStudentId?: string, status?: string, parentPhones?: { phone_number: string; parent_type: string }[], registrationDate?: string) {

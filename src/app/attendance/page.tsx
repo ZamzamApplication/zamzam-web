@@ -9,11 +9,14 @@ import AttendanceFilter from '@/components/AttendanceFilter'
 import ExcelPreviewModal, { type SpreadsheetSheet } from '@/components/ExcelPreviewModal'
 import MonthSwitcher from '@/components/MonthSwitcher'
 import ScrollableTable from '@/components/ScrollableTable'
+import ConfirmDialog from '@/components/ConfirmDialog'
 
 interface SavedFilter {
   id: number
   name: string
   groups: FilterGroup[]
+  can_edit?: boolean
+  can_delete?: boolean
 }
 
 function parseSavedFilter(f: any): SavedFilter {
@@ -63,10 +66,6 @@ function StudentAvatar({
 
 function getSessionWeekday(dateStr: string): number {
   return new Date(`${dateStr}T12:00:00`).getDay()
-}
-
-function hasWeekdayRules(groups: FilterGroup[]): boolean {
-  return groups.some((g) => g.rules.some((r) => r.target === 'weekday'))
 }
 
 function getSessionRuleIds(groups: FilterGroup[]): number[] {
@@ -154,12 +153,23 @@ export default function AttendancePage() {
   const [previewPic, setPreviewPic] = useState<string | null>(null)
   const [excelSheets, setExcelSheets] = useState<SpreadsheetSheet[] | null>(null)
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [isDesktop, setIsDesktop] = useState<boolean | null>(null)
+  const [filterToDelete, setFilterToDelete] = useState<SavedFilter | null>(null)
+  const [deletingFilter, setDeletingFilter] = useState(false)
 
   useEffect(() => {
     api.getMe().then(setUser).catch(() => {})
     api.getSavedFilters().then((data: any[]) => {
       setSavedFilters(data.map(parseSavedFilter))
     }).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    const query = window.matchMedia('(min-width: 768px)')
+    const update = () => setIsDesktop(query.matches)
+    update()
+    query.addEventListener('change', update)
+    return () => query.removeEventListener('change', update)
   }, [])
 
   const refreshSavedFilters = () => {
@@ -171,9 +181,10 @@ export default function AttendancePage() {
   const handleSaveFilter = async () => {
     const name = saveFilterName.trim()
     if (!name || filterGroups.length === 0) return
+    const editingExisting = Boolean(activeSavedFilter && activeSavedFilter.can_edit !== false)
     try {
       const data = JSON.stringify(filterGroups)
-      if (activeSavedFilter) {
+      if (editingExisting && activeSavedFilter) {
         const updated = await api.updateSavedFilter(activeSavedFilter.id, name, data)
         const parsed = parseSavedFilter(updated)
         setActiveSavedFilter(parsed)
@@ -187,7 +198,14 @@ export default function AttendancePage() {
       refreshSavedFilters()
       setShowSaveModal(false)
       setSaveFilterName('')
-      setNotice({ type: 'success', text: activeSavedFilter ? 'تم حفظ تعديلات التصفية' : 'تم حفظ التصفية' })
+      setNotice({
+        type: 'success',
+        text: editingExisting
+          ? 'تم حفظ تعديلات التصفية'
+          : activeSavedFilter
+            ? 'تم حفظ نسخة جديدة من التصفية'
+            : 'تم حفظ التصفية',
+      })
     } catch {}
   }
 
@@ -197,20 +215,22 @@ export default function AttendancePage() {
     setActiveSavedFilter({ ...f, groups })
     setShowFilter(openBuilder)
     const ruleSessionIds = getSessionRuleIds(groups)
-    const useExplicitSessions = !hasWeekdayRules(groups) && ruleSessionIds.length > 0
     try {
       const data = await api.getAttendanceGrid(
         selectedSheikh || undefined,
         undefined,
-        useExplicitSessions ? ruleSessionIds : undefined,
-        useExplicitSessions ? undefined : activeRange.start,
-        useExplicitSessions ? undefined : activeRange.end
+        ruleSessionIds.length > 0 ? ruleSessionIds : undefined,
+        activeRange.start,
+        activeRange.end
       )
       setGrid(data)
-    } catch {}
+    } catch {
+      setNotice({ type: 'error', text: 'تعذر تحميل التصفية المحفوظة' })
+    }
   }
 
   const handleDeleteSavedFilter = async (id: number) => {
+    setDeletingFilter(true)
     try {
       await api.deleteSavedFilter(id)
       if (activeSavedFilter?.id === id) {
@@ -218,7 +238,13 @@ export default function AttendancePage() {
         setFilterGroups([])
       }
       refreshSavedFilters()
-    } catch {}
+      setFilterToDelete(null)
+      setNotice({ type: 'success', text: 'تم حذف التصفية' })
+    } catch {
+      setNotice({ type: 'error', text: 'تعذر حذف التصفية' })
+    } finally {
+      setDeletingFilter(false)
+    }
   }
 
   const loadGrid = useCallback(async (sheikhId: number | '', dateFrom: string, dateTo: string) => {
@@ -228,6 +254,7 @@ export default function AttendancePage() {
       setGrid(data)
     } catch (err) {
       console.error(err)
+      setNotice({ type: 'error', text: 'تعذر تحميل سجل الحضور. حاول مرة أخرى.' })
     } finally {
       setLoading(false)
     }
@@ -307,10 +334,9 @@ export default function AttendancePage() {
         )
       )
       return grid.sessions.filter((s) => (
-        (periodMode === 'week' && sessionRuleIds.has(s.id)) ||
-        (s.date >= activeRange.start &&
-          s.date <= activeRange.end &&
-          (sessionRuleIds.has(s.id) || weekdays.has(getSessionWeekday(s.date))))
+        s.date >= activeRange.start &&
+        s.date <= activeRange.end &&
+        (sessionRuleIds.has(s.id) || weekdays.has(getSessionWeekday(s.date)))
       ))
     }
     if (periodMode === 'week') {
@@ -333,9 +359,8 @@ export default function AttendancePage() {
     setFilterGroups(nextGroups)
     setShowFilter(false)
     const ruleSessionIds = getSessionRuleIds(nextGroups)
-    const useExplicitSessions = !hasWeekdayRules(nextGroups) && ruleSessionIds.length > 0
     try {
-      if (activeSavedFilter) {
+      if (activeSavedFilter && activeSavedFilter.can_edit !== false) {
         const updated = await api.updateSavedFilter(activeSavedFilter.id, activeSavedFilter.name, JSON.stringify(nextGroups))
         const parsed = parseSavedFilter(updated)
         setActiveSavedFilter(parsed)
@@ -345,9 +370,9 @@ export default function AttendancePage() {
       const data = await api.getAttendanceGrid(
         selectedSheikh || undefined,
         undefined,
-        useExplicitSessions ? ruleSessionIds : undefined,
-        useExplicitSessions ? undefined : activeRange.start,
-        useExplicitSessions ? undefined : activeRange.end
+        ruleSessionIds.length > 0 ? ruleSessionIds : undefined,
+        activeRange.start,
+        activeRange.end
       )
       setGrid(data)
     } catch {
@@ -445,7 +470,9 @@ export default function AttendancePage() {
               }}
               className="flex-1 sm:flex-none px-3 py-2 rounded-xl text-sm water-btn-outline"
             >
-              {activeSavedFilter ? 'حفظ التعديلات' : 'حفظ التصفية'}
+              {activeSavedFilter
+                ? (activeSavedFilter.can_edit === false ? 'حفظ نسخة' : 'حفظ التعديلات')
+                : 'حفظ التصفية'}
             </button>
           )}
           {savedFilters.map((f) => (
@@ -460,18 +487,23 @@ export default function AttendancePage() {
               >
                 {f.name}
               </button>
-              <button
-                onClick={() => handleLoadFilter(f, true)}
-                className="px-2 py-2 text-sm border-y border-water-300 bg-white/70 dark:bg-slate-800/60 text-deep-600 hover:text-deep-900 hover:bg-water-100/80 transition"
-              >
-                تعديل
-              </button>
-              <button
-                onClick={() => handleDeleteSavedFilter(f.id)}
-                className="px-2 py-2 rounded-l-lg text-sm border border-r-0 border-water-300 bg-white/70 dark:bg-slate-800/60 text-red-500 hover:text-red-700 hover:bg-red-50/70 dark:hover:bg-red-900/30 transition"
-              >
-                ✕
-              </button>
+              {f.can_edit !== false && (
+                <button
+                  onClick={() => handleLoadFilter(f, true)}
+                  className="px-2 py-2 text-sm border-y border-water-300 bg-white/70 dark:bg-slate-800/60 text-deep-600 hover:text-deep-900 hover:bg-water-100/80 transition"
+                >
+                  تعديل
+                </button>
+              )}
+              {f.can_delete !== false && (
+                <button
+                  onClick={() => setFilterToDelete(f)}
+                  aria-label={`حذف تصفية ${f.name}`}
+                  className="px-2 py-2 rounded-l-lg text-sm border border-r-0 border-water-300 bg-white/70 dark:bg-slate-800/60 text-red-500 hover:text-red-700 hover:bg-red-50/70 dark:hover:bg-red-900/30 transition"
+                >
+                  ✕
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -479,7 +511,11 @@ export default function AttendancePage() {
         {showSaveModal && (
           <div className="mobile-sheet-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={() => setShowSaveModal(false)}>
             <div className="mobile-sheet glass-strong rounded-lg p-6 w-full max-w-xs mx-4" onClick={(e) => e.stopPropagation()}>
-              <h3 className="text-sm font-bold text-deep-800 mb-3">{activeSavedFilter ? 'حفظ تعديلات التصفية' : 'حفظ التصفية'}</h3>
+              <h3 className="text-sm font-bold text-deep-800 mb-3">
+                {activeSavedFilter
+                  ? (activeSavedFilter.can_edit === false ? 'حفظ نسخة من التصفية' : 'حفظ تعديلات التصفية')
+                  : 'حفظ التصفية'}
+              </h3>
               <input
                 autoFocus
                 value={saveFilterName}
@@ -582,7 +618,7 @@ export default function AttendancePage() {
               معاينة وتصدير Excel
             </button>
           </div>
-          <div className="md:hidden space-y-3">
+          {isDesktop === false && <div className="space-y-3">
             {displayStudents.map((student) => (
               <div key={student.id} className="rounded-lg border border-water-200/80 bg-white/85 dark:bg-slate-800/70 overflow-hidden">
                 <div className="px-4 py-3 border-b border-water-200/30 flex items-center justify-between gap-3">
@@ -620,9 +656,9 @@ export default function AttendancePage() {
                 </div>
               </div>
             ))}
-          </div>
+          </div>}
 
-          <ScrollableTable>
+          {isDesktop === true && <ScrollableTable>
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="border-b border-water-200/30">
@@ -671,7 +707,7 @@ export default function AttendancePage() {
               ))}
             </tbody>
           </table>
-          </ScrollableTable>
+          </ScrollableTable>}
           <div className="mt-3 text-center text-sm text-deep-500">
             عدد الطلاب: {displayStudents.length} من {grid.students.length}
           </div>
@@ -699,6 +735,19 @@ export default function AttendancePage() {
           onClose={() => setExcelSheets(null)}
         />
       )}
+      <ConfirmDialog
+        open={Boolean(filterToDelete)}
+        title="حذف التصفية"
+        message={`هل تريد حذف تصفية "${filterToDelete?.name || ''}"؟ لا يمكن التراجع عن هذا الإجراء.`}
+        confirmLabel="حذف"
+        busy={deletingFilter}
+        onClose={() => {
+          if (!deletingFilter) setFilterToDelete(null)
+        }}
+        onConfirm={() => {
+          if (filterToDelete) void handleDeleteSavedFilter(filterToDelete.id)
+        }}
+      />
     </div>
   )
 }

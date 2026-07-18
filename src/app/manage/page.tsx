@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { mediaUrl } from '@/lib/format'
 import { compressProfileImage } from '@/lib/image'
-import type { Circle, ExcusedWeekdayInfo, SheikhInfo, StudentInfo, UserInfo, WarningInfo, WarningRow, WhatsAppGroup } from '@/lib/types'
+import type { Circle, ExcusedWeekdayInfo, QuranProgressEntry, QuranProgressTrendPoint, QuranRangeType, SheikhInfo, StudentGoal, StudentInfo, UserInfo, WarningInfo, WarningRow, WhatsAppGroup } from '@/lib/types'
+import AsyncState from '@/components/AsyncState'
 
 const WEEKDAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
 
@@ -139,6 +140,7 @@ function EditCircleModal({ circle, onClose, onUpdated }: { circle: Circle; onClo
   const [whatsendApiUrl, setWhatsendApiUrl] = useState(circle.whatsend_api_url || '')
   const [whatsendGroupsUrl, setWhatsendGroupsUrl] = useState(circle.whatsend_groups_url || '')
   const [whatsendApiKey, setWhatsendApiKey] = useState('')
+  const [progressTrackingEnabled, setProgressTrackingEnabled] = useState(Boolean(circle.progress_tracking_enabled))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -156,6 +158,7 @@ function EditCircleModal({ circle, onClose, onUpdated }: { circle: Circle; onClo
         week_start_day: weekStartDay,
         whatsend_api_url: whatsendApiUrl,
         whatsend_groups_url: whatsendGroupsUrl,
+        progress_tracking_enabled: progressTrackingEnabled,
         ...(whatsendApiKey ? { whatsend_api_key: whatsendApiKey } : {}),
       })
       onUpdated()
@@ -174,6 +177,21 @@ function EditCircleModal({ circle, onClose, onUpdated }: { circle: Circle; onClo
           <label htmlFor="edit-circle-name" className="block text-sm font-medium text-deep-700 mb-1">اسم التحفيظ</label>
           <input id="edit-circle-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="اسم التحفيظ" required className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
         </div>
+        <label className="flex items-start gap-3 rounded-xl border border-cyan-200/80 bg-cyan-50/60 p-4 dark:border-cyan-800 dark:bg-cyan-900/20">
+          <input
+            type="checkbox"
+            checked={progressTrackingEnabled}
+            onChange={(event) => setProgressTrackingEnabled(event.target.checked)}
+            className="mt-1 h-4 w-4 accent-cyan-600"
+          />
+          <span>
+            <span className="block text-sm font-bold text-deep-800">تفعيل متابعة الحفظ والمراجعة</span>
+            <span className="mt-1 block text-xs leading-5 text-deep-500">
+              يضيف تسجيل الحفظ الجديد والمراجعة والاختبارات والأهداف. الإدخال اختياري تماماً،
+              وإيقاف الميزة لاحقاً يخفيها دون حذف البيانات.
+            </span>
+          </span>
+        </label>
         <div>
           <label htmlFor="edit-circle-description" className="block text-sm font-medium text-deep-700 mb-1">وصف التحفيظ</label>
           <input id="edit-circle-description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="وصف (اختياري)" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
@@ -931,9 +949,66 @@ function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete, onMo
   onMove: () => void
   onZoomPic?: (url: string) => void
 }) {
+  const [progressEnabled, setProgressEnabled] = useState(false)
+  const [progressEntries, setProgressEntries] = useState<QuranProgressEntry[]>([])
+  const [goals, setGoals] = useState<StudentGoal[]>([])
+  const [progressTrend, setProgressTrend] = useState<QuranProgressTrendPoint[]>([])
+  const [averageQuality, setAverageQuality] = useState(0)
+  const [goalRangeType, setGoalRangeType] = useState<QuranRangeType>('page')
+  const [goalFromPage, setGoalFromPage] = useState(1)
+  const [goalToPage, setGoalToPage] = useState(1)
+  const [goalFromSurah, setGoalFromSurah] = useState(1)
+  const [goalFromAyah, setGoalFromAyah] = useState(1)
+  const [goalToSurah, setGoalToSurah] = useState(1)
+  const [goalToAyah, setGoalToAyah] = useState(1)
+  const [goalDate, setGoalDate] = useState('')
+  const [goalBusy, setGoalBusy] = useState(false)
+  const [progressError, setProgressError] = useState('')
+
+  const loadProgress = useCallback(async () => {
+    try {
+      const result = await api.getStudentProgress(student.id)
+      setProgressEnabled(result.enabled)
+      setProgressEntries(result.entries)
+      setGoals(result.goals)
+      setAverageQuality(result.average_quality)
+      setProgressTrend(result.trend || [])
+    } catch (err: any) {
+      setProgressError(err.message || 'تعذر تحميل تقدم الطالب')
+    }
+  }, [student.id])
+
+  useEffect(() => {
+    loadProgress()
+  }, [loadProgress])
+
+  const addGoal = async () => {
+    setGoalBusy(true)
+    setProgressError('')
+    try {
+      await api.createStudentGoal(student.id, {
+        range_type: goalRangeType,
+        ...(goalRangeType === 'page'
+          ? { from_page: goalFromPage, to_page: goalToPage }
+          : {
+              from_surah: goalFromSurah,
+              from_ayah: goalFromAyah,
+              to_surah: goalToSurah,
+              to_ayah: goalToAyah,
+            }),
+        target_date: goalDate || null,
+      })
+      await loadProgress()
+    } catch (err: any) {
+      setProgressError(err.message || 'تعذر إضافة الهدف')
+    } finally {
+      setGoalBusy(false)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={onClose}>
-      <div className="glass-strong rounded-2xl p-6 w-full max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
+      <div className="glass-strong max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl p-6 mx-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-col items-center mb-4">
           {student.profile_pic ? (
             <img src={mediaUrl(student.profile_pic)!} alt="" className="w-20 h-20 rounded-full object-cover border-2 border-water-300 mb-3 cursor-pointer hover:opacity-80 transition" onClick={() => onZoomPic?.(mediaUrl(student.profile_pic)!)} />
@@ -1023,6 +1098,78 @@ function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete, onMo
                   <span className="text-deep-600" dir="ltr">{p.phone_number}</span>
                 </div>
               ))}
+            </div>
+          )}
+
+          {progressEnabled && (
+            <div className="rounded-xl border border-cyan-200/70 bg-cyan-50/50 p-3 dark:border-cyan-800 dark:bg-cyan-900/20">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-deep-800">الحفظ والمراجعة</span>
+                <span className="text-sm font-bold text-cyan-700">متوسط {averageQuality}/5</span>
+              </div>
+              {progressError && <p role="alert" className="mt-2 text-xs text-red-600">{progressError}</p>}
+              {progressEntries.length === 0 ? (
+                <p className="mt-2 text-xs text-deep-500">لا توجد سجلات متابعة بعد.</p>
+              ) : (
+                <div className="mt-2 space-y-1.5">
+                  {progressEntries.slice(0, 5).map((entry) => (
+                    <div key={entry.id} className="rounded-lg bg-white/60 px-2.5 py-2 text-xs dark:bg-slate-800/50">
+                      <div className="flex justify-between gap-2">
+                        <span className="font-semibold">{entry.category === 'new_memorization' ? 'حفظ جديد' : entry.category === 'recent_revision' ? 'مراجعة قريبة' : entry.category === 'old_revision' ? 'مراجعة قديمة' : 'اختبار'}</span>
+                        <span>{entry.quality_score}/5 — {entry.mistakes} أخطاء</span>
+                      </div>
+                      {entry.next_assignment && <p className="mt-1 text-deep-500">التالي: {entry.next_assignment}</p>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {progressTrend.length > 0 && (
+                <div className="mt-3 border-t border-cyan-200/60 pt-3">
+                  <p className="mb-2 text-xs font-semibold text-deep-700">اتجاه التقييم — آخر {progressTrend.length} سجلاً</p>
+                  <div className="flex h-24 items-end gap-1 rounded-lg bg-white/50 px-2 pt-2 dark:bg-slate-800/40" role="img" aria-label="اتجاه تقييم تقدم الطالب">
+                    {progressTrend.map((point) => (
+                      <div key={point.entry_id} className="group flex min-w-0 flex-1 flex-col items-center justify-end">
+                        <span className="mb-1 text-[9px] font-semibold text-deep-500">{point.quality_score}</span>
+                        <div
+                          className="w-full max-w-5 rounded-t bg-cyan-500 transition-colors group-hover:bg-cyan-600"
+                          style={{ height: `${Math.max(12, point.quality_score * 12)}px` }}
+                          title={`${point.session_date}: ${point.quality_score}/5، ${point.mistakes} أخطاء`}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="mt-3 border-t border-cyan-200/60 pt-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold text-deep-700">إضافة هدف للطالب</p>
+                  <select value={goalRangeType} onChange={(event) => setGoalRangeType(event.target.value as QuranRangeType)} className="surface-field rounded-lg px-2 py-1 text-xs">
+                    <option value="page">بالصفحات</option>
+                    <option value="surah_ayah">بالسورة والآية</option>
+                  </select>
+                </div>
+                {goalRangeType === 'page' ? (
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <input aria-label="صفحة بداية الهدف" type="number" min={1} max={604} value={goalFromPage} onChange={(event) => setGoalFromPage(Number(event.target.value))} className="surface-field min-w-0 rounded-lg px-2 py-1.5 text-xs" />
+                    <input aria-label="صفحة نهاية الهدف" type="number" min={goalFromPage} max={604} value={goalToPage} onChange={(event) => setGoalToPage(Number(event.target.value))} className="surface-field min-w-0 rounded-lg px-2 py-1.5 text-xs" />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <input aria-label="سورة البداية" placeholder="سورة البداية" type="number" min={1} max={114} value={goalFromSurah} onChange={(event) => setGoalFromSurah(Number(event.target.value))} className="surface-field min-w-0 rounded-lg px-2 py-1.5 text-xs" />
+                    <input aria-label="آية البداية" placeholder="آية البداية" type="number" min={1} value={goalFromAyah} onChange={(event) => setGoalFromAyah(Number(event.target.value))} className="surface-field min-w-0 rounded-lg px-2 py-1.5 text-xs" />
+                    <input aria-label="سورة النهاية" placeholder="سورة النهاية" type="number" min={1} max={114} value={goalToSurah} onChange={(event) => setGoalToSurah(Number(event.target.value))} className="surface-field min-w-0 rounded-lg px-2 py-1.5 text-xs" />
+                    <input aria-label="آية النهاية" placeholder="آية النهاية" type="number" min={1} value={goalToAyah} onChange={(event) => setGoalToAyah(Number(event.target.value))} className="surface-field min-w-0 rounded-lg px-2 py-1.5 text-xs" />
+                  </div>
+                )}
+                <input aria-label="تاريخ الهدف" type="date" value={goalDate} onChange={(event) => setGoalDate(event.target.value)} className="surface-field mt-1.5 w-full rounded-lg px-2 py-1.5 text-xs" />
+                <button type="button" onClick={addGoal} disabled={goalBusy || (goalRangeType === 'page' && goalToPage < goalFromPage)} className="water-btn-outline mt-2 w-full rounded-lg px-3 py-1.5 text-xs disabled:opacity-50">{goalBusy ? 'جاري...' : 'إضافة الهدف'}</button>
+                {goals.filter((goal) => goal.status === 'active').map((goal) => (
+                  <div key={goal.id} className="mt-2 flex items-center justify-between rounded-lg bg-white/60 px-2 py-1.5 text-xs dark:bg-slate-800/50">
+                    <span>{goal.range_type === 'page' ? `صفحات ${goal.from_page}–${goal.to_page}` : `سورة ${goal.from_surah}:${goal.from_ayah} إلى ${goal.to_surah}:${goal.to_ayah}`}</span>
+                    <button type="button" onClick={async () => { await api.updateStudentGoal(student.id, goal.id, { status: 'completed' }); await loadProgress() }} className="font-semibold text-emerald-600">إكمال</button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -1311,6 +1458,7 @@ export default function ManagePage() {
   const [users, setUsers] = useState<UserInfo[]>([])
   const [activeTab, setActiveTab] = useState<'sheikhs' | 'users' | 'circles' | 'warnings'>('sheikhs')
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [expandedSheikhs, setExpandedSheikhs] = useState<Set<number>>(new Set())
 
   useEffect(() => {
@@ -1350,21 +1498,36 @@ export default function ManagePage() {
   const [showAddUser, setShowAddUser] = useState(false)
   const [editUser, setEditUser] = useState<UserInfo | null>(null)
   const load = useCallback(async () => {
-    const [sheikhsData, tahfizSettings, usersData] = await Promise.all([
-      api.getSheikhs(),
-      api.getTahfizSettings(),
-      api.getUsers(),
-    ])
-    const withStudents = await Promise.all(
-      sheikhsData.map(async (s: SheikhInfo) => ({
+    setLoading(true)
+    setLoadError('')
+    try {
+      const [sheikhsData, tahfizSettings, usersData, studentsData] = await Promise.all([
+        api.getSheikhs(),
+        api.getTahfizSettings(),
+        api.getUsers(),
+        api.getStudents(),
+      ])
+      const studentsBySheikh = new Map<number, StudentInfo[]>()
+      ;(studentsData as StudentInfo[]).forEach((student) => {
+        if (!student.sheikh) return
+        const current = studentsBySheikh.get(student.sheikh.id) || []
+        current.push(student)
+        studentsBySheikh.set(student.sheikh.id, current)
+      })
+      const withStudents = sheikhsData.map((s: SheikhInfo) => ({
         ...s,
-        students: await api.getSheikhStudents(s.id),
+        students: (studentsBySheikh.get(s.id) || []).sort(
+          (a, b) => (a.sort_order || 0) - (b.sort_order || 0) || a.name.localeCompare(b.name, 'ar')
+        ),
       }))
-    )
-    setSheikhs(withStudents)
-    setCircles([tahfizSettings])
-    setUsers(usersData)
-    setLoading(false)
+      setSheikhs(withStudents)
+      setCircles([tahfizSettings])
+      setUsers(usersData)
+    } catch (err: any) {
+      setLoadError(err.message || 'تعذر تحميل بيانات الإدارة')
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   useEffect(() => { load() }, [load])
@@ -1444,6 +1607,7 @@ export default function ManagePage() {
   }
 
   if (loading) return <div className="page-loading" aria-label="جاري التحميل" />
+  if (loadError) return <AsyncState message={loadError} onRetry={load} />
 
   const tabs = [
     { key: 'sheikhs', label: 'الشيوخ والطلاب' },

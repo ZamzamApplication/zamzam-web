@@ -4,11 +4,13 @@ export interface User {
   role: 'super_admin' | 'admin' | 'sheikh'
   sheikh_id: number | null
   tahfiz_id: number | null
+  capabilities?: string[]
   tahfiz?: {
     id: number
     name: string
     status: 'pending' | 'active' | 'rejected' | 'suspended'
     status_reason?: string | null
+    progress_tracking_enabled?: boolean
   } | null
 }
 
@@ -22,12 +24,15 @@ export interface Circle {
   whatsend_api_url?: string
   whatsend_groups_url?: string
   whatsend_api_key_configured?: boolean
+  progress_tracking_enabled?: boolean
 }
 
 export interface Session {
   id: number
   date: string
   is_confirmed: boolean
+  status?: 'draft' | 'confirmed' | 'reopened'
+  version?: number
   circle_id: number
   circle_name?: string
 }
@@ -52,6 +57,8 @@ export interface SessionAttendance {
   session_id: number
   date: string
   is_confirmed: boolean
+  status?: 'draft' | 'confirmed' | 'reopened'
+  version: number
   circle_id: number
   circle_name?: string
   sheikh_groups: SheikhGroup[]
@@ -117,6 +124,7 @@ export interface StudentInfo {
   profile_pic?: string | null
   status: string
   registration_date?: string
+  sort_order?: number
   warnings: WarningInfo[]
   sheikh?: { id: number; name: string }
   parent_phones?: ParentPhone[]
@@ -201,4 +209,73 @@ export interface StudentStatsItem {
 export interface CircleStudentStatsResponse {
   circle_id: number
   students: StudentStatsItem[]
+}
+
+export type ProgressCategory = 'new_memorization' | 'recent_revision' | 'old_revision' | 'test'
+export type QuranRangeType = 'surah_ayah' | 'page'
+
+export interface QuranProgressEntry {
+  id: number
+  session_id: number
+  student_id: number
+  sheikh_id: number | null
+  recorded_by_id: number
+  category: ProgressCategory
+  range_type: QuranRangeType
+  from_surah: number | null
+  from_ayah: number | null
+  to_surah: number | null
+  to_ayah: number | null
+  from_page: number | null
+  to_page: number | null
+  quality_score: number
+  mistakes: number
+  notes: string | null
+  next_assignment: string | null
+  created_at: string
+  updated_at: string
+  session_date?: string | null
+}
+
+export interface QuranProgressTrendPoint {
+  entry_id: number
+  session_date: string
+  category: ProgressCategory
+  quality_score: number
+  mistakes: number
+}
+
+export interface QuranProgressInput {
+  student_id: number
+  sheikh_id?: number | null
+  category: ProgressCategory
+  range_type: QuranRangeType
+  from_surah?: number | null
+  from_ayah?: number | null
+  to_surah?: number | null
+  to_ayah?: number | null
+  from_page?: number | null
+  to_page?: number | null
+  quality_score: number
+  mistakes?: number
+  notes?: string | null
+  next_assignment?: string | null
+}
+
+export interface StudentGoal {
+  id: number
+  student_id: number
+  range_type: QuranRangeType
+  from_surah: number | null
+  from_ayah: number | null
+  to_surah: number | null
+  to_ayah: number | null
+  from_page: number | null
+  to_page: number | null
+  target_date: string | null
+  notes: string | null
+  status: 'active' | 'completed' | 'cancelled'
+  completed_at: string | null
+  created_at: string
+  updated_at: string
 }

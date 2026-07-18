@@ -39,9 +39,9 @@ export default function ScrollableTable({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="hidden md:block">
+    <div>
       {canScroll && (
-        <div className="table-top-scroll sticky top-[4.25rem] z-20 mb-2 rounded-lg px-2 pt-1">
+        <div className="table-top-scroll sticky top-[4.25rem] z-20 mb-2 hidden rounded-lg px-2 pt-1 md:block">
           <div className="text-[11px] text-deep-500 text-center leading-none mb-1">مرّر الجدول أفقياً</div>
           <div
             ref={topRef}

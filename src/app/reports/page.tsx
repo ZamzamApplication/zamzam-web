@@ -19,9 +19,15 @@ export default function ReportsPage() {
   const [periodMode, setPeriodMode] = useState<'month' | 'all'>('month')
   const [selectedMonth, setSelectedMonth] = useState(currentMonthValue)
   const [reportLoading, setReportLoading] = useState(false)
+  const [error, setError] = useState('')
   const [excelSheets, setExcelSheets] = useState<SpreadsheetSheet[] | null>(null)
   const [previewPic, setPreviewPic] = useState<string | null>(null)
   const reportRequestId = useRef(0)
+  const [progressReport, setProgressReport] = useState<{
+    enabled: boolean
+    students: { student_id: number; student_name: string; entries: number; average_quality: number; mistakes: number }[]
+    category_totals: Record<string, number>
+  }>({ enabled: false, students: [], category_totals: {} })
 
   const studentAvatar = (name: string, profilePic?: string | null) => (
     profilePic ? (
@@ -44,15 +50,22 @@ export default function ReportsPage() {
   )
 
   const load = useCallback(async () => {
-    const circlesData = await api.getCircles()
-    setCircles(circlesData)
-    const tahfiz = circlesData[0]
-    if (tahfiz) {
-      setSelectedCircle(tahfiz.id)
-      const range = monthRange(currentMonthValue())
-      await loadStatistics(tahfiz.id, range.start, range.end)
+    setLoading(true)
+    setError('')
+    try {
+      const circlesData = await api.getCircles()
+      setCircles(circlesData)
+      const tahfiz = circlesData[0]
+      if (tahfiz) {
+        setSelectedCircle(tahfiz.id)
+        const range = monthRange(currentMonthValue())
+        await loadStatistics(tahfiz.id, range.start, range.end)
+      }
+    } catch (err: any) {
+      setError(err.message || 'تعذر تحميل التقارير')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }, [])
 
   useEffect(() => { load() }, [load])
@@ -60,14 +73,21 @@ export default function ReportsPage() {
   const loadStatistics = async (circleId: number, from?: string, to?: string) => {
     const requestId = ++reportRequestId.current
     setReportLoading(true)
+    setError('')
     try {
-      const [rate, stats] = await Promise.all([
+      const [rate, stats, progress] = await Promise.all([
         api.getCircleAttendanceRate(circleId, from, to),
         api.getCircleStudentStats(circleId, from, to),
+        api.getProgressReport(from, to),
       ])
       if (requestId !== reportRequestId.current) return
       setCircleRate(rate)
       setStudentStats(stats.students)
+      setProgressReport(progress)
+    } catch (err: any) {
+      if (requestId === reportRequestId.current) {
+        setError(err.message || 'تعذر تحميل بيانات التقرير')
+      }
     } finally {
       if (requestId === reportRequestId.current) {
         setReportLoading(false)
@@ -113,7 +133,7 @@ export default function ReportsPage() {
 
   const openExcelPreview = () => {
     if (!circleRate) return
-    setExcelSheets([
+    const sheets: SpreadsheetSheet[] = [
       {
         name: 'إحصائيات الطلاب',
         columns: [
@@ -137,11 +157,35 @@ export default function ReportsPage() {
           rate: `${student.attendance_rate}%`,
         })),
       },
-    ])
+    ]
+    if (progressReport.enabled) {
+      sheets.push({
+        name: 'تقدم الحفظ والمراجعة',
+        columns: [
+          { id: 'student', label: 'الطالب' },
+          { id: 'entries', label: 'عدد سجلات المتابعة' },
+          { id: 'quality', label: 'متوسط التقييم' },
+          { id: 'mistakes', label: 'إجمالي الأخطاء' },
+        ],
+        rows: progressReport.students.map((student) => ({
+          student: student.student_name,
+          entries: student.entries,
+          quality: student.average_quality,
+          mistakes: student.mistakes,
+        })),
+      })
+    }
+    setExcelSheets(sheets)
   }
 
   return (
     <div>
+      {error && (
+        <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50/80 px-4 py-3 text-center text-sm text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300">
+          {error}
+          <button type="button" onClick={() => void load()} className="mr-2 font-semibold underline">إعادة المحاولة</button>
+        </div>
+      )}
       <h1 className="text-2xl font-bold text-deep-800 mb-6">التقارير</h1>
 
       <p className="text-sm text-deep-500 mb-5">إحصائيات التحفيظ بالكامل{selectedCircleName ? ` — ${selectedCircleName}` : ''}</p>
@@ -295,6 +339,47 @@ export default function ReportsPage() {
               </ScrollableTable>
             </>)}
           </div>
+
+          {progressReport.enabled && (
+            <div className="glass-card rounded-2xl p-3 sm:p-5">
+              <div className="mb-4">
+                <h2 className="text-lg font-bold text-deep-800">تقدم الحفظ والمراجعة</h2>
+                <p className="text-xs text-deep-500 mt-1">{periodLabel}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                {[
+                  ['new_memorization', 'حفظ جديد'],
+                  ['recent_revision', 'مراجعة قريبة'],
+                  ['old_revision', 'مراجعة قديمة'],
+                  ['test', 'اختبارات'],
+                ].map(([key, label]) => (
+                  <div key={key} className="rounded-xl bg-water-100/35 p-3 text-center">
+                    <p className="text-2xl font-bold text-cyan-700 dark:text-cyan-400">{progressReport.category_totals[key] || 0}</p>
+                    <p className="mt-1 text-xs text-deep-500">{label}</p>
+                  </div>
+                ))}
+              </div>
+              {progressReport.students.length === 0 ? (
+                <p className="py-6 text-center text-sm text-deep-500">لا توجد سجلات متابعة في هذه الفترة.</p>
+              ) : (
+                <ScrollableTable>
+                  <table className="mt-4 w-full text-sm">
+                    <thead><tr className="border-b border-water-200/40 text-deep-600"><th className="px-3 py-2 text-right">الطالب</th><th className="px-3 py-2 text-center">السجلات</th><th className="px-3 py-2 text-center">متوسط التقييم</th><th className="px-3 py-2 text-center">الأخطاء</th></tr></thead>
+                    <tbody>
+                      {progressReport.students.map((student) => (
+                        <tr key={student.student_id} className="border-b border-water-200/20">
+                          <td className="px-3 py-2 font-medium text-deep-800">{student.student_name}</td>
+                          <td className="px-3 py-2 text-center">{student.entries}</td>
+                          <td className="px-3 py-2 text-center font-bold text-cyan-700">{student.average_quality}/5</td>
+                          <td className="px-3 py-2 text-center">{student.mistakes}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </ScrollableTable>
+              )}
+            </div>
+          )}
         </>
       )}
 

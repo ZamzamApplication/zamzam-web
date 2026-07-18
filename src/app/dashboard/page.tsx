@@ -7,6 +7,7 @@ import { api } from '@/lib/api'
 import { formatDateWithWeekday } from '@/lib/format'
 import type { Session } from '@/lib/types'
 import CreateSessionModal from '@/components/CreateSessionModal'
+import AsyncState from '@/components/AsyncState'
 
 interface Stats {
   sheikhs: number
@@ -50,9 +51,12 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [canManage, setCanManage] = useState(false)
+  const [error, setError] = useState('')
   const router = useRouter()
 
   const load = useCallback(async () => {
+    setLoading(true)
+    setError('')
     try {
       const [sessionsData, summary] = await Promise.all([
         api.getUpcomingSessions(),
@@ -67,7 +71,7 @@ export default function DashboardPage() {
         pendingSessions: summary.pending_sessions,
       })
     } catch {
-      // ignore
+      setError('لم نتمكن من تحميل ملخص التحفيظ. تحقق من الاتصال ثم حاول مرة أخرى.')
     } finally {
       setLoading(false)
     }
@@ -86,22 +90,23 @@ export default function DashboardPage() {
     router.push(`/sessions/${sessionId}`)
   }
 
-  if (loading) return <div className="page-loading" aria-label="جاري التحميل" />
+  if (loading) return <div className="page-loading" role="status"><span className="sr-only">جاري التحميل</span></div>
+  if (error) return <AsyncState message={error} onRetry={load} />
 
   const nextSession = sessions[0]
   const visibleSessions = sessions.slice(0, 5)
   const completionRate = stats.sessions > 0 ? Math.round((stats.confirmedSessions / stats.sessions) * 100) : 0
 
   const metricCards = [
-    { label: 'الطلاب', value: stats.students, href: '/manage', accent: 'bg-cyan-500', detail: 'طالب مقيد في التحفيظ' },
-    { label: 'الشيوخ', value: stats.sheikhs, href: '/manage', accent: 'bg-emerald-500', detail: 'شيخ مسؤول عن المتابعة' },
+    { label: 'الطلاب', value: stats.students, href: canManage ? '/manage' : undefined, accent: 'bg-cyan-500', detail: 'طالب مقيد في التحفيظ' },
+    { label: 'الشيوخ', value: stats.sheikhs, href: canManage ? '/manage' : undefined, accent: 'bg-emerald-500', detail: 'شيخ مسؤول عن المتابعة' },
     { label: 'الجلسات', value: stats.sessions, href: '/sessions', accent: 'bg-amber-500', detail: `${stats.pendingSessions} جلسة قيد الانتظار` },
     { label: 'الحضور المؤكد', value: stats.confirmedSessions, href: '/attendance', accent: 'bg-indigo-500', detail: 'جلسة مكتملة في سجل الحضور' },
   ]
 
   const actionCards = [
     { title: 'تسجيل الحضور', desc: 'راجع سجل الحضور والتصفيات المحفوظة', href: '/attendance' },
-    { title: 'إدارة الطلاب', desc: 'الشيوخ والطلاب والمستخدمون', href: '/manage' },
+    ...(canManage ? [{ title: 'إدارة الطلاب', desc: 'الشيوخ والطلاب والمستخدمون', href: '/manage' }] : []),
     { title: 'التقارير', desc: 'نسب الحضور وأداء الطلاب في التحفيظ', href: '/reports' },
   ]
 
@@ -160,8 +165,9 @@ export default function DashboardPage() {
       </section>
 
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {metricCards.map((item) => (
-          <Link key={item.label} href={item.href} className="glass-card rounded-lg p-4">
+        {metricCards.map((item) => {
+          const content = (
+            <>
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-deep-600">{item.label}</p>
@@ -170,8 +176,14 @@ export default function DashboardPage() {
               <span className={`w-2.5 h-10 rounded-full ${item.accent}`} />
             </div>
             <p className="text-xs text-deep-500 mt-3 leading-5">{item.detail}</p>
-          </Link>
-        ))}
+            </>
+          )
+          return item.href ? (
+            <Link key={item.label} href={item.href} className="glass-card rounded-lg p-4">{content}</Link>
+          ) : (
+            <div key={item.label} className="glass-card rounded-lg p-4">{content}</div>
+          )
+        })}
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">

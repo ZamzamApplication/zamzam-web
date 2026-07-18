@@ -256,6 +256,27 @@ table {
   background: rgb(var(--water-50) / 0.86);
 }
 
+.nav-link:focus-visible,
+.mobile-nav-item:focus-visible,
+.nav-icon-btn:focus-visible,
+.nav-action:focus-visible {
+  outline: 3px solid rgb(var(--water-400) / 0.55);
+  outline-offset: 2px;
+}
+
+.tab-count {
+  display: inline-flex;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  margin-inline-start: 0.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  padding-inline: 0.3rem;
+  background: rgb(255 255 255 / 0.22);
+  font-size: 0.7rem;
+}
+
 .nav-link-active {
   color: rgb(var(--deep-900));
   background: rgb(var(--water-100) / 0.9);

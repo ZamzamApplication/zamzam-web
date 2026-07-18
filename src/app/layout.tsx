@@ -2,7 +2,7 @@
 
 import './globals.css'
 import { Cairo } from 'next/font/google'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
@@ -71,6 +71,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [supportName, setSupportName] = useState('')
+  const verifiedToken = useRef<string | null>(null)
   const router = useRouter()
   const pathname = usePathname()
 
@@ -102,12 +103,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     setSupportName(localStorage.getItem('support_tahfiz_name') || '')
     const token = localStorage.getItem('token')
     if (!token && !isPublicAuthPage && !isLandingPage) {
+      setUser(null)
+      setLoading(false)
       router.push('/login')
       return
     }
     if (token) {
+      if (verifiedToken.current === token) {
+        setLoading(false)
+        return
+      }
+      setLoading(true)
       api.getMe()
         .then((u) => {
+          verifiedToken.current = token
           setUser(u)
           localStorage.setItem('user', JSON.stringify(u))
           if (u.role === 'super_admin') {
@@ -119,6 +128,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }
         })
         .catch(() => {
+          verifiedToken.current = null
           localStorage.removeItem('token')
           localStorage.removeItem('user')
           if (!isLandingPage) router.push('/login')
@@ -218,7 +228,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </button>
             </div>
           </header>
-          <nav className="nav-glass hidden md:block px-6 py-3 sticky top-0 z-40">
+          <nav className="nav-glass hidden md:block px-6 py-3 sticky top-0 z-40" aria-label="التنقل الرئيسي">
             <div className="max-w-6xl mx-auto flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2 md:gap-3 flex-wrap">
               <Link href={isDedicatedPlatform ? '/platform' : '/dashboard'} className="nav-brand">
@@ -228,11 +238,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <span className="nav-link nav-link-active">إدارة المنصة</span>
               ) : (
                 <>
-                  <Link href="/sessions" className={navLinkClass('/sessions')}>الجلسات</Link>
-                  <Link href="/attendance" className={navLinkClass('/attendance')}>سجل الحضور</Link>
-                  {(user?.role === 'admin' || user?.role === 'super_admin') && <Link href="/manage" className={navLinkClass('/manage')}>الإدارة</Link>}
-                  <Link href="/reports" className={navLinkClass('/reports')}>التقارير</Link>
-                  {user?.role === 'super_admin' && <Link href="/platform" className={navLinkClass('/platform')}>المنصة</Link>}
+                  <Link href="/sessions" className={navLinkClass('/sessions')} aria-current={isActive('/sessions') ? 'page' : undefined}>الجلسات</Link>
+                  <Link href="/attendance" className={navLinkClass('/attendance')} aria-current={isActive('/attendance') ? 'page' : undefined}>سجل الحضور</Link>
+                  {(user?.role === 'admin' || user?.role === 'super_admin') && <Link href="/manage" className={navLinkClass('/manage')} aria-current={isActive('/manage') ? 'page' : undefined}>الإدارة</Link>}
+                  <Link href="/reports" className={navLinkClass('/reports')} aria-current={isActive('/reports') ? 'page' : undefined}>التقارير</Link>
+                  {user?.role === 'super_admin' && <Link href="/platform" className={navLinkClass('/platform')} aria-current={isActive('/platform') ? 'page' : undefined}>المنصة</Link>}
                 </>
               )}
             </div>
