@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '@/lib/api'
 import { mediaUrl } from '@/lib/format'
 import { currentMonthValue, formatMonth, monthRange } from '@/lib/month'
@@ -21,6 +21,7 @@ export default function ReportsPage() {
   const [reportLoading, setReportLoading] = useState(false)
   const [excelSheets, setExcelSheets] = useState<SpreadsheetSheet[] | null>(null)
   const [previewPic, setPreviewPic] = useState<string | null>(null)
+  const reportRequestId = useRef(0)
 
   const studentAvatar = (name: string, profilePic?: string | null) => (
     profilePic ? (
@@ -57,16 +58,20 @@ export default function ReportsPage() {
   useEffect(() => { load() }, [load])
 
   const loadStatistics = async (circleId: number, from?: string, to?: string) => {
+    const requestId = ++reportRequestId.current
     setReportLoading(true)
     try {
       const [rate, stats] = await Promise.all([
         api.getCircleAttendanceRate(circleId, from, to),
         api.getCircleStudentStats(circleId, from, to),
       ])
+      if (requestId !== reportRequestId.current) return
       setCircleRate(rate)
       setStudentStats(stats.students)
     } finally {
-      setReportLoading(false)
+      if (requestId === reportRequestId.current) {
+        setReportLoading(false)
+      }
     }
   }
 
@@ -109,22 +114,6 @@ export default function ReportsPage() {
   const openExcelPreview = () => {
     if (!circleRate) return
     setExcelSheets([
-      {
-        name: 'الملخص',
-        columns: [
-          { id: 'metric', label: 'البيان' },
-          { id: 'value', label: 'القيمة' },
-        ],
-        rows: [
-          { metric: 'التحفيظ', value: selectedCircleName },
-          { metric: 'الفترة', value: periodLabel },
-          { metric: 'إجمالي السجلات', value: circleRate.total_attendance_records },
-          { metric: 'حاضر', value: circleRate.present },
-          { metric: 'غياب بعذر', value: circleRate.excused },
-          { metric: 'غائب', value: circleRate.absent },
-          { metric: 'نسبة الحضور', value: `${circleRate.attendance_rate}%` },
-        ],
-      },
       {
         name: 'إحصائيات الطلاب',
         columns: [
@@ -187,7 +176,10 @@ export default function ReportsPage() {
       {circleRate && !reportLoading && (
         <>
           <div className="glass-card rounded-2xl p-5 mb-6">
-            <h2 className="text-lg font-bold text-deep-800 mb-4">إحصائيات الحضور</h2>
+            <div className="mb-4">
+              <h2 className="text-lg font-bold text-deep-800">إحصائيات الحضور</h2>
+              <p className="text-xs text-deep-500 mt-1">{periodLabel}</p>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center p-3 bg-water-100/30 rounded-xl">
                 <div className="text-2xl font-bold text-cyan-700 dark:text-cyan-400">{circleRate.total_attendance_records}</div>
