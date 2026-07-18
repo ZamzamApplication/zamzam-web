@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
@@ -14,18 +14,27 @@ export default function SessionsPage() {
   const [showModal, setShowModal] = useState(false)
   const [canManage, setCanManage] = useState(false)
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'past'>('upcoming')
+  const loadRequestId = useRef(0)
   const router = useRouter()
 
   const load = useCallback(async () => {
+    const requestId = ++loadRequestId.current
+    setLoading(true)
     try {
       const data = filter === 'all' ? await api.getAllSessions()
         : filter === 'past' ? await api.getPastSessions()
         : await api.getUpcomingSessions()
-      setSessions(data)
+      if (requestId === loadRequestId.current) {
+        setSessions(data)
+      }
     } catch (err) {
-      console.error(err)
+      if (requestId === loadRequestId.current) {
+        console.error(err)
+      }
     } finally {
-      setLoading(false)
+      if (requestId === loadRequestId.current) {
+        setLoading(false)
+      }
     }
   }, [filter])
 
@@ -64,7 +73,7 @@ export default function SessionsPage() {
         ].map((f) => (
           <button
             key={f.key}
-            onClick={() => { setFilter(f.key as typeof filter); setLoading(true) }}
+            onClick={() => setFilter(f.key as typeof filter)}
             className={`px-2 py-2 rounded-lg text-sm font-medium transition ${
               filter === f.key ? 'water-btn text-white' : 'water-btn-outline'
             }`}
