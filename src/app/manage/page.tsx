@@ -1650,16 +1650,16 @@ export default function ManagePage() {
               const url = URL.createObjectURL(blob)
               const a = document.createElement('a')
               a.href = url
-              a.download = `zamzam-tahfiz-${new Date().toISOString().slice(0, 10)}.json`
+              a.download = 'zamzam_backup.db'
               a.click()
               URL.revokeObjectURL(url)
             } catch (err) {
-              alert('فشل تصدير بيانات التحفيظ')
+              alert('فشل تصدير قاعدة البيانات')
             }
           }}
           className="water-btn-outline px-6 py-3 rounded-xl text-sm"
         >
-          📥 تصدير بيانات التحفيظ
+          📥 تصدير قاعدة البيانات
         </button>
       </div>
     </div>

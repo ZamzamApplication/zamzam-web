@@ -36,11 +36,28 @@ export default function PlatformPage() {
     router.push('/dashboard')
   }
 
+  async function exportFullDatabase() {
+    try {
+      const blob = await api.exportFullDb()
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = 'zamzam_full_backup.db'
+      anchor.click()
+      URL.revokeObjectURL(url)
+    } catch (error: any) {
+      window.alert(error.message || 'فشل تصدير قاعدة البيانات الكاملة')
+    }
+  }
+
   return (
     <div className="space-y-5">
       <div className="flex justify-between items-center">
         <div><h1 className="text-2xl font-bold text-deep-900">إدارة منصة زمزم</h1><p className="text-sm text-deep-500 mt-1">طلبات التحفيظ ومساحات الدعم</p></div>
-        <button onClick={() => { localStorage.removeItem('support_tahfiz_id'); load() }} className="water-btn-outline px-4 py-2 rounded-xl">تحديث</button>
+        <div className="flex gap-2">
+          <button onClick={exportFullDatabase} className="water-btn text-white px-4 py-2 rounded-xl">تنزيل قاعدة البيانات كاملة</button>
+          <button onClick={() => { localStorage.removeItem('support_tahfiz_id'); load() }} className="water-btn-outline px-4 py-2 rounded-xl">تحديث</button>
+        </div>
       </div>
       {loading ? <div className="page-loading" /> : (
         <div className="grid gap-4">

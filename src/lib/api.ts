@@ -335,8 +335,26 @@ export const api = {
   },
 
   async exportDb() {
-    const data = await request('/tahfiz/export')
-    return new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const runtime = getApiRuntime()
+    const token = await runtime.getAccessToken()
+    const supportTahfizId = typeof window !== 'undefined' ? localStorage.getItem('support_tahfiz_id') : null
+    const res = await fetch(`${API_BASE}/tahfiz/export-db`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(supportTahfizId ? { 'X-Tahfiz-ID': supportTahfizId } : {}),
+      },
+    })
+    if (!res.ok) throw new Error('فشل تصدير قاعدة البيانات')
+    return res.blob()
+  },
+
+  async exportFullDb() {
+    const token = await getApiRuntime().getAccessToken()
+    const res = await fetch(`${API_BASE}/export-db`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    if (!res.ok) throw new Error('فشل تصدير قاعدة البيانات الكاملة')
+    return res.blob()
   },
 
   getSavedFilters() {
