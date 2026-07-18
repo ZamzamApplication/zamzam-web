@@ -79,6 +79,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const isPendingPage = pathname === '/pending'
   const isPublicAuthPage = isLoginPage || isSignupPage
   const isLandingPage = pathname === '/'
+  const isDedicatedPlatform = pathname === '/platform'
   const isActive = (href: string) => pathname === href || (href !== '/dashboard' && pathname.startsWith(`${href}/`))
   const navLinkClass = (href: string) => `nav-link ${isActive(href) ? 'nav-link-active' : ''}`
   const logout = () => {
@@ -204,7 +205,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {!loading && user && (
           <>
           <header className="mobile-topbar nav-glass md:hidden sticky top-0 z-40">
-            <Link href="/dashboard" className="nav-brand" aria-label="الصفحة الرئيسية">
+            <Link href={isDedicatedPlatform ? '/platform' : '/dashboard'} className="nav-brand" aria-label="الصفحة الرئيسية">
               <span className="nav-brand-mark">💧</span> زمزم
             </Link>
             <div className="flex items-center gap-2">
@@ -220,14 +221,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <nav className="nav-glass hidden md:block px-6 py-3 sticky top-0 z-40">
             <div className="max-w-6xl mx-auto flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2 md:gap-3 flex-wrap">
-              <Link href="/dashboard" className="nav-brand">
+              <Link href={isDedicatedPlatform ? '/platform' : '/dashboard'} className="nav-brand">
                 <span className="nav-brand-mark">💧</span> زمزم
               </Link>
-              <Link href="/sessions" className={navLinkClass('/sessions')}>الجلسات</Link>
-              <Link href="/attendance" className={navLinkClass('/attendance')}>سجل الحضور</Link>
-              {(user?.role === 'admin' || user?.role === 'super_admin') && <Link href="/manage" className={navLinkClass('/manage')}>الإدارة</Link>}
-              <Link href="/reports" className={navLinkClass('/reports')}>التقارير</Link>
-              {user?.role === 'super_admin' && <Link href="/platform" className={navLinkClass('/platform')}>المنصة</Link>}
+              {user?.role === 'super_admin' && isDedicatedPlatform ? (
+                <span className="nav-link nav-link-active">إدارة المنصة</span>
+              ) : (
+                <>
+                  <Link href="/sessions" className={navLinkClass('/sessions')}>الجلسات</Link>
+                  <Link href="/attendance" className={navLinkClass('/attendance')}>سجل الحضور</Link>
+                  {(user?.role === 'admin' || user?.role === 'super_admin') && <Link href="/manage" className={navLinkClass('/manage')}>الإدارة</Link>}
+                  <Link href="/reports" className={navLinkClass('/reports')}>التقارير</Link>
+                  {user?.role === 'super_admin' && <Link href="/platform" className={navLinkClass('/platform')}>المنصة</Link>}
+                </>
+              )}
             </div>
             <div className="flex items-center gap-2 md:gap-3">
               <ThemeToggle />
@@ -241,7 +248,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
             </div>
           </nav>
-          <nav className="mobile-bottom-nav md:hidden" aria-label="التنقل الرئيسي">
+          {!isDedicatedPlatform && <nav className="mobile-bottom-nav md:hidden" aria-label="التنقل الرئيسي">
             {mobileNavItems.filter((item) => !item.adminOnly || user.role === 'admin' || user.role === 'super_admin').map((item) => (
               <Link
                 key={item.href}
@@ -253,10 +260,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <span>{item.label}</span>
               </Link>
             ))}
-          </nav>
+          </nav>}
           </>
         )}
-        {!loading && user?.role === 'super_admin' && supportName && (
+        {!loading && user?.role === 'super_admin' && supportName && !isDedicatedPlatform && (
           <div className="bg-amber-100 text-amber-900 text-center text-sm py-2 px-4">
             وضع الدعم: {supportName}
             <button onClick={() => { localStorage.removeItem('support_tahfiz_id'); localStorage.removeItem('support_tahfiz_name'); setSupportName(''); router.push('/platform') }} className="font-bold underline mr-3">إنهاء الدعم</button>
