@@ -3,8 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api } from '@/lib/api'
 import { formatDateWithWeekday, mediaUrl } from '@/lib/format'
+import { currentMonthValue, formatMonth, monthRange } from '@/lib/month'
 import type { User, SheikhInfo, AttendanceGrid, AttendanceGridSession, AttendanceGridStudent, FilterRule, FilterGroup } from '@/lib/types'
 import AttendanceFilter from '@/components/AttendanceFilter'
+import ExcelPreviewModal, { type SpreadsheetSheet } from '@/components/ExcelPreviewModal'
+import MonthSwitcher from '@/components/MonthSwitcher'
 
 interface SavedFilter {
   id: number
@@ -133,6 +136,8 @@ export default function AttendancePage() {
   const [allSessions, setAllSessions] = useState<AttendanceGridSession[]>([])
   const [loading, setLoading] = useState(false)
   const [weekPage, setWeekPage] = useState(0)
+  const [periodMode, setPeriodMode] = useState<'week' | 'month'>('week')
+  const [selectedMonth, setSelectedMonth] = useState(currentMonthValue)
 
   const [showFilter, setShowFilter] = useState(false)
   const [filterGroups, setFilterGroups] = useState<FilterGroup[]>([])
@@ -144,6 +149,7 @@ export default function AttendancePage() {
   const [saveFilterName, setSaveFilterName] = useState('')
   const [warningStudent, setWarningStudent] = useState<AttendanceGridStudent | null>(null)
   const [previewPic, setPreviewPic] = useState<string | null>(null)
+  const [excelSheets, setExcelSheets] = useState<SpreadsheetSheet[] | null>(null)
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   useEffect(() => {
@@ -246,10 +252,20 @@ export default function AttendancePage() {
     return `${format.format(new Date(`${weekRange.start}T12:00:00`))} - ${format.format(new Date(`${weekRange.end}T12:00:00`))}`
   }, [weekRange])
 
+  const activeRange = useMemo(
+    () => periodMode === 'week' ? weekRange : monthRange(selectedMonth),
+    [periodMode, selectedMonth, weekRange]
+  )
+
+  const periodLabel = useMemo(
+    () => periodMode === 'week' ? weekLabel : formatMonth(selectedMonth),
+    [periodMode, selectedMonth, weekLabel]
+  )
+
   const weekdayRuleSessions = useMemo(() => {
     if (!grid) return []
-    return grid.sessions.filter((s) => s.date >= weekRange.start && s.date <= weekRange.end)
-  }, [grid, weekRange])
+    return grid.sessions.filter((s) => s.date >= activeRange.start && s.date <= activeRange.end)
+  }, [activeRange, grid])
 
   const ruleFilteredStudents = useMemo(() => {
     if (!grid) return []
@@ -274,14 +290,17 @@ export default function AttendancePage() {
         )
       )
       return grid.sessions.filter((s) => (
-        sessionRuleIds.has(s.id) ||
-        (s.date >= weekRange.start &&
-          s.date <= weekRange.end &&
-          weekdays.has(getSessionWeekday(s.date)))
+        (periodMode === 'week' && sessionRuleIds.has(s.id)) ||
+        (s.date >= activeRange.start &&
+          s.date <= activeRange.end &&
+          (sessionRuleIds.has(s.id) || weekdays.has(getSessionWeekday(s.date))))
       ))
     }
-    return grid.sessions.filter((s) => s.date >= weekRange.start && (weekPage === 0 || s.date <= weekRange.end))
-  }, [grid, filterGroups, hasActiveFilter, weekPage, weekRange])
+    if (periodMode === 'week') {
+      return grid.sessions.filter((s) => s.date >= weekRange.start && (weekPage === 0 || s.date <= weekRange.end))
+    }
+    return grid.sessions.filter((s) => s.date >= activeRange.start && s.date <= activeRange.end)
+  }, [activeRange, filterGroups, grid, hasActiveFilter, periodMode, weekPage, weekRange])
 
   const displayStudents = useMemo(() => {
     return [...searchedStudents].sort((a, b) => {
@@ -315,6 +334,31 @@ export default function AttendancePage() {
   const clearFilter = () => {
     setFilterGroups([])
     setActiveSavedFilter(null)
+  }
+
+  const openExcelPreview = () => {
+    const sessionColumns = displaySessions.map((session) => ({
+      id: `session_${session.id}`,
+      label: formatDateWithWeekday(session.date),
+    }))
+    setExcelSheets([{
+      name: 'سجل الحضور',
+      columns: [
+        { id: 'student', label: 'الطالب' },
+        { id: 'sheikh', label: 'الشيخ' },
+        ...sessionColumns,
+      ],
+      rows: displayStudents.map((student) => {
+        const row: Record<string, string | number | null> = {
+          student: student.name,
+          sheikh: student.sheikh_name || 'بدون شيخ',
+        }
+        displaySessions.forEach((session) => {
+          row[`session_${session.id}`] = student.records[String(session.id)] || 'لا ينطبق'
+        })
+        return row
+      }),
+    }])
   }
 
   return (
@@ -408,8 +452,8 @@ export default function AttendancePage() {
         </div>
 
         {showSaveModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={() => setShowSaveModal(false)}>
-            <div className="glass-strong rounded-lg p-6 w-full max-w-xs mx-4" onClick={(e) => e.stopPropagation()}>
+          <div className="mobile-sheet-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={() => setShowSaveModal(false)}>
+            <div className="mobile-sheet glass-strong rounded-lg p-6 w-full max-w-xs mx-4" onClick={(e) => e.stopPropagation()}>
               <h3 className="text-sm font-bold text-deep-800 mb-3">{activeSavedFilter ? 'حفظ تعديلات التصفية' : 'حفظ التصفية'}</h3>
               <input
                 autoFocus
@@ -451,7 +495,25 @@ export default function AttendancePage() {
       )}
 
       {grid && !loading && (
-        <div className="glass-card rounded-lg px-3 py-3 md:px-5 mb-4 flex items-center justify-between gap-3">
+        <div className="glass-card rounded-lg px-3 py-3 md:px-5 mb-4">
+          <div className="flex gap-2 mb-4">
+            <button
+              type="button"
+              onClick={() => setPeriodMode('week')}
+              className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold ${periodMode === 'week' ? 'water-btn text-white' : 'water-btn-outline'}`}
+            >
+              عرض أسبوعي
+            </button>
+            <button
+              type="button"
+              onClick={() => setPeriodMode('month')}
+              className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold ${periodMode === 'month' ? 'water-btn text-white' : 'water-btn-outline'}`}
+            >
+              عرض شهري
+            </button>
+          </div>
+          {periodMode === 'week' ? (
+          <div className="flex items-center justify-between gap-3">
           <button
             type="button"
             onClick={() => setWeekPage((page) => page + 1)}
@@ -471,17 +533,30 @@ export default function AttendancePage() {
           >
             أسبوع أحدث
           </button>
+          </div>
+          ) : (
+            <MonthSwitcher value={selectedMonth} onChange={setSelectedMonth} />
+          )}
         </div>
       )}
 
       {grid && displaySessions.length === 0 && (
         <div className="glass-card rounded-lg p-8 text-center text-deep-600/80">
-          لا توجد جلسات في هذا الأسبوع
+          لا توجد جلسات في هذه الفترة
         </div>
       )}
 
       {grid && displaySessions.length > 0 && (
         <div className="glass-card rounded-lg p-3 md:p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div>
+              <h2 className="font-bold text-deep-800">الحضور — {periodLabel}</h2>
+              <p className="text-xs text-deep-500 mt-1">سيشمل التصدير النتائج المعروضة بعد التصفية والبحث.</p>
+            </div>
+            <button type="button" onClick={openExcelPreview} className="water-btn text-white rounded-lg px-4 py-2 text-sm font-semibold">
+              معاينة وتصدير Excel
+            </button>
+          </div>
           <div className="md:hidden space-y-3">
             {displayStudents.map((student) => (
               <div key={student.id} className="rounded-lg border border-water-200/80 bg-white/85 dark:bg-slate-800/70 overflow-hidden">
@@ -592,6 +667,13 @@ export default function AttendancePage() {
       )}
 
       {previewPic && <ImagePreviewModal src={previewPic} onClose={() => setPreviewPic(null)} />}
+      {excelSheets && (
+        <ExcelPreviewModal
+          sheets={excelSheets}
+          filename={`zamzam-attendance-${periodMode === 'month' ? selectedMonth : weekRange.start}.xlsx`}
+          onClose={() => setExcelSheets(null)}
+        />
+      )}
     </div>
   )
 }
@@ -684,8 +766,8 @@ ${selectedLabels.map((label) => `* ${label}`).join('\n') || '* ...'}
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={onClose}>
-      <div className="glass-strong rounded-2xl p-6 w-full max-w-lg mx-4" onClick={(e) => e.stopPropagation()}>
+    <div className="mobile-sheet-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={onClose}>
+      <div className="mobile-sheet glass-strong rounded-2xl p-5 sm:p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>
             <h3 className="text-lg font-bold text-deep-800">إضافة إنذار</h3>

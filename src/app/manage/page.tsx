@@ -19,8 +19,8 @@ function normalizeExcusedWeekdays(days: (ExcusedWeekdayInfo | number)[] | undefi
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={onClose}>
-      <div className="glass-strong rounded-2xl p-6 w-full max-w-sm mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+    <div className="mobile-sheet-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={onClose}>
+      <div className="mobile-sheet glass-strong rounded-2xl p-6 w-full max-w-sm mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-xl font-bold text-deep-800 mb-4">{title}</h2>
         {children}
       </div>
@@ -1441,7 +1441,7 @@ export default function ManagePage() {
       <h1 className="text-2xl font-bold text-deep-800 mb-1">الإدارة</h1>
       <p className="text-deep-500 text-sm mb-4">إجمالي الطلاب المقيدين: {sheikhs.reduce((sum, s) => sum + s.students.filter((st) => st.status === 'مقيد').length, 0)}</p>
 
-      <div className="flex gap-2 mb-6 border-b border-water-200/30">
+      <div className="mobile-scroll-tabs flex gap-2 mb-6 border-b border-water-200/30">
         {tabs.map((t) => (
           <button
             key={t.key}
@@ -1458,7 +1458,7 @@ export default function ManagePage() {
       {/* ─── Sheikhs & Students Tab ─────────────────────────────────────── */}
       {activeTab === 'sheikhs' && (
         <div>
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex justify-between items-center gap-3 mb-4">
             <button onClick={toggleAllSheikhs} className="water-btn-outline px-4 py-2 rounded-xl text-sm">
               {allExpanded ? 'طي الكل' : 'فتح الكل'}
             </button>
@@ -1476,17 +1476,17 @@ export default function ManagePage() {
                 const isExpanded = expandedSheikhs.has(sheikh.id)
                 return (
                 <div key={sheikh.id} className="glass-card rounded-2xl overflow-hidden">
-                  <div className="flex items-center justify-between px-5 py-4 bg-water-100/30 cursor-pointer" onClick={() => toggleSheikh(sheikh.id)}>
-                    <div className="flex items-center gap-3">
+                  <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-4 bg-water-100/30 cursor-pointer" onClick={() => toggleSheikh(sheikh.id)}>
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-wrap">
                       <span className={`text-deep-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}>{'<'}</span>
-                      <span className="text-lg font-bold text-deep-800">{sheikh.name}</span>
-                      <span className="text-deep-500 text-sm">{sheikh.circle_name}</span>
+                      <span className="text-lg font-bold text-deep-800 truncate">{sheikh.name}</span>
+                      <span className="text-deep-500 text-sm truncate">{sheikh.circle_name}</span>
                       <span className="text-xs bg-water-200/50 text-deep-600 px-2 py-0.5 rounded-full">{sheikh.students.length} طالب</span>
                     </div>
-                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                      <button onClick={() => setAddingStudent({ id: sheikh.id, name: sheikh.name })} className="water-btn-outline px-3 py-1.5 rounded-xl text-xs">+ إضافة طالب</button>
-                      <button onClick={() => setEditSheikh(sheikh)} className="water-btn-outline px-3 py-1.5 rounded-xl text-xs">تعديل</button>
-                      <button onClick={() => handleDeleteSheikh(sheikh.id)} className="px-3 py-1.5 rounded-xl text-xs border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50/50 dark:hover:bg-red-900/30 transition">حذف</button>
+                    <div className="grid grid-cols-3 gap-2 sm:flex" onClick={(e) => e.stopPropagation()}>
+                      <button onClick={() => setAddingStudent({ id: sheikh.id, name: sheikh.name })} className="water-btn-outline px-3 py-2 rounded-xl text-xs">+ طالب</button>
+                      <button onClick={() => setEditSheikh(sheikh)} className="water-btn-outline px-3 py-2 rounded-xl text-xs">تعديل</button>
+                      <button onClick={() => handleDeleteSheikh(sheikh.id)} className="px-3 py-2 rounded-xl text-xs border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50/50 dark:hover:bg-red-900/30 transition">حذف</button>
                     </div>
                   </div>
                    {isExpanded && (

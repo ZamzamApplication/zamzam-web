@@ -39,17 +39,17 @@ export default function SessionsPage() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center gap-3 mb-5">
         <h1 className="text-2xl font-bold text-deep-800">الجلسات</h1>
         <button
           onClick={() => setShowModal(true)}
-          className="water-btn text-white px-4 py-2 rounded-xl text-sm"
+          className="water-btn text-white px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap"
         >
           + إضافة جلسة
         </button>
       </div>
 
-      <div className="flex gap-2 mb-6">
+      <div className="grid grid-cols-3 gap-2 mb-5 p-1 rounded-xl bg-water-100/35">
         {[
           { key: 'upcoming', label: 'غير مؤكدة' },
           { key: 'past', label: 'مؤكدة' },
@@ -58,7 +58,7 @@ export default function SessionsPage() {
           <button
             key={f.key}
             onClick={() => { setFilter(f.key as typeof filter); setLoading(true) }}
-            className={`px-4 py-1.5 rounded-xl text-sm transition ${
+            className={`px-2 py-2 rounded-lg text-sm font-medium transition ${
               filter === f.key ? 'water-btn text-white' : 'water-btn-outline'
             }`}
           >
@@ -78,14 +78,14 @@ export default function SessionsPage() {
             <Link
               key={s.id}
               href={`/sessions/${s.id}`}
-              className="glass-card rounded-2xl p-5 cursor-pointer block"
+              className="glass-card rounded-xl p-4 sm:p-5 cursor-pointer block"
             >
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="font-semibold text-lg text-deep-800">جلسة {formatDateWithWeekday(s.date)}</h3>
+              <div className="flex justify-between items-start gap-3">
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-base sm:text-lg text-deep-800 leading-7">جلسة {formatDateWithWeekday(s.date)}</h3>
                   {s.circle_name && <p className="text-xs text-deep-500 mt-0.5">{s.circle_name}</p>}
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col-reverse sm:flex-row items-end sm:items-center gap-2 shrink-0">
                   <button
                     onClick={async (e) => {
                       e.preventDefault()
@@ -93,7 +93,7 @@ export default function SessionsPage() {
                       await api.deleteSession(s.id)
                       load()
                     }}
-                    className="text-xs text-red-400 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition"
+                    className="min-h-[2rem] px-2 text-xs text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition"
                   >
                     حذف
                   </button>

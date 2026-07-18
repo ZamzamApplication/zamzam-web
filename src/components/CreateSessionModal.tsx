@@ -38,8 +38,8 @@ export default function CreateSessionModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-      <div className="glass-strong rounded-2xl p-6 w-full max-w-sm mx-4">
+    <div className="mobile-sheet-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={onClose}>
+      <div className="mobile-sheet glass-strong rounded-2xl p-6 w-full max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-xl font-bold text-deep-800 mb-4">إضافة جلسة جديدة</h2>
 
         {error && (

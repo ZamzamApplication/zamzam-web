@@ -28,10 +28,10 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
-      <div className="glass-strong rounded-2xl p-8 w-full max-w-md">
+      <div className="glass-strong rounded-2xl p-6 sm:p-8 w-full max-w-md">
         <div className="text-center mb-6">
           <div className="text-5xl mb-2 animate-float inline-block">💧</div>
-          <h1 className="text-3xl font-bold text-deep-700">دار زمزم</h1>
+          <h1 className="text-3xl font-bold text-deep-700">زمزم</h1>
           <p className="text-deep-600/70 mt-1 text-sm">تسجيل الدخول</p>
         </div>
 
@@ -67,7 +67,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full water-btn text-white py-2.5 rounded-xl font-medium disabled:opacity-50"
+            className="w-full water-btn text-white py-3 rounded-xl font-medium disabled:opacity-50"
           >
             {loading ? 'جاري التحميل...' : 'دخول'}
           </button>

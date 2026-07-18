@@ -52,7 +52,7 @@ export default function LandingPage() {
         <div className="relative z-10 text-center px-4 max-w-3xl">
           <div className="text-7xl mb-6 animate-float inline-block drop-shadow-lg">💧</div>
           <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 leading-tight drop-shadow-lg">
-            دار زمزم لتحفيظ القرآن
+            زمزم لتحفيظ القرآن
           </h1>
           <p className="text-lg md:text-xl text-cyan-200/90 mb-8 max-w-xl mx-auto drop-shadow">
             منصة متابعة حضور حلقات تحفيظ القرآن الكريم — إدارة الجلسات، تسجيل الحضور، والتقارير
@@ -119,7 +119,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="text-center py-8 text-deep-500/50 text-sm border-t border-water-200/20">
-        دار زمزم لتحفيظ القرآن © {new Date().getFullYear()}
+        زمزم لتحفيظ القرآن © {new Date().getFullYear()}
       </footer>
     </div>
   )

@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 import { mediaUrl } from '@/lib/format'
+import { currentMonthValue, formatMonth, monthRange } from '@/lib/month'
 import type { Circle, CircleAttendanceRate, StudentStatsItem } from '@/lib/types'
+import ExcelPreviewModal, { type SpreadsheetSheet } from '@/components/ExcelPreviewModal'
+import MonthSwitcher from '@/components/MonthSwitcher'
 
 export default function ReportsPage() {
   const [circles, setCircles] = useState<Circle[]>([])
@@ -14,6 +17,10 @@ export default function ReportsPage() {
   const [sortAsc, setSortAsc] = useState(false)
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+  const [periodMode, setPeriodMode] = useState<'month' | 'custom'>('month')
+  const [selectedMonth, setSelectedMonth] = useState(currentMonthValue)
+  const [reportLoading, setReportLoading] = useState(false)
+  const [excelSheets, setExcelSheets] = useState<SpreadsheetSheet[] | null>(null)
   const [previewPic, setPreviewPic] = useState<string | null>(null)
 
   const studentAvatar = (name: string, profilePic?: string | null) => (
@@ -42,32 +49,104 @@ export default function ReportsPage() {
 
   useEffect(() => { load() }, [load])
 
-  const handleSelectCircle = async (circleId: number) => {
+  const loadStatistics = async (circleId: number, from?: string, to?: string) => {
+    setReportLoading(true)
+    try {
+      const [rate, stats] = await Promise.all([
+        api.getCircleAttendanceRate(circleId, from, to),
+        api.getCircleStudentStats(circleId, from, to),
+      ])
+      setCircleRate(rate)
+      setStudentStats(stats.students)
+    } finally {
+      setReportLoading(false)
+    }
+  }
+
+  const handleSelectCircle = async (circleId: number | null) => {
     setSelectedCircle(circleId)
     setDateFrom('')
     setDateTo('')
+    setPeriodMode('month')
+    if (!circleId) {
+      setCircleRate(null)
+      setStudentStats([])
+      return
+    }
+    const range = monthRange(selectedMonth)
+    await loadStatistics(circleId, range.start, range.end)
+  }
 
-    const [rate, stats] = await Promise.all([
-      api.getCircleAttendanceRate(circleId),
-      api.getCircleStudentStats(circleId),
-    ])
-    setCircleRate(rate)
-    setStudentStats(stats.students)
+  const handleMonthChange = async (month: string) => {
+    setSelectedMonth(month)
+    setPeriodMode('month')
+    setDateFrom('')
+    setDateTo('')
+    if (!selectedCircle) return
+    const range = monthRange(month)
+    await loadStatistics(selectedCircle, range.start, range.end)
   }
 
   const handleFilterByDate = async () => {
     if (!selectedCircle) return
-    const df = dateFrom || undefined
-    const dt = dateTo || undefined
-    const [rate, stats] = await Promise.all([
-      api.getCircleAttendanceRate(selectedCircle, df, dt),
-      api.getCircleStudentStats(selectedCircle, df, dt),
-    ])
-    setCircleRate(rate)
-    setStudentStats(stats.students)
+    setPeriodMode('custom')
+    await loadStatistics(selectedCircle, dateFrom || undefined, dateTo || undefined)
   }
 
   if (loading) return <div className="page-loading" aria-label="جاري التحميل" />
+
+  const sortedStudents = [...studentStats].sort((a, b) => (
+    sortAsc ? a.attendance_rate - b.attendance_rate : b.attendance_rate - a.attendance_rate
+  ))
+  const selectedCircleName = circles.find((circle) => circle.id === selectedCircle)?.name || ''
+  const periodLabel = periodMode === 'month'
+    ? formatMonth(selectedMonth)
+    : `${dateFrom || 'البداية'} إلى ${dateTo || 'اليوم'}`
+
+  const openExcelPreview = () => {
+    if (!circleRate) return
+    setExcelSheets([
+      {
+        name: 'الملخص',
+        columns: [
+          { id: 'metric', label: 'البيان' },
+          { id: 'value', label: 'القيمة' },
+        ],
+        rows: [
+          { metric: 'الحلقة', value: selectedCircleName },
+          { metric: 'الفترة', value: periodLabel },
+          { metric: 'إجمالي السجلات', value: circleRate.total_attendance_records },
+          { metric: 'حاضر', value: circleRate.present },
+          { metric: 'غياب بعذر', value: circleRate.excused },
+          { metric: 'غائب', value: circleRate.absent },
+          { metric: 'نسبة الحضور', value: `${circleRate.attendance_rate}%` },
+        ],
+      },
+      {
+        name: 'إحصائيات الطلاب',
+        columns: [
+          { id: 'student', label: 'الطالب' },
+          { id: 'sheikh', label: 'الشيخ' },
+          { id: 'sessions', label: 'إجمالي الجلسات' },
+          { id: 'present', label: 'حاضر' },
+          { id: 'excused', label: 'غياب بعذر' },
+          { id: 'absent', label: 'غائب' },
+          { id: 'notApplicable', label: 'لا ينطبق' },
+          { id: 'rate', label: 'نسبة الحضور' },
+        ],
+        rows: sortedStudents.map((student) => ({
+          student: student.student_name,
+          sheikh: student.sheikh_name,
+          sessions: student.total_sessions,
+          present: student.present,
+          excused: student.excused,
+          absent: student.absent,
+          notApplicable: student.not_applicable,
+          rate: `${student.attendance_rate}%`,
+        })),
+      },
+    ])
+  }
 
   return (
     <div>
@@ -77,7 +156,7 @@ export default function ReportsPage() {
         <label className="block text-sm font-medium text-deep-700 mb-2">اختر الحلقة</label>
         <select
           value={selectedCircle ?? ''}
-          onChange={(e) => handleSelectCircle(Number(e.target.value))}
+          onChange={(e) => handleSelectCircle(e.target.value ? Number(e.target.value) : null)}
           className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400"
         >
           <option value="">-- اختر --</option>
@@ -87,8 +166,31 @@ export default function ReportsPage() {
 
       {selectedCircle && (
         <div className="glass-card rounded-2xl p-5 mb-6">
-          <label className="block text-sm font-medium text-deep-700 mb-2">نطاق التاريخ</label>
-          <div className="flex gap-3 items-end">
+          <div className="flex gap-2 mb-4">
+            <button
+              type="button"
+              onClick={() => handleMonthChange(selectedMonth)}
+              className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold ${periodMode === 'month' ? 'water-btn text-white' : 'water-btn-outline'}`}
+            >
+              عرض شهري
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const range = monthRange(selectedMonth)
+                setDateFrom(range.start)
+                setDateTo(range.end)
+                setPeriodMode('custom')
+              }}
+              className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold ${periodMode === 'custom' ? 'water-btn text-white' : 'water-btn-outline'}`}
+            >
+              نطاق مخصص
+            </button>
+          </div>
+          {periodMode === 'month' ? (
+            <MonthSwitcher value={selectedMonth} onChange={handleMonthChange} disabled={reportLoading} />
+          ) : (
+          <div className="grid grid-cols-2 gap-3 items-end sm:flex">
             <div className="flex-1">
               <label className="block text-xs text-deep-500 mb-1">من</label>
               <input
@@ -119,12 +221,7 @@ export default function ReportsPage() {
                   setDateFrom('')
                   setDateTo('')
                   if (!selectedCircle) return
-                  const [rate, stats] = await Promise.all([
-                    api.getCircleAttendanceRate(selectedCircle),
-                    api.getCircleStudentStats(selectedCircle),
-                  ])
-                  setCircleRate(rate)
-                  setStudentStats(stats.students)
+                  await loadStatistics(selectedCircle)
                 }}
                 className="px-3 py-2 rounded-xl text-sm border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50/50 dark:hover:bg-red-900/30 transition whitespace-nowrap"
               >
@@ -132,10 +229,13 @@ export default function ReportsPage() {
               </button>
             )}
           </div>
+          )}
         </div>
       )}
 
-      {circleRate && (
+      {reportLoading && <div className="glass-card rounded-2xl p-6 mb-6 text-center text-deep-500">جاري تحميل الإحصائيات...</div>}
+
+      {circleRate && !reportLoading && (
         <>
           <div className="glass-card rounded-2xl p-5 mb-6">
             <h2 className="text-lg font-bold text-deep-800 mb-4">إحصائيات الحضور</h2>
@@ -165,12 +265,57 @@ export default function ReportsPage() {
             </div>
           </div>
 
-          <div className="glass-card rounded-2xl p-5">
-            <h2 className="text-lg font-bold text-deep-800 mb-4">نسب حضور الطلاب</h2>
+          <div className="glass-card rounded-2xl p-3 sm:p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <div>
+                <h2 className="text-lg font-bold text-deep-800">نسب حضور الطلاب</h2>
+                <p className="text-xs text-deep-500 mt-1">{periodLabel}</p>
+              </div>
+              <button type="button" onClick={openExcelPreview} className="water-btn text-white rounded-xl px-4 py-2 text-sm font-semibold">
+                معاينة وتصدير Excel
+              </button>
+            </div>
             {studentStats.length === 0 ? (
               <div className="text-center text-deep-500 py-4">لا يوجد طلاب</div>
-            ) : (
-              <div className="overflow-x-auto">
+            ) : (<>
+              <div className="md:hidden space-y-3">
+                <button
+                  type="button"
+                  onClick={() => setSortAsc(!sortAsc)}
+                  className="w-full water-btn-outline rounded-xl px-4 py-2 text-sm font-medium"
+                >
+                  ترتيب حسب النسبة {sortAsc ? 'من الأقل للأعلى ↑' : 'من الأعلى للأقل ↓'}
+                </button>
+                {sortedStudents.map((s) => (
+                  <div key={s.student_id} className="rounded-xl border border-water-200/70 bg-white/60 dark:bg-slate-800/55 p-4">
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        {studentAvatar(s.student_name, s.profile_pic)}
+                        <div className="min-w-0">
+                          <p className="font-bold text-deep-800 truncate">{s.student_name}</p>
+                          <p className="text-xs text-deep-500 truncate mt-0.5">{s.sheikh_name}</p>
+                        </div>
+                      </div>
+                      <span className="text-xl font-bold text-cyan-700 dark:text-cyan-400 shrink-0">{s.attendance_rate}%</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="rounded-lg bg-green-50/80 dark:bg-green-900/25 p-2">
+                        <div className="font-bold text-green-700 dark:text-green-400">{s.present}</div>
+                        <div className="text-[11px] text-deep-500">حضر</div>
+                      </div>
+                      <div className="rounded-lg bg-yellow-50/80 dark:bg-yellow-900/25 p-2">
+                        <div className="font-bold text-yellow-700 dark:text-yellow-400">{s.excused}</div>
+                        <div className="text-[11px] text-deep-500">بعذر</div>
+                      </div>
+                      <div className="rounded-lg bg-red-50/80 dark:bg-red-900/25 p-2">
+                        <div className="font-bold text-red-600 dark:text-red-400">{s.absent}</div>
+                        <div className="text-[11px] text-deep-500">غاب</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-water-200/30 text-deep-600">
@@ -187,9 +332,7 @@ export default function ReportsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {[...studentStats]
-                      .sort((a, b) => sortAsc ? a.attendance_rate - b.attendance_rate : b.attendance_rate - a.attendance_rate)
-                      .map((s) => (
+                    {sortedStudents.map((s) => (
                         <tr key={s.student_id} className="border-b border-water-200/20 hover:bg-water-100/20">
                           <td className="py-2 px-3 text-deep-800">
                             <div className="flex items-center gap-3 min-w-[160px]">
@@ -209,7 +352,7 @@ export default function ReportsPage() {
                   </tbody>
                 </table>
               </div>
-            )}
+            </>)}
           </div>
         </>
       )}
@@ -222,6 +365,13 @@ export default function ReportsPage() {
       )}
 
       {previewPic && <ImagePreviewModal src={previewPic} onClose={() => setPreviewPic(null)} />}
+      {excelSheets && (
+        <ExcelPreviewModal
+          sheets={excelSheets}
+          filename={`zamzam-statistics-${selectedMonth}.xlsx`}
+          onClose={() => setExcelSheets(null)}
+        />
+      )}
     </div>
   )
 }

@@ -115,7 +115,7 @@ export default function DashboardPage() {
           <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
             <div>
               <p className="text-sm font-semibold text-cyan-700 dark:text-cyan-300 mb-2">لوحة المتابعة</p>
-              <h1 className="text-2xl md:text-3xl font-bold text-deep-900">دار زمزم لتحفيظ القرآن</h1>
+              <h1 className="text-2xl md:text-3xl font-bold text-deep-900">زمزم لتحفيظ القرآن</h1>
               <p className="text-deep-500 text-sm mt-2 max-w-2xl">
                 نظرة سريعة على الحلقات والجلسات غير المؤكدة، مع وصول مباشر لأهم مهام اليوم.
               </p>

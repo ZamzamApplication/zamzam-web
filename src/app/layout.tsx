@@ -11,6 +11,24 @@ import PwaRegistration from '@/components/PwaRegistration'
 
 const cairoFont = Cairo({ subsets: ['arabic'], display: 'swap', variable: '--font-cairo' })
 
+type NavIconName = 'home' | 'sessions' | 'attendance' | 'reports' | 'manage'
+
+function NavIcon({ name }: { name: NavIconName }) {
+  const paths: Record<NavIconName, React.ReactNode> = {
+    home: <><path d="M3 11.5 12 4l9 7.5" /><path d="M5.5 10v10h13V10M9.5 20v-6h5v6" /></>,
+    sessions: <><rect x="4" y="5.5" width="16" height="14" rx="2" /><path d="M8 3v5M16 3v5M4 10h16M8 14h3M8 17h7" /></>,
+    attendance: <><path d="M9 5H6a2 2 0 0 0-2 2v12h13v-3" /><path d="M9 3h6v4H9zM9 12l2.2 2.2L20 6" /></>,
+    reports: <><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></>,
+    manage: <><circle cx="9" cy="8" r="3" /><path d="M3.5 20v-2a5.5 5.5 0 0 1 11 0v2M17 8h4M19 6v4M17 15h4" /></>,
+  }
+
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      {paths[name]}
+    </svg>
+  )
+}
+
 function ThemeToggle() {
   const [dark, setDark] = useState(false)
 
@@ -34,6 +52,7 @@ function ThemeToggle() {
       onClick={toggle}
       className="nav-icon-btn"
       title={dark ? 'الوضع النهاري' : 'الوضع الليلي'}
+      aria-label={dark ? 'تفعيل الوضع النهاري' : 'تفعيل الوضع الليلي'}
     >
       {dark ? (
         <svg className="w-5 h-5 text-yellow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -56,7 +75,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   const isLoginPage = pathname === '/login'
   const isLandingPage = pathname === '/'
-  const navLinkClass = (href: string) => `nav-link ${pathname === href ? 'nav-link-active' : ''}`
+  const isActive = (href: string) => pathname === href || (href !== '/dashboard' && pathname.startsWith(`${href}/`))
+  const navLinkClass = (href: string) => `nav-link ${isActive(href) ? 'nav-link-active' : ''}`
+  const logout = () => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    router.push('/login')
+  }
+
+  const mobileNavItems: { href: string; label: string; icon: NavIconName; adminOnly?: boolean }[] = [
+    { href: '/dashboard', label: 'الرئيسية', icon: 'home' },
+    { href: '/sessions', label: 'الجلسات', icon: 'sessions' },
+    { href: '/attendance', label: 'الحضور', icon: 'attendance' },
+    { href: '/reports', label: 'التقارير', icon: 'reports' },
+    { href: '/manage', label: 'الإدارة', icon: 'manage', adminOnly: true },
+  ]
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -89,7 +122,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     return (
       <html lang="ar" dir="rtl" suppressHydrationWarning>
         <head>
-          <title>دار زمزم</title>
+          <title>زمزم</title>
           <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
           <link rel="manifest" href="/manifest.webmanifest" />
           <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
@@ -97,7 +130,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <meta name="mobile-web-app-capable" content="yes" />
           <meta name="apple-mobile-web-app-capable" content="yes" />
           <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-          <meta name="apple-mobile-web-app-title" content="دار زمزم" />
+          <meta name="apple-mobile-web-app-title" content="زمزم" />
+          <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         </head>
         <body className={`${cairoFont.variable} font-cairo`}><PwaRegistration />{children}</body>
       </html>
@@ -108,7 +142,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     return (
       <html lang="ar" dir="rtl" suppressHydrationWarning>
         <head>
-          <title>دار زمزم لتحفيظ القرآن</title>
+          <title>زمزم لتحفيظ القرآن</title>
           <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
           <link rel="manifest" href="/manifest.webmanifest" />
           <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
@@ -116,13 +150,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <meta name="mobile-web-app-capable" content="yes" />
           <meta name="apple-mobile-web-app-capable" content="yes" />
           <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-          <meta name="apple-mobile-web-app-title" content="دار زمزم" />
+          <meta name="apple-mobile-web-app-title" content="زمزم" />
+          <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         </head>
         <body className={`${cairoFont.variable} font-cairo`}>
           <PwaRegistration />
           <header className="fixed top-0 left-0 right-0 z-50 px-6 py-4 flex justify-between items-center">
             <Link href="/" className="text-xl font-bold text-white drop-shadow-lg">
-              💧 دار زمزم
+              💧 زمزم
             </Link>
           </header>
           <main>{children}</main>
@@ -134,7 +169,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
       <head>
-        <title>دار زمزم</title>
+        <title>زمزم</title>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="manifest" href="/manifest.webmanifest" />
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
@@ -142,16 +177,32 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="دار زمزم" />
+        <meta name="apple-mobile-web-app-title" content="زمزم" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       </head>
       <body className={`${cairoFont.variable} font-cairo`}>
         <PwaRegistration />
         {!loading && user && (
-          <nav className="nav-glass px-4 md:px-6 py-3 sticky top-0 z-40">
+          <>
+          <header className="mobile-topbar nav-glass md:hidden sticky top-0 z-40">
+            <Link href="/dashboard" className="nav-brand" aria-label="الصفحة الرئيسية">
+              <span className="nav-brand-mark">💧</span> زمزم
+            </Link>
+            <div className="flex items-center gap-2">
+              <span className="mobile-user-badge" title={user.username}>{user.username.charAt(0).toUpperCase()}</span>
+              <ThemeToggle />
+              <button onClick={logout} className="nav-icon-btn" title="تسجيل الخروج" aria-label="تسجيل الخروج">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 17l5-5-5-5M15 12H3M14 4h5a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5" />
+                </svg>
+              </button>
+            </div>
+          </header>
+          <nav className="nav-glass hidden md:block px-6 py-3 sticky top-0 z-40">
             <div className="max-w-6xl mx-auto flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2 md:gap-3 flex-wrap">
               <Link href="/dashboard" className="nav-brand">
-                <span className="nav-brand-mark">💧</span> دار زمزم
+                <span className="nav-brand-mark">💧</span> زمزم
               </Link>
               <Link href="/sessions" className={navLinkClass('/sessions')}>الجلسات</Link>
               <Link href="/attendance" className={navLinkClass('/attendance')}>سجل الحضور</Link>
@@ -162,7 +213,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <ThemeToggle />
               <span className="nav-username">{user.username}</span>
               <button
-                onClick={() => { localStorage.removeItem('token'); localStorage.removeItem('user'); router.push('/login') }}
+                onClick={logout}
                 className="nav-action"
               >
                 تسجيل الخروج
@@ -170,8 +221,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
             </div>
           </nav>
+          <nav className="mobile-bottom-nav md:hidden" aria-label="التنقل الرئيسي">
+            {mobileNavItems.filter((item) => !item.adminOnly || user.role === 'admin').map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`mobile-nav-item ${isActive(item.href) ? 'mobile-nav-item-active' : ''}`}
+                aria-current={isActive(item.href) ? 'page' : undefined}
+              >
+                <NavIcon name={item.icon} />
+                <span>{item.label}</span>
+              </Link>
+            ))}
+          </nav>
+          </>
         )}
-        <main className="max-w-6xl mx-auto p-4 md:p-6 relative z-10">
+        <main className="app-main max-w-6xl mx-auto p-3 sm:p-4 md:p-6 relative z-10">
           {loading ? (
             <div className="flex justify-center items-center h-64">
               <div className="animate-droplet rounded-full h-8 w-8 bg-water-400" />

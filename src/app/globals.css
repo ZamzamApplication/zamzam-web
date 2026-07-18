@@ -80,6 +80,7 @@ html {
   scroll-behavior: smooth;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
 }
 
 body {
@@ -292,6 +293,79 @@ table {
   white-space: nowrap;
 }
 
+.mobile-topbar {
+  display: flex;
+  min-height: 3.75rem;
+  padding: max(0.5rem, env(safe-area-inset-top)) 0.75rem 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mobile-topbar .nav-brand {
+  padding-inline-end: 0;
+}
+
+.mobile-user-badge {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: rgb(var(--water-100) / 0.9);
+  border: 1px solid rgb(var(--water-300) / 0.85);
+  color: rgb(var(--deep-800));
+  font-size: 0.875rem;
+  font-weight: 800;
+}
+
+.mobile-bottom-nav {
+  position: fixed;
+  z-index: 45;
+  inset-inline: 0;
+  bottom: 0;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 0.125rem;
+  padding: 0.4rem 0.4rem max(0.4rem, env(safe-area-inset-bottom));
+  background: rgb(var(--nav-bg) / 0.96);
+  border-top: 1px solid rgb(var(--surface-border) / 0.9);
+  box-shadow: 0 -8px 28px rgba(15, 23, 42, 0.1);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.mobile-nav-item {
+  min-width: 0;
+  min-height: 3.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  border-radius: 0.75rem;
+  color: rgb(var(--muted-text));
+  font-size: 0.68rem;
+  font-weight: 650;
+  line-height: 1;
+}
+
+.mobile-nav-item svg {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.mobile-nav-item-active {
+  color: rgb(var(--water-700));
+  background: rgb(var(--water-100) / 0.72);
+}
+
+.dark .mobile-nav-item-active {
+  color: rgb(103 232 249);
+  background: rgb(var(--deep-100) / 0.9);
+}
+
 .surface-field {
   background: rgb(var(--outline-bg) / 0.9);
   border: 1px solid rgb(var(--water-400) / 0.62);
@@ -403,4 +477,66 @@ table {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(34, 211, 238, 0.5);
+}
+
+@media (max-width: 767px) {
+  .app-main {
+    padding-bottom: calc(5.25rem + env(safe-area-inset-bottom));
+  }
+
+  .nav-icon-btn {
+    width: 2.5rem;
+    min-height: 2.5rem;
+  }
+
+  body input:not([type="checkbox"]):not([type="radio"]),
+  body select,
+  body textarea {
+    min-height: 2.75rem;
+    font-size: 16px;
+  }
+
+  .water-btn,
+  .water-btn-outline,
+  .nav-action {
+    min-height: 2.75rem;
+  }
+
+  .glass-card:hover {
+    transform: none;
+  }
+
+  .mobile-scroll-tabs {
+    margin-inline: -0.75rem;
+    padding-inline: 0.75rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+  }
+
+  .mobile-scroll-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mobile-scroll-tabs > * {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+    min-height: 2.75rem;
+  }
+
+  .mobile-sheet-backdrop {
+    align-items: flex-end;
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .mobile-sheet {
+    width: 100%;
+    max-width: none;
+    max-height: min(88vh, 760px);
+    margin: 0;
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+    border-end-start-radius: 0;
+    border-end-end-radius: 0;
+  }
 }
