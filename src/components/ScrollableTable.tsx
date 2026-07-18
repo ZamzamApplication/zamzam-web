@@ -57,7 +57,7 @@ export default function ScrollableTable({ children }: { children: ReactNode }) {
       <div
         ref={bottomRef}
         onScroll={() => syncScroll(bottomRef, topRef)}
-        className="overflow-x-auto"
+        className="table-scroll-no-bar overflow-x-auto"
       >
         {children}
       </div>

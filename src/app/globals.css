@@ -546,3 +546,11 @@ table {
     border-end-end-radius: 0;
   }
 }
+.table-scroll-no-bar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.table-scroll-no-bar::-webkit-scrollbar {
+  display: none;
+}
