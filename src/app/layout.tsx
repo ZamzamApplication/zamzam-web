@@ -70,16 +70,22 @@ function ThemeToggle() {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [supportName, setSupportName] = useState('')
   const router = useRouter()
   const pathname = usePathname()
 
   const isLoginPage = pathname === '/login'
+  const isSignupPage = pathname === '/signup'
+  const isPendingPage = pathname === '/pending'
+  const isPublicAuthPage = isLoginPage || isSignupPage
   const isLandingPage = pathname === '/'
   const isActive = (href: string) => pathname === href || (href !== '/dashboard' && pathname.startsWith(`${href}/`))
   const navLinkClass = (href: string) => `nav-link ${isActive(href) ? 'nav-link-active' : ''}`
   const logout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
+    localStorage.removeItem('support_tahfiz_id')
+    localStorage.removeItem('support_tahfiz_name')
     router.push('/login')
   }
 
@@ -92,13 +98,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   ]
 
   useEffect(() => {
+    setSupportName(localStorage.getItem('support_tahfiz_name') || '')
     const token = localStorage.getItem('token')
-    if (!token && !isLoginPage && !isLandingPage) {
+    if (!token && !isPublicAuthPage && !isLandingPage) {
       router.push('/login')
-      return
-    }
-    if (token && isLoginPage) {
-      router.push('/dashboard')
       return
     }
     if (token) {
@@ -106,6 +109,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         .then((u) => {
           setUser(u)
           localStorage.setItem('user', JSON.stringify(u))
+          if (u.role === 'super_admin') {
+            if (!localStorage.getItem('support_tahfiz_id') && pathname !== '/platform') router.replace('/platform')
+          } else if (u.tahfiz?.status !== 'active' && pathname !== '/pending') {
+            router.replace('/pending')
+          } else if (u.tahfiz?.status === 'active' && (isLoginPage || isPendingPage)) {
+            router.replace('/dashboard')
+          }
         })
         .catch(() => {
           localStorage.removeItem('token')
@@ -116,9 +126,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     } else {
       setLoading(false)
     }
-  }, [pathname])
+  }, [pathname, router, isPublicAuthPage, isLandingPage, isLoginPage, isPendingPage])
 
-  if (isLoginPage) {
+  if (isPublicAuthPage) {
     return (
       <html lang="ar" dir="rtl" suppressHydrationWarning>
         <head>
@@ -133,6 +143,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <meta name="apple-mobile-web-app-title" content="زمزم" />
           <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         </head>
+        <body className={`${cairoFont.variable} font-cairo`}><PwaRegistration />{children}</body>
+      </html>
+    )
+  }
+
+  if (isPendingPage) {
+    return (
+      <html lang="ar" dir="rtl" suppressHydrationWarning>
+        <head><title>حالة طلب التحفيظ — زمزم</title><meta name="viewport" content="width=device-width, initial-scale=1" /></head>
         <body className={`${cairoFont.variable} font-cairo`}><PwaRegistration />{children}</body>
       </html>
     )
@@ -206,8 +225,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </Link>
               <Link href="/sessions" className={navLinkClass('/sessions')}>الجلسات</Link>
               <Link href="/attendance" className={navLinkClass('/attendance')}>سجل الحضور</Link>
-              {user?.role === 'admin' && <Link href="/manage" className={navLinkClass('/manage')}>الإدارة</Link>}
+              {(user?.role === 'admin' || user?.role === 'super_admin') && <Link href="/manage" className={navLinkClass('/manage')}>الإدارة</Link>}
               <Link href="/reports" className={navLinkClass('/reports')}>التقارير</Link>
+              {user?.role === 'super_admin' && <Link href="/platform" className={navLinkClass('/platform')}>المنصة</Link>}
             </div>
             <div className="flex items-center gap-2 md:gap-3">
               <ThemeToggle />
@@ -222,7 +242,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </nav>
           <nav className="mobile-bottom-nav md:hidden" aria-label="التنقل الرئيسي">
-            {mobileNavItems.filter((item) => !item.adminOnly || user.role === 'admin').map((item) => (
+            {mobileNavItems.filter((item) => !item.adminOnly || user.role === 'admin' || user.role === 'super_admin').map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -235,6 +255,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             ))}
           </nav>
           </>
+        )}
+        {!loading && user?.role === 'super_admin' && supportName && (
+          <div className="bg-amber-100 text-amber-900 text-center text-sm py-2 px-4">
+            وضع الدعم: {supportName}
+            <button onClick={() => { localStorage.removeItem('support_tahfiz_id'); localStorage.removeItem('support_tahfiz_name'); setSupportName(''); router.push('/platform') }} className="font-bold underline mr-3">إنهاء الدعم</button>
+          </div>
         )}
         <main className="app-main max-w-6xl mx-auto p-3 sm:p-4 md:p-6 relative z-10">
           {loading ? (

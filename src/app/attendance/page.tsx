@@ -8,6 +8,7 @@ import type { User, SheikhInfo, AttendanceGrid, AttendanceGridSession, Attendanc
 import AttendanceFilter from '@/components/AttendanceFilter'
 import ExcelPreviewModal, { type SpreadsheetSheet } from '@/components/ExcelPreviewModal'
 import MonthSwitcher from '@/components/MonthSwitcher'
+import ScrollableTable from '@/components/ScrollableTable'
 
 interface SavedFilter {
   id: number
@@ -45,6 +46,8 @@ function StudentAvatar({
     <img
       src={mediaUrl(profilePic)!}
       alt=""
+      loading="lazy"
+      decoding="async"
       className={`${className} rounded-full object-cover border border-water-300 shrink-0 cursor-pointer hover:opacity-80 transition`}
       onClick={(e) => {
         e.stopPropagation()
@@ -194,8 +197,15 @@ export default function AttendancePage() {
     setActiveSavedFilter({ ...f, groups })
     setShowFilter(openBuilder)
     const ruleSessionIds = getSessionRuleIds(groups)
+    const useExplicitSessions = !hasWeekdayRules(groups) && ruleSessionIds.length > 0
     try {
-      const data = await api.getAttendanceGrid(selectedSheikh || undefined, undefined, !hasWeekdayRules(groups) && ruleSessionIds.length > 0 ? ruleSessionIds : undefined)
+      const data = await api.getAttendanceGrid(
+        selectedSheikh || undefined,
+        undefined,
+        useExplicitSessions ? ruleSessionIds : undefined,
+        useExplicitSessions ? undefined : activeRange.start,
+        useExplicitSessions ? undefined : activeRange.end
+      )
       setGrid(data)
     } catch {}
   }
@@ -211,12 +221,11 @@ export default function AttendancePage() {
     } catch {}
   }
 
-  const loadGrid = useCallback(async (sheikhId: number | '') => {
+  const loadGrid = useCallback(async (sheikhId: number | '', dateFrom: string, dateTo: string) => {
     setLoading(true)
     try {
-      const data = await api.getAttendanceGrid(sheikhId || undefined)
+      const data = await api.getAttendanceGrid(sheikhId || undefined, undefined, undefined, dateFrom, dateTo)
       setGrid(data)
-      setAllSessions(data.sessions)
     } catch (err) {
       console.error(err)
     } finally {
@@ -226,12 +235,16 @@ export default function AttendancePage() {
 
   useEffect(() => {
     api.getSheikhs().then(setSheikhs).catch(console.error)
-    loadGrid('')
-  }, [loadGrid])
-
-  useEffect(() => {
-    loadGrid(selectedSheikh)
-  }, [selectedSheikh, loadGrid])
+    api.getPastSessions()
+      .then((sessions: { id: number; date: string; circle_id: number }[]) => {
+        setAllSessions(sessions.map((session) => ({
+          id: session.id,
+          date: session.date,
+          circle_id: session.circle_id,
+        })))
+      })
+      .catch(console.error)
+  }, [])
 
   const hasActiveFilter = filterGroups.some((g) => g.rules.length > 0)
   const weekStartDay = selectedSheikh
@@ -261,6 +274,10 @@ export default function AttendancePage() {
     () => periodMode === 'week' ? weekLabel : formatMonth(selectedMonth),
     [periodMode, selectedMonth, weekLabel]
   )
+
+  useEffect(() => {
+    loadGrid(selectedSheikh, activeRange.start, activeRange.end)
+  }, [activeRange.end, activeRange.start, loadGrid, selectedSheikh])
 
   const weekdayRuleSessions = useMemo(() => {
     if (!grid) return []
@@ -316,6 +333,7 @@ export default function AttendancePage() {
     setFilterGroups(nextGroups)
     setShowFilter(false)
     const ruleSessionIds = getSessionRuleIds(nextGroups)
+    const useExplicitSessions = !hasWeekdayRules(nextGroups) && ruleSessionIds.length > 0
     try {
       if (activeSavedFilter) {
         const updated = await api.updateSavedFilter(activeSavedFilter.id, activeSavedFilter.name, JSON.stringify(nextGroups))
@@ -324,7 +342,13 @@ export default function AttendancePage() {
         setSavedFilters((prev) => prev.map((f) => (f.id === parsed.id ? parsed : f)))
         setNotice({ type: 'success', text: 'تم حفظ تعديلات التصفية' })
       }
-      const data = await api.getAttendanceGrid(selectedSheikh || undefined, undefined, !hasWeekdayRules(nextGroups) && ruleSessionIds.length > 0 ? ruleSessionIds : undefined)
+      const data = await api.getAttendanceGrid(
+        selectedSheikh || undefined,
+        undefined,
+        useExplicitSessions ? ruleSessionIds : undefined,
+        useExplicitSessions ? undefined : activeRange.start,
+        useExplicitSessions ? undefined : activeRange.end
+      )
       setGrid(data)
     } catch {
       setNotice({ type: 'error', text: 'فشل حفظ أو تطبيق التصفية' })
@@ -334,6 +358,7 @@ export default function AttendancePage() {
   const clearFilter = () => {
     setFilterGroups([])
     setActiveSavedFilter(null)
+    loadGrid(selectedSheikh, activeRange.start, activeRange.end)
   }
 
   const openExcelPreview = () => {
@@ -597,11 +622,11 @@ export default function AttendancePage() {
             ))}
           </div>
 
-          <div className="hidden md:block overflow-x-auto">
+          <ScrollableTable>
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="border-b border-water-200/30">
-                <th className="data-table-header text-right py-3 px-3 text-deep-800 sticky right-0 backdrop-blur-sm z-10 min-w-[240px]">الطالب</th>
+                <th className="data-table-header text-right py-3 px-3 text-deep-800 sticky right-0 z-10 min-w-[240px]">الطالب</th>
                 {displaySessions.map((s) => (
                   <th key={s.id} className="data-table-header text-center py-3 px-2 text-deep-700 text-xs whitespace-nowrap min-w-[96px]">{formatDateWithWeekday(s.date)}</th>
                 ))}
@@ -610,7 +635,7 @@ export default function AttendancePage() {
             <tbody>
               {displayStudents.map((student) => (
                 <tr key={student.id} className="border-b border-water-200/40 hover:bg-water-50/80 dark:hover:bg-slate-800/70">
-                  <td className="data-table-sticky py-2.5 px-3 text-deep-900 font-semibold sticky right-0 backdrop-blur-sm z-10">
+                  <td className="data-table-sticky py-2.5 px-3 text-deep-900 font-semibold sticky right-0 z-10">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
                         <StudentAvatar name={student.name} profilePic={student.profile_pic} onZoomPic={setPreviewPic} />
@@ -646,7 +671,7 @@ export default function AttendancePage() {
               ))}
             </tbody>
           </table>
-          </div>
+          </ScrollableTable>
           <div className="mt-3 text-center text-sm text-deep-500">
             عدد الطلاب: {displayStudents.length} من {grid.students.length}
           </div>
@@ -748,7 +773,7 @@ ${selectedLabels.map((label) => `* ${label}`).join('\n') || '* ...'}
 
   const handleSend = async () => {
     if (selectedLabels.length === 0) {
-      setError('اختر حلقة واحدة على الأقل')
+      setError('اختر جلسة واحدة على الأقل')
       return
     }
     setLoading(true)
@@ -783,7 +808,7 @@ ${selectedLabels.map((label) => `* ${label}`).join('\n') || '* ...'}
         )}
 
         <div className="space-y-3">
-          <p className="text-sm font-medium text-deep-700">اختر الحلقات المعروضة حسب التصفية التي غاب عنها الطالب بدون اعتذار</p>
+          <p className="text-sm font-medium text-deep-700">اختر الجلسات المعروضة حسب التصفية التي غاب عنها الطالب بدون اعتذار</p>
           {sessions.length === 0 ? (
             <div className="rounded-xl border border-water-200/50 bg-white/40 dark:bg-slate-800/40 p-4 text-sm text-deep-500 text-center">
               لا توجد حلقات مطابقة للتصفية

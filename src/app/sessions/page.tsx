@@ -12,6 +12,7 @@ export default function SessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [canManage, setCanManage] = useState(false)
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'past'>('upcoming')
   const router = useRouter()
 
@@ -28,7 +29,13 @@ export default function SessionsPage() {
     }
   }, [filter])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    load()
+    try {
+      const role = JSON.parse(localStorage.getItem('user') || '{}').role
+      setCanManage(role === 'admin' || role === 'super_admin')
+    } catch {}
+  }, [load])
 
   const handleCreated = (sessionId: number) => {
     setShowModal(false)
@@ -41,12 +48,12 @@ export default function SessionsPage() {
     <div>
       <div className="flex justify-between items-center gap-3 mb-5">
         <h1 className="text-2xl font-bold text-deep-800">الجلسات</h1>
-        <button
+        {canManage && <button
           onClick={() => setShowModal(true)}
           className="water-btn text-white px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap"
         >
           + إضافة جلسة
-        </button>
+        </button>}
       </div>
 
       <div className="grid grid-cols-3 gap-2 mb-5 p-1 rounded-xl bg-water-100/35">
@@ -86,7 +93,7 @@ export default function SessionsPage() {
                   {s.circle_name && <p className="text-xs text-deep-500 mt-0.5">{s.circle_name}</p>}
                 </div>
                 <div className="flex flex-col-reverse sm:flex-row items-end sm:items-center gap-2 shrink-0">
-                  <button
+                  {canManage && <button
                     onClick={async (e) => {
                       e.preventDefault()
                       if (!confirm('حذف الجلسة وجميع سجلات الحضور المرتبطة بها؟')) return
@@ -96,7 +103,7 @@ export default function SessionsPage() {
                     className="min-h-[2rem] px-2 text-xs text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition"
                   >
                     حذف
-                  </button>
+                  </button>}
                   <span className={`status-badge px-3 py-1 rounded-full text-xs ${
                     s.is_confirmed ? 'bg-green-100/60 text-green-700 border-green-300 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700' : 'bg-yellow-100/60 text-yellow-700 border-yellow-300 dark:bg-yellow-900/40 dark:text-yellow-300 dark:border-yellow-700'
                   }`}>

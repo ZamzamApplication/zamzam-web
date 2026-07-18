@@ -1,8 +1,15 @@
 export interface User {
   id: number
   username: string
-  role: 'admin' | 'sheikh'
+  role: 'super_admin' | 'admin' | 'sheikh'
   sheikh_id: number | null
+  tahfiz_id: number | null
+  tahfiz?: {
+    id: number
+    name: string
+    status: 'pending' | 'active' | 'rejected' | 'suspended'
+    status_reason?: string | null
+  } | null
 }
 
 export interface Circle {
@@ -11,6 +18,10 @@ export interface Circle {
   description?: string
   max_warnings?: number
   week_start_day?: number
+  contact_phone?: string
+  whatsend_api_url?: string
+  whatsend_groups_url?: string
+  whatsend_api_key_configured?: boolean
 }
 
 export interface Session {

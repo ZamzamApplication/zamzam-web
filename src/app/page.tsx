@@ -8,7 +8,7 @@ import type { User } from '@/lib/types'
 const features = [
   { icon: '📋', title: 'إدارة الجلسات', desc: 'إنشاء وتنظيم جلسات التحفيظ بسهولة ومتابعة مواعيدها' },
   { icon: '✅', title: 'تسجيل الحضور', desc: 'تسجيل حضور وغياب الطلاب في كل جلسة بلمسة واحدة' },
-  { icon: '📊', title: 'تقارير شاملة', desc: 'إحصائيات دقيقة عن نسب الحضور وأداء الحلقات' },
+  { icon: '📊', title: 'تقارير شاملة', desc: 'إحصائيات دقيقة عن نسب الحضور وأداء الطلاب' },
 ]
 
 export default function LandingPage() {

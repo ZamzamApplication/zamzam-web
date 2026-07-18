@@ -420,11 +420,11 @@ export default function SessionAttendancePage() {
                     <button onClick={() => setEditingDate(false)} className="text-xs text-deep-400 px-2 py-1">إلغاء</button>
                   </span>
                 ) : (
-                  <button onClick={() => { setEditDateVal(data.date); setEditingDate(true) }} className="hover:text-cyan-600 transition cursor-pointer">
+                  <button disabled={userRole !== 'admin' && userRole !== 'super_admin'} onClick={() => { setEditDateVal(data.date); setEditingDate(true) }} className="hover:text-cyan-600 transition cursor-pointer disabled:cursor-default">
                     {getArabicDay(data.date)} — {data.date}
                   </button>
                 )}
-                <span>{data.circle_name || `حلقة #${data.circle_id}`}</span>
+                <span>{data.circle_name || 'التحفيظ'}</span>
               </div>
             </div>
             <button
@@ -443,7 +443,7 @@ export default function SessionAttendancePage() {
           >
             رجوع
           </button>
-          {!data.is_confirmed && userRole === 'admin' && (
+          {!data.is_confirmed && (userRole === 'admin' || userRole === 'super_admin') && (
             <button
               onClick={handleConfirm}
               className="water-btn text-white px-4 py-2 rounded-xl text-sm font-medium flex-1 md:flex-none"

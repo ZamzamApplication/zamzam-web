@@ -7,6 +7,9 @@ async function request(path: string, options?: RequestInit) {
   const token = await runtime.getAccessToken()
   const headers: Record<string, string> = {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(typeof window !== 'undefined' && localStorage.getItem('support_tahfiz_id')
+      ? { 'X-Tahfiz-ID': localStorage.getItem('support_tahfiz_id')! }
+      : {}),
     ...(options?.headers as Record<string, string> || {}),
   }
 
@@ -21,7 +24,10 @@ async function request(path: string, options?: RequestInit) {
   }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }))
-    throw new Error(err.detail || 'Request failed')
+    const detail = typeof err.detail === 'object'
+      ? (err.detail.reason || err.detail.code || 'Request failed')
+      : err.detail
+    throw new Error(detail || 'Request failed')
   }
   return res.json()
 }
@@ -34,8 +40,24 @@ export const api = {
     })
   },
 
+  signup(tahfizName: string, username: string, password: string, contactPhone?: string) {
+    return request('/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify({
+        tahfiz_name: tahfizName,
+        username,
+        password,
+        contact_phone: contactPhone || null,
+      }),
+    })
+  },
+
   getMe() {
     return request('/auth/me')
+  },
+
+  getDashboardSummary() {
+    return request('/reports/dashboard-summary')
   },
 
   getUpcomingSessions() {
@@ -76,10 +98,10 @@ export const api = {
     return request(`/sessions/${sessionId}`, { method: 'DELETE' })
   },
 
-  createSession(sessionDate: string, circleId: number, defaultStatus?: string) {
+  createSession(sessionDate: string, _circleId?: number, defaultStatus?: string) {
     return request('/sessions/', {
       method: 'POST',
-      body: JSON.stringify({ session_date: sessionDate, circle_id: circleId, default_status: defaultStatus || 'غياب' }),
+      body: JSON.stringify({ session_date: sessionDate, default_status: defaultStatus || 'غياب' }),
     })
   },
 
@@ -89,6 +111,32 @@ export const api = {
 
   getWhatsAppGroups() {
     return request('/whatsend/groups')
+  },
+
+  getTahfizSettings() {
+    return request('/tahfiz/settings')
+  },
+
+  updateTahfizSettings(data: Record<string, unknown>) {
+    return request('/tahfiz/settings', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  },
+
+  getPlatformTahfiz(status?: string) {
+    return request(`/platform/tahfiz${status ? `?status=${encodeURIComponent(status)}` : ''}`)
+  },
+
+  platformTahfizAction(id: number, action: 'approve' | 'reject' | 'suspend' | 'reactivate', reason?: string) {
+    return request(`/platform/tahfiz/${id}/${action}`, {
+      method: 'POST',
+      body: JSON.stringify({ reason: reason || null }),
+    })
+  },
+
+  enterSupportWorkspace(id: number) {
+    return request(`/platform/tahfiz/${id}/support-access`, { method: 'POST' })
   },
 
   createSheikh(name: string, circleId: number, phone?: string, whatsappGroupId?: string) {
@@ -287,14 +335,8 @@ export const api = {
   },
 
   async exportDb() {
-    const token = await getApiRuntime().getAccessToken()
-    const url = `${API_BASE}/export-db`
-    return fetch(url, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    }).then((res) => {
-      if (!res.ok) throw new Error('فشل التصدير')
-      return res.blob()
-    })
+    const data = await request('/tahfiz/export')
+    return new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
   },
 
   getSavedFilters() {
@@ -319,11 +361,13 @@ export const api = {
     return request(`/saved-filters/${id}`, { method: 'DELETE' })
   },
 
-  getAttendanceGrid(sheikhId?: number, circleId?: number, sessionIds?: number[]) {
+  getAttendanceGrid(sheikhId?: number, circleId?: number, sessionIds?: number[], dateFrom?: string, dateTo?: string) {
     const params = new URLSearchParams()
     if (sheikhId) params.set('sheikh_id', String(sheikhId))
     if (circleId) params.set('circle_id', String(circleId))
     if (sessionIds && sessionIds.length > 0) params.set('session_ids', sessionIds.join(','))
+    if (dateFrom) params.set('date_from', dateFrom)
+    if (dateTo) params.set('date_to', dateTo)
     const qs = params.toString()
     return request(`/reports/attendance-grid${qs ? `?${qs}` : ''}`)
   },

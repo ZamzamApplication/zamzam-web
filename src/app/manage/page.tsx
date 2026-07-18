@@ -135,6 +135,10 @@ function EditCircleModal({ circle, onClose, onUpdated }: { circle: Circle; onClo
   const [description, setDescription] = useState(circle.description || '')
   const [maxWarnings, setMaxWarnings] = useState(circle.max_warnings || 3)
   const [weekStartDay, setWeekStartDay] = useState(circle.week_start_day ?? 6)
+  const [contactPhone, setContactPhone] = useState(circle.contact_phone || '')
+  const [whatsendApiUrl, setWhatsendApiUrl] = useState(circle.whatsend_api_url || '')
+  const [whatsendGroupsUrl, setWhatsendGroupsUrl] = useState(circle.whatsend_groups_url || '')
+  const [whatsendApiKey, setWhatsendApiKey] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -144,7 +148,16 @@ function EditCircleModal({ circle, onClose, onUpdated }: { circle: Circle; onClo
     setLoading(true)
     setError('')
     try {
-      await api.updateCircle(circle.id, name, description || undefined, maxWarnings, weekStartDay)
+      await api.updateTahfizSettings({
+        name,
+        description,
+        contact_phone: contactPhone,
+        max_warnings: maxWarnings,
+        week_start_day: weekStartDay,
+        whatsend_api_url: whatsendApiUrl,
+        whatsend_groups_url: whatsendGroupsUrl,
+        ...(whatsendApiKey ? { whatsend_api_key: whatsendApiKey } : {}),
+      })
       onUpdated()
     } catch (err: any) {
       setError(err.message || 'فشل التحديث')
@@ -154,20 +167,30 @@ function EditCircleModal({ circle, onClose, onUpdated }: { circle: Circle; onClo
   }
 
   return (
-    <Modal title={`تعديل الحلقة — ${circle.name}`} onClose={onClose}>
+    <Modal title={`إعدادات التحفيظ — ${circle.name}`} onClose={onClose}>
       <ErrorMsg error={error} />
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="edit-circle-name" className="block text-sm font-medium text-deep-700 mb-1">اسم الحلقة</label>
-          <input id="edit-circle-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="اسم الحلقة" required className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+          <label htmlFor="edit-circle-name" className="block text-sm font-medium text-deep-700 mb-1">اسم التحفيظ</label>
+          <input id="edit-circle-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="اسم التحفيظ" required className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
         </div>
         <div>
-          <label htmlFor="edit-circle-description" className="block text-sm font-medium text-deep-700 mb-1">وصف الحلقة</label>
+          <label htmlFor="edit-circle-description" className="block text-sm font-medium text-deep-700 mb-1">وصف التحفيظ</label>
           <input id="edit-circle-description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="وصف (اختياري)" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-deep-700 mb-1">رقم التواصل</label>
+          <input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} dir="ltr" className="w-full px-4 py-2.5 bg-white/50 border border-water-300 rounded-xl" />
         </div>
         <div>
           <label htmlFor="edit-circle-max-warnings" className="block text-sm font-medium text-deep-700 mb-1">الحد الأقصى للإنذارات</label>
           <input id="edit-circle-max-warnings" value={maxWarnings} onChange={(e) => setMaxWarnings(Number(e.target.value))} type="number" min="1" placeholder="الحد الأقصى للإنذارات" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
+        </div>
+        <div className="border-t border-water-200 pt-4 space-y-3">
+          <h3 className="font-bold text-deep-800">تكامل WhatSend</h3>
+          <input value={whatsendApiUrl} onChange={(e) => setWhatsendApiUrl(e.target.value)} dir="ltr" placeholder="Send API URL" className="w-full px-4 py-2.5 bg-white/50 border border-water-300 rounded-xl" />
+          <input value={whatsendGroupsUrl} onChange={(e) => setWhatsendGroupsUrl(e.target.value)} dir="ltr" placeholder="Groups API URL (اختياري)" className="w-full px-4 py-2.5 bg-white/50 border border-water-300 rounded-xl" />
+          <input type="password" value={whatsendApiKey} onChange={(e) => setWhatsendApiKey(e.target.value)} dir="ltr" placeholder={circle.whatsend_api_key_configured ? 'المفتاح محفوظ — اكتب بديلاً لتغييره' : 'API key'} className="w-full px-4 py-2.5 bg-white/50 border border-water-300 rounded-xl" />
         </div>
         <div>
           <label htmlFor="edit-circle-week-start" className="block text-sm font-medium text-deep-700 mb-1">بداية الأسبوع</label>
@@ -215,9 +238,6 @@ function AddSheikhModal({ circles, onClose, onCreated }: { circles: Circle[]; on
       <form onSubmit={handleSubmit} className="space-y-4">
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="الاسم" required className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
         <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="رقم الهاتف (اختياري)" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
-        <select value={circleId} onChange={(e) => setCircleId(Number(e.target.value))} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
-          {circles.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
         <WhatsAppGroupSelect value={whatsappGroupId} onChange={setWhatsappGroupId} />
         <div className="flex gap-3 pt-2">
           <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 water-btn-outline rounded-xl text-sm">إلغاء</button>
@@ -228,10 +248,9 @@ function AddSheikhModal({ circles, onClose, onCreated }: { circles: Circle[]; on
   )
 }
 
-function EditSheikhModal({ sheikh, circles, onClose, onUpdated }: { sheikh: SheikhInfo; circles: Circle[]; onClose: () => void; onUpdated: () => void }) {
+function EditSheikhModal({ sheikh, circles: _circles, onClose, onUpdated }: { sheikh: SheikhInfo; circles: Circle[]; onClose: () => void; onUpdated: () => void }) {
   const [name, setName] = useState(sheikh.name)
   const [phone, setPhone] = useState(sheikh.phone || '')
-  const [circleId, setCircleId] = useState(sheikh.circle_id)
   const [whatsappGroupId, setWhatsappGroupId] = useState(sheikh.whatsapp_group_id || '')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -242,7 +261,7 @@ function EditSheikhModal({ sheikh, circles, onClose, onUpdated }: { sheikh: Shei
     setLoading(true)
     setError('')
     try {
-      await api.updateSheikh(sheikh.id, name, phone || undefined, whatsappGroupId || undefined, circleId)
+      await api.updateSheikh(sheikh.id, name, phone || undefined, whatsappGroupId || undefined)
       onUpdated()
     } catch (err: any) {
       setError(err.message || 'فشل التحديث')
@@ -257,9 +276,6 @@ function EditSheikhModal({ sheikh, circles, onClose, onUpdated }: { sheikh: Shei
       <form onSubmit={handleSubmit} className="space-y-4">
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="الاسم" required className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
         <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="رقم الهاتف (اختياري)" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
-        <select value={circleId} onChange={(e) => setCircleId(Number(e.target.value))} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
-          {circles.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
         <WhatsAppGroupSelect value={whatsappGroupId} onChange={setWhatsappGroupId} />
         <div className="flex gap-3 pt-2">
           <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 water-btn-outline rounded-xl text-sm">إلغاء</button>
@@ -1299,7 +1315,7 @@ export default function ManagePage() {
 
   useEffect(() => {
     const u = JSON.parse(localStorage.getItem('user') || '{}')
-    if (u.role !== 'admin') {
+    if (u.role !== 'admin' && u.role !== 'super_admin') {
       router.replace('/dashboard')
     }
   }, [router])
@@ -1334,9 +1350,9 @@ export default function ManagePage() {
   const [showAddUser, setShowAddUser] = useState(false)
   const [editUser, setEditUser] = useState<UserInfo | null>(null)
   const load = useCallback(async () => {
-    const [sheikhsData, circlesData, usersData] = await Promise.all([
+    const [sheikhsData, tahfizSettings, usersData] = await Promise.all([
       api.getSheikhs(),
-      api.getCircles(),
+      api.getTahfizSettings(),
       api.getUsers(),
     ])
     const withStudents = await Promise.all(
@@ -1346,7 +1362,7 @@ export default function ManagePage() {
       }))
     )
     setSheikhs(withStudents)
-    setCircles(circlesData)
+    setCircles([tahfizSettings])
     setUsers(usersData)
     setLoading(false)
   }, [])
@@ -1432,7 +1448,7 @@ export default function ManagePage() {
   const tabs = [
     { key: 'sheikhs', label: 'الشيوخ والطلاب' },
     { key: 'users', label: 'المستخدمين' },
-    { key: 'circles', label: 'الحلقات' },
+    { key: 'circles', label: 'إعدادات التحفيظ' },
     { key: 'warnings', label: 'الإنذارات' },
   ] as const
 
@@ -1480,7 +1496,6 @@ export default function ManagePage() {
                     <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-wrap">
                       <span className={`text-deep-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}>{'<'}</span>
                       <span className="text-lg font-bold text-deep-800 truncate">{sheikh.name}</span>
-                      <span className="text-deep-500 text-sm truncate">{sheikh.circle_name}</span>
                       <span className="text-xs bg-water-200/50 text-deep-600 px-2 py-0.5 rounded-full">{sheikh.students.length} طالب</span>
                     </div>
                     <div className="grid grid-cols-3 gap-2 sm:flex" onClick={(e) => e.stopPropagation()}>
@@ -1555,13 +1570,9 @@ export default function ManagePage() {
       {/* ─── Circles Tab ────────────────────────────────────────────────── */}
       {activeTab === 'circles' && (
         <div>
-          <div className="flex justify-end mb-4">
-            <button onClick={() => setShowAddCircle(true)} className="water-btn text-white px-4 py-2 rounded-xl text-sm">+ إضافة حلقة</button>
-          </div>
-
           {circles.length === 0 ? (
             <div className="glass-card rounded-2xl p-8 text-center text-deep-600/60">
-              لا يوجد حلقات
+              تعذر تحميل إعدادات التحفيظ
             </div>
           ) : (
             <div className="space-y-4">
@@ -1573,8 +1584,7 @@ export default function ManagePage() {
                       {c.description && <span className="text-deep-500 text-sm mr-3">{c.description}</span>}
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={() => setEditCircle(c)} className="water-btn-outline px-3 py-1.5 rounded-xl text-xs">تعديل</button>
-                      <button onClick={() => handleDeleteCircle(c.id)} className="px-3 py-1.5 rounded-xl text-xs border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50/50 dark:hover:bg-red-900/30 transition">حذف</button>
+                      <button onClick={() => setEditCircle(c)} className="water-btn-outline px-3 py-1.5 rounded-xl text-xs">تعديل الإعدادات</button>
                     </div>
                   </div>
                 </div>
@@ -1640,16 +1650,16 @@ export default function ManagePage() {
               const url = URL.createObjectURL(blob)
               const a = document.createElement('a')
               a.href = url
-              a.download = 'zamzam_backup.db'
+              a.download = `zamzam-tahfiz-${new Date().toISOString().slice(0, 10)}.json`
               a.click()
               URL.revokeObjectURL(url)
             } catch (err) {
-              alert('فشل تصدير قاعدة البيانات')
+              alert('فشل تصدير بيانات التحفيظ')
             }
           }}
           className="water-btn-outline px-6 py-3 rounded-xl text-sm"
         >
-          📥 تصدير قاعدة البيانات
+          📥 تصدير بيانات التحفيظ
         </button>
       </div>
     </div>

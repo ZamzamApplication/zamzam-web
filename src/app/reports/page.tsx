@@ -7,6 +7,7 @@ import { currentMonthValue, formatMonth, monthRange } from '@/lib/month'
 import type { Circle, CircleAttendanceRate, StudentStatsItem } from '@/lib/types'
 import ExcelPreviewModal, { type SpreadsheetSheet } from '@/components/ExcelPreviewModal'
 import MonthSwitcher from '@/components/MonthSwitcher'
+import ScrollableTable from '@/components/ScrollableTable'
 
 export default function ReportsPage() {
   const [circles, setCircles] = useState<Circle[]>([])
@@ -15,9 +16,7 @@ export default function ReportsPage() {
   const [studentStats, setStudentStats] = useState<StudentStatsItem[]>([])
   const [loading, setLoading] = useState(true)
   const [sortAsc, setSortAsc] = useState(false)
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
-  const [periodMode, setPeriodMode] = useState<'month' | 'custom'>('month')
+  const [periodMode, setPeriodMode] = useState<'month' | 'all'>('month')
   const [selectedMonth, setSelectedMonth] = useState(currentMonthValue)
   const [reportLoading, setReportLoading] = useState(false)
   const [excelSheets, setExcelSheets] = useState<SpreadsheetSheet[] | null>(null)
@@ -28,6 +27,8 @@ export default function ReportsPage() {
       <img
         src={mediaUrl(profilePic)!}
         alt=""
+        loading="lazy"
+        decoding="async"
         className="w-8 h-8 rounded-full object-cover border border-water-300 shrink-0 cursor-pointer hover:opacity-80 transition"
         onClick={(e) => {
           e.stopPropagation()
@@ -44,6 +45,12 @@ export default function ReportsPage() {
   const load = useCallback(async () => {
     const circlesData = await api.getCircles()
     setCircles(circlesData)
+    const tahfiz = circlesData[0]
+    if (tahfiz) {
+      setSelectedCircle(tahfiz.id)
+      const range = monthRange(currentMonthValue())
+      await loadStatistics(tahfiz.id, range.start, range.end)
+    }
     setLoading(false)
   }, [])
 
@@ -65,8 +72,6 @@ export default function ReportsPage() {
 
   const handleSelectCircle = async (circleId: number | null) => {
     setSelectedCircle(circleId)
-    setDateFrom('')
-    setDateTo('')
     setPeriodMode('month')
     if (!circleId) {
       setCircleRate(null)
@@ -80,17 +85,15 @@ export default function ReportsPage() {
   const handleMonthChange = async (month: string) => {
     setSelectedMonth(month)
     setPeriodMode('month')
-    setDateFrom('')
-    setDateTo('')
     if (!selectedCircle) return
     const range = monthRange(month)
     await loadStatistics(selectedCircle, range.start, range.end)
   }
 
-  const handleFilterByDate = async () => {
+  const handleAllTime = async () => {
     if (!selectedCircle) return
-    setPeriodMode('custom')
-    await loadStatistics(selectedCircle, dateFrom || undefined, dateTo || undefined)
+    setPeriodMode('all')
+    await loadStatistics(selectedCircle)
   }
 
   if (loading) return <div className="page-loading" aria-label="جاري التحميل" />
@@ -101,7 +104,7 @@ export default function ReportsPage() {
   const selectedCircleName = circles.find((circle) => circle.id === selectedCircle)?.name || ''
   const periodLabel = periodMode === 'month'
     ? formatMonth(selectedMonth)
-    : `${dateFrom || 'البداية'} إلى ${dateTo || 'اليوم'}`
+    : 'كل الوقت'
 
   const openExcelPreview = () => {
     if (!circleRate) return
@@ -113,7 +116,7 @@ export default function ReportsPage() {
           { id: 'value', label: 'القيمة' },
         ],
         rows: [
-          { metric: 'الحلقة', value: selectedCircleName },
+          { metric: 'التحفيظ', value: selectedCircleName },
           { metric: 'الفترة', value: periodLabel },
           { metric: 'إجمالي السجلات', value: circleRate.total_attendance_records },
           { metric: 'حاضر', value: circleRate.present },
@@ -152,17 +155,7 @@ export default function ReportsPage() {
     <div>
       <h1 className="text-2xl font-bold text-deep-800 mb-6">التقارير</h1>
 
-      <div className="glass-card rounded-2xl p-5 mb-6">
-        <label className="block text-sm font-medium text-deep-700 mb-2">اختر الحلقة</label>
-        <select
-          value={selectedCircle ?? ''}
-          onChange={(e) => handleSelectCircle(e.target.value ? Number(e.target.value) : null)}
-          className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400"
-        >
-          <option value="">-- اختر --</option>
-          {circles.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-      </div>
+      <p className="text-sm text-deep-500 mb-5">إحصائيات التحفيظ بالكامل{selectedCircleName ? ` — ${selectedCircleName}` : ''}</p>
 
       {selectedCircle && (
         <div className="glass-card rounded-2xl p-5 mb-6">
@@ -176,59 +169,15 @@ export default function ReportsPage() {
             </button>
             <button
               type="button"
-              onClick={() => {
-                const range = monthRange(selectedMonth)
-                setDateFrom(range.start)
-                setDateTo(range.end)
-                setPeriodMode('custom')
-              }}
-              className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold ${periodMode === 'custom' ? 'water-btn text-white' : 'water-btn-outline'}`}
+              onClick={handleAllTime}
+              disabled={reportLoading}
+              className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-50 ${periodMode === 'all' ? 'water-btn text-white' : 'water-btn-outline'}`}
             >
-              نطاق مخصص
+              كل الوقت
             </button>
           </div>
-          {periodMode === 'month' ? (
+          {periodMode === 'month' && (
             <MonthSwitcher value={selectedMonth} onChange={handleMonthChange} disabled={reportLoading} />
-          ) : (
-          <div className="grid grid-cols-2 gap-3 items-end sm:flex">
-            <div className="flex-1">
-              <label className="block text-xs text-deep-500 mb-1">من</label>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="w-full px-3 py-2 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-water-400"
-              />
-            </div>
-            <div className="flex-1">
-              <label className="block text-xs text-deep-500 mb-1">إلى</label>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="w-full px-3 py-2 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-water-400"
-              />
-            </div>
-            <button
-              onClick={handleFilterByDate}
-              className="px-4 py-2 water-btn text-white rounded-xl text-sm font-medium whitespace-nowrap"
-            >
-              تصفية
-            </button>
-            {(dateFrom || dateTo) && (
-              <button
-                onClick={async () => {
-                  setDateFrom('')
-                  setDateTo('')
-                  if (!selectedCircle) return
-                  await loadStatistics(selectedCircle)
-                }}
-                className="px-3 py-2 rounded-xl text-sm border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50/50 dark:hover:bg-red-900/30 transition whitespace-nowrap"
-              >
-                إلغاء
-              </button>
-            )}
-          </div>
           )}
         </div>
       )}
@@ -315,7 +264,7 @@ export default function ReportsPage() {
                   </div>
                 ))}
               </div>
-              <div className="hidden md:block overflow-x-auto">
+              <ScrollableTable>
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-water-200/30 text-deep-600">
@@ -351,7 +300,7 @@ export default function ReportsPage() {
                       ))}
                   </tbody>
                 </table>
-              </div>
+              </ScrollableTable>
             </>)}
           </div>
         </>
@@ -360,7 +309,7 @@ export default function ReportsPage() {
       {!selectedCircle && (
         <div className="glass-card rounded-2xl p-8 text-center text-deep-600/60">
           <div className="text-4xl mb-3">📊</div>
-          اختر حلقة لعرض التقارير
+          لا توجد بيانات لعرض التقارير
         </div>
       )}
 
@@ -368,7 +317,7 @@ export default function ReportsPage() {
       {excelSheets && (
         <ExcelPreviewModal
           sheets={excelSheets}
-          filename={`zamzam-statistics-${selectedMonth}.xlsx`}
+          filename={`zamzam-statistics-${periodMode === 'month' ? selectedMonth : 'all-time'}.xlsx`}
           onClose={() => setExcelSheets(null)}
         />
       )}

@@ -18,7 +18,11 @@ export default function LoginPage() {
     try {
       const res = await api.login(username, password)
       localStorage.setItem('token', res.access_token)
-      router.push('/dashboard')
+      const user = await api.getMe()
+      localStorage.setItem('user', JSON.stringify(user))
+      if (user.role === 'super_admin') router.push('/platform')
+      else if (user.tahfiz?.status !== 'active') router.push('/pending')
+      else router.push('/dashboard')
     } catch (err: any) {
       setError(err.message || 'فشل تسجيل الدخول')
     } finally {
@@ -72,6 +76,9 @@ export default function LoginPage() {
             {loading ? 'جاري التحميل...' : 'دخول'}
           </button>
         </form>
+        <p className="text-center text-sm text-deep-600 mt-5">
+          ليس لديك حساب؟ <a href="/signup" className="font-semibold text-cyan-700">سجّل تحفيظك</a>
+        </p>
       </div>
     </div>
   )

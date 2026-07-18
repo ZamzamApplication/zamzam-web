@@ -9,7 +9,6 @@ import type { Session } from '@/lib/types'
 import CreateSessionModal from '@/components/CreateSessionModal'
 
 interface Stats {
-  circles: number
   sheikhs: number
   students: number
   sessions: number
@@ -42,7 +41,6 @@ function sessionTimingLabel(dateStr: string): string {
 export default function DashboardPage() {
   const [sessions, setSessions] = useState<Session[]>([])
   const [stats, setStats] = useState<Stats>({
-    circles: 0,
     sheikhs: 0,
     students: 0,
     sessions: 0,
@@ -51,29 +49,22 @@ export default function DashboardPage() {
   })
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [canManage, setCanManage] = useState(false)
   const router = useRouter()
 
   const load = useCallback(async () => {
     try {
-      const [sessionsData, circlesData] = await Promise.all([
+      const [sessionsData, summary] = await Promise.all([
         api.getUpcomingSessions(),
-        api.getCircles(),
+        api.getDashboardSummary(),
       ])
       setSessions(sessionsData)
-
-      const sheikhs = await api.getSheikhs()
-      const allSessions = await api.getAllSessions()
-      const studentsCount = (await Promise.all(
-        sheikhs.map((s: any) => api.getSheikhStudents(s.id))
-      )).reduce((acc: number, arr: any[]) => acc + arr.length, 0)
-
       setStats({
-        circles: circlesData.length,
-        sheikhs: sheikhs.length,
-        students: studentsCount,
-        sessions: allSessions.length,
-        confirmedSessions: allSessions.filter((s: Session) => s.is_confirmed).length,
-        pendingSessions: allSessions.filter((s: Session) => !s.is_confirmed).length,
+        sheikhs: summary.sheikhs,
+        students: summary.students,
+        sessions: summary.sessions,
+        confirmedSessions: summary.confirmed_sessions,
+        pendingSessions: summary.pending_sessions,
       })
     } catch {
       // ignore
@@ -82,7 +73,13 @@ export default function DashboardPage() {
     }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    load()
+    try {
+      const role = JSON.parse(localStorage.getItem('user') || '{}').role
+      setCanManage(role === 'admin' || role === 'super_admin')
+    } catch {}
+  }, [load])
 
   const handleCreated = (sessionId: number) => {
     setShowModal(false)
@@ -96,16 +93,16 @@ export default function DashboardPage() {
   const completionRate = stats.sessions > 0 ? Math.round((stats.confirmedSessions / stats.sessions) * 100) : 0
 
   const metricCards = [
-    { label: 'الطلاب', value: stats.students, href: '/manage', accent: 'bg-cyan-500', detail: 'طالب مقيد داخل الحلقات' },
+    { label: 'الطلاب', value: stats.students, href: '/manage', accent: 'bg-cyan-500', detail: 'طالب مقيد في التحفيظ' },
     { label: 'الشيوخ', value: stats.sheikhs, href: '/manage', accent: 'bg-emerald-500', detail: 'شيخ مسؤول عن المتابعة' },
-    { label: 'الحلقات', value: stats.circles, href: '/manage', accent: 'bg-indigo-500', detail: 'حلقة نشطة في النظام' },
     { label: 'الجلسات', value: stats.sessions, href: '/sessions', accent: 'bg-amber-500', detail: `${stats.pendingSessions} جلسة قيد الانتظار` },
+    { label: 'الحضور المؤكد', value: stats.confirmedSessions, href: '/attendance', accent: 'bg-indigo-500', detail: 'جلسة مكتملة في سجل الحضور' },
   ]
 
   const actionCards = [
     { title: 'تسجيل الحضور', desc: 'راجع سجل الحضور والتصفيات المحفوظة', href: '/attendance' },
-    { title: 'إدارة الطلاب', desc: 'الشيوخ، الطلاب، الحلقات والمستخدمين', href: '/manage' },
-    { title: 'التقارير', desc: 'نسب الحضور وأداء الطلاب والحلقات', href: '/reports' },
+    { title: 'إدارة الطلاب', desc: 'الشيوخ والطلاب والمستخدمون', href: '/manage' },
+    { title: 'التقارير', desc: 'نسب الحضور وأداء الطلاب في التحفيظ', href: '/reports' },
   ]
 
   return (
@@ -117,12 +114,12 @@ export default function DashboardPage() {
               <p className="text-sm font-semibold text-cyan-700 dark:text-cyan-300 mb-2">لوحة المتابعة</p>
               <h1 className="text-2xl md:text-3xl font-bold text-deep-900">زمزم لتحفيظ القرآن</h1>
               <p className="text-deep-500 text-sm mt-2 max-w-2xl">
-                نظرة سريعة على الحلقات والجلسات غير المؤكدة، مع وصول مباشر لأهم مهام اليوم.
+                نظرة سريعة على التحفيظ والجلسات غير المؤكدة، مع وصول مباشر لأهم مهام اليوم.
               </p>
             </div>
-            <button onClick={() => setShowModal(true)} className="water-btn text-white px-5 py-2.5 rounded-lg text-sm font-semibold self-start">
+            {canManage && <button onClick={() => setShowModal(true)} className="water-btn text-white px-5 py-2.5 rounded-lg text-sm font-semibold self-start">
               إضافة جلسة جديدة
-            </button>
+            </button>}
           </div>
 
           <div className="grid sm:grid-cols-3 gap-3 mt-6">
@@ -152,7 +149,7 @@ export default function DashboardPage() {
                 {sessionTimingLabel(nextSession.date)}
               </span>
               <h2 className="text-lg font-bold text-deep-900">جلسة {formatDateWithWeekday(nextSession.date)}</h2>
-              <p className="text-sm text-deep-500 mt-1">{nextSession.circle_name || 'بدون حلقة'}</p>
+              <p className="text-sm text-deep-500 mt-1">{nextSession.circle_name || 'زمزم'}</p>
             </button>
           ) : (
             <div className="rounded-lg border border-dashed border-water-300/80 p-5 text-center text-deep-500 text-sm">
