@@ -3,6 +3,14 @@
 import { useState } from 'react'
 import { api } from '@/lib/api'
 
+function todayLocalDate(): string {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 export default function CreateSessionModal({
   onClose,
   onCreated,
@@ -10,7 +18,7 @@ export default function CreateSessionModal({
   onClose: () => void
   onCreated: (sessionId: number) => void
 }) {
-  const [sessionDate, setSessionDate] = useState('')
+  const [sessionDate, setSessionDate] = useState(todayLocalDate)
   const [defaultStatus, setDefaultStatus] = useState('غياب')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
