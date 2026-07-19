@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>زمزم — نموذج الحضور والمتابعة معاً</title>
+  <style>
+    :root{--navy:#164e63;--cyan:#0891b2;--cyan2:#06b6d4;--line:#c9e9ef;--soft:#effbfc;--muted:#64748b;--green:#059669;--amber:#d97706;--red:#dc2626}
+    *{box-sizing:border-box}body{margin:0;font-family:"Cairo","Noto Sans Arabic",Tahoma,sans-serif;color:#123b4a;background:radial-gradient(circle at 90% 0,#cffafe,transparent 32rem),#f7fbfc}
+    button,input,select{font:inherit}button{cursor:pointer}.page{max-width:1360px;margin:auto;padding:22px}.top{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:18px}
+    .brand{font-weight:900;color:var(--cyan);font-size:13px}.top h1{margin:6px 0 4px;font-size:28px}.muted{color:var(--muted);font-size:13px}.actions{display:flex;gap:8px;flex-wrap:wrap}
+    .btn{border:0;border-radius:11px;padding:10px 16px;font-weight:800;background:var(--cyan);color:#fff}.btn.outline{border:1px solid var(--line);background:#fff;color:var(--cyan)}.btn.green{background:var(--green)}
+    .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:15px}.stat{background:#fff;border:1px solid var(--line);border-radius:15px;padding:12px;text-align:center;box-shadow:0 8px 20px #164e630d}
+    .stat b{font-size:24px;display:block}.stat span{font-size:11px;color:var(--muted)}.save-state{background:#ecfdf5;border:1px solid #a7f3d0;color:#047857;padding:10px 13px;border-radius:12px;font-size:12px;margin-bottom:14px}
+    .bulk{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:0 10px 24px #164e6310}.bulk-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}.bulk-head h2{font-size:16px;margin:0}
+    .bulk-grid{display:grid;grid-template-columns:1.15fr 1fr 1fr 1fr 1fr auto;gap:9px;align-items:end}.field{display:grid;gap:5px;font-size:11px;color:var(--muted)}input,select{min-width:0;width:100%;border:1px solid #b8e2e9;border-radius:10px;padding:9px;background:#fff;color:#123b4a}
+    .group{background:#fff;border:1px solid var(--line);border-radius:19px;overflow:hidden;box-shadow:0 12px 28px #164e6310}.group-head{display:flex;justify-content:space-between;align-items:center;padding:15px 18px;background:#effbfc}.group-head h2{font-size:17px;margin:0}.pill{padding:5px 9px;border-radius:999px;background:#cffafe;color:#0e7490;font-size:11px;font-weight:800}
+    .table-wrap{overflow:auto}table{border-collapse:collapse;width:100%;min-width:1080px;font-size:12px}th,td{padding:10px;border-bottom:1px solid #edf4f5;text-align:right;vertical-align:middle}th{background:#f9fcfd;color:var(--muted);font-size:11px;position:sticky;top:0}
+    tr:last-child td{border-bottom:0}.person{display:flex;gap:9px;align-items:center;min-width:180px}.avatar{width:34px;height:34px;border-radius:11px;background:#cffafe;color:#0e7490;display:grid;place-items:center;font-weight:900}.person small{display:block;color:var(--muted);margin-top:2px}
+    .status{display:flex;gap:4px}.status button{border:1px solid #d6e8eb;background:#fff;color:#64748b;padding:6px 8px;border-radius:8px;font-size:11px}.status .present.active{background:#ecfdf5;border-color:#6ee7b7;color:#047857}.status .absent.active{background:#f1f5f9;border-color:#cbd5e1;color:#475569}.status .excused.active{background:#fffbeb;border-color:#fcd34d;color:#b45309}
+    .track{min-width:170px}.track-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}.track-toggle{border:1px solid var(--line);background:#fff;color:#64748b;border-radius:8px;padding:4px 7px;font-size:10px}.track-toggle.on{background:#ecfeff;border-color:#67e8f9;color:#0e7490}.range{display:none;grid-template-columns:1fr auto 1fr;gap:4px;align-items:center}.track.on .range{display:grid}.range input{padding:6px;text-align:center}.empty{font-size:10px;color:#94a3b8}
+    .score{display:flex;gap:3px;direction:ltr}.score button{border:0;background:transparent;color:#cbd5e1;padding:1px;font-size:18px}.score button.on{color:#f59e0b}.mistakes{display:flex;align-items:center;gap:4px}.mistakes button{border:1px solid var(--line);background:#fff;border-radius:7px;width:25px;height:25px}.mistakes b{min-width:18px;text-align:center}
+    .done{color:#047857;font-weight:800;font-size:11px}.bottom{position:sticky;bottom:10px;margin:16px auto 0;max-width:720px;background:#164e63;color:#fff;border-radius:17px;padding:12px 15px;display:flex;justify-content:space-between;gap:12px;align-items:center;box-shadow:0 18px 45px #164e6340}.bottom small{color:#cffafe}.bottom .btn{background:#fff;color:#0e7490}
+    .mobile-list{display:none}.student-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:13px;margin:9px}.card-head{display:flex;justify-content:space-between;align-items:center;gap:8px}.mobile-progress{display:none;background:#f5fcfd;border-radius:12px;padding:10px;margin-top:10px}.student-card.open .mobile-progress{display:block}.tabs{display:flex;gap:5px;overflow:auto}.tabs button{white-space:nowrap;border:1px solid var(--line);background:#fff;border-radius:9px;padding:7px;font-size:11px}.tabs button.active{background:#cffafe;color:#0e7490}.mobile-progress .two{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}
+    #toast{position:fixed;bottom:20px;left:20px;background:#123b4a;color:#fff;border-radius:11px;padding:11px 15px;opacity:0;transform:translateY(12px);transition:.2s;z-index:5}#toast.show{opacity:1;transform:none}
+    @media(max-width:760px){.page{padding:12px}.top{display:block}.actions{margin-top:12px}.summary{grid-template-columns:repeat(2,1fr)}.bulk-grid{grid-template-columns:1fr 1fr}.bulk-grid .btn{grid-column:1/-1}.table-wrap{display:none}.mobile-list{display:block}.bottom{bottom:7px}.bottom div{display:none}.top h1{font-size:22px}}
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="top">
+      <div><div class="brand">💧 زمزم · نموذج تجريبي</div><h1>الحضور ومتابعة القرآن — جلسة واحدة</h1><div class="muted">السبت 19 يوليو 2026 · الشيخ الأرقم · التغييرات هنا تجريبية فقط</div></div>
+      <div class="actions"><button class="btn outline">رجوع</button><button class="btn green" id="confirm">تأكيد الجلسة</button></div>
+    </header>
+    <section class="summary"><div class="stat"><b id="presentCount">3</b><span>حاضر</span></div><div class="stat"><b id="absentCount">1</b><span>غائب</span></div><div class="stat"><b id="progressCount">5</b><span>سجلات حفظ ومراجعة</span></div><div class="stat"><b>4</b><span>طلاب المجموعة</span></div></section>
+    <div class="save-state">✓ الحضور يُحفظ تلقائياً · متابعة القرآن تُجمع ثم تُحفظ مرة واحدة</div>
+
+    <section class="bulk">
+      <div class="bulk-head"><div><h2>تطبيق سريع على الحاضرين</h2><span class="muted">استخدمه إذا سمّع عدة طلاب نفس المقدار، ثم عدّل الاستثناءات في الصفوف.</span></div><span class="pill">3 طلاب حاضرون</span></div>
+      <div class="bulk-grid">
+        <label class="field">طبّق على<select><option>كل الحاضرين</option><option>طلاب محددون</option></select></label>
+        <label class="field">النوع<select id="bulkType"><option value="new">حفظ جديد</option><option value="recent">مراجعة قريبة</option><option value="old">مراجعة قديمة</option><option value="test">اختبار</option></select></label>
+        <label class="field">طريقة التحديد<select><option>بالصفحات</option><option>بالسورة والآية</option></select></label>
+        <label class="field">من صفحة<input id="bulkFrom" type="number" value="48" min="1" max="604"></label>
+        <label class="field">إلى صفحة<input id="bulkTo" type="number" value="49" min="1" max="604"></label>
+        <button class="btn" id="applyBulk">تطبيق على الحاضرين</button>
+      </div>
+    </section>
+
+    <section class="group">
+      <div class="group-head"><h2>الشيخ الأرقم</h2><span class="pill">3 / 4 حاضر</span></div>
+      <div class="table-wrap">
+        <table><thead><tr><th>الطالب</th><th>الحضور</th><th>حفظ جديد</th><th>مراجعة قريبة</th><th>مراجعة قديمة</th><th>التقييم</th><th>الأخطاء</th><th>الحالة</th></tr></thead>
+          <tbody id="desktopRows"></tbody>
+        </table>
+      </div>
+      <div class="mobile-list" id="mobileRows"></div>
+    </section>
+
+    <div class="bottom"><div><b id="pendingLabel">4 تغييرات جاهزة</b><br><small>سيتم حفظ الحضور والمتابعة معاً قبل التأكيد</small></div><button class="btn" id="saveAll">حفظ كل التغييرات</button></div>
+  </div>
+  <div id="toast">تم الحفظ في النموذج ✓</div>
+  <script>
+    const students=[
+      {id:1,name:'علي حسن الرفاعي',status:'present',new:[48,49],recent:[42,47],old:null,score:4,mistakes:2},
+      {id:2,name:'محمد حسن الرفاعي',status:'present',new:[22,23],recent:null,old:[1,10],score:5,mistakes:0},
+      {id:3,name:'معاذ عمرو جمال',status:'present',new:[31,32],recent:null,old:null,score:3,mistakes:4},
+      {id:4,name:'مازن عمرو جمال',status:'absent',new:null,recent:null,old:null,score:3,mistakes:0}
+    ];
+    const labels={new:'حفظ جديد',recent:'مراجعة قريبة',old:'مراجعة قديمة'};
+    const toast=document.querySelector('#toast');
+    function notify(text='تم الحفظ في النموذج ✓'){toast.textContent=text;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1700)}
+    function statusButtons(s){return `<div class="status"><button data-action="status" data-status="present" class="present ${s.status==='present'?'active':''}">حاضر</button><button data-action="status" data-status="absent" class="absent ${s.status==='absent'?'active':''}">غائب</button><button data-action="status" data-status="excused" class="excused ${s.status==='excused'?'active':''}">بعذر</button></div>`}
+    function trackCell(s,type){const value=s[type];return `<div class="track ${value?'on':''}" data-type="${type}"><div class="track-top"><button class="track-toggle ${value?'on':''}" data-action="track">${value?'✓ '+labels[type]+':':'＋ '+labels[type]}</button>${!value?'<span class="empty">غير مسجل</span>':''}</div><div class="range"><input data-range="from" type="number" value="${value?value[0]:1}"><span>—</span><input data-range="to" type="number" value="${value?value[1]:1}"></div></div>`}
+    function stars(s){return `<div class="score">${[1,2,3,4,5].map(n=>`<button data-action="score" data-score="${n}" class="${n<=s.score?'on':''}">★</button>`).join('')}</div>`}
+    function counter(s){return `<div class="mistakes"><button data-action="mistake" data-delta="-1">−</button><b>${s.mistakes}</b><button data-action="mistake" data-delta="1">+</button></div>`}
+    function render(){
+      document.querySelector('#desktopRows').innerHTML=students.map(s=>`<tr data-id="${s.id}"><td><div class="person"><span class="avatar">${s.name[0]}</span><div><b>${s.name}</b><small>${s.status==='present'?'أدخل المتابعة في نفس الصف':'المتابعة مخفية للغائب'}</small></div></div></td><td>${statusButtons(s)}</td><td>${trackCell(s,'new')}</td><td>${trackCell(s,'recent')}</td><td>${trackCell(s,'old')}</td><td>${stars(s)}</td><td>${counter(s)}</td><td class="done">${s.status==='present'?'✓ جاهز':'حضور فقط'}</td></tr>`).join('');
+      document.querySelector('#mobileRows').innerHTML=students.map(s=>`<article class="student-card ${s.status==='present'?'open':''}" data-id="${s.id}"><div class="card-head"><div class="person"><span class="avatar">${s.name[0]}</span><b>${s.name}</b></div>${statusButtons(s)}</div><div class="mobile-progress"><div class="tabs">${['new','recent','old'].map((t,i)=>`<button class="${i===0?'active':''}" data-mobile-tab="${t}">${labels[t]}</button>`).join('')}</div><div class="two"><label class="field">من صفحة<input value="${s.new?.[0]||1}"></label><label class="field">إلى صفحة<input value="${s.new?.[1]||1}"></label></div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">${stars(s)}${counter(s)}</div></div></article>`).join('');
+      document.querySelector('#presentCount').textContent=students.filter(s=>s.status==='present').length;
+      document.querySelector('#absentCount').textContent=students.filter(s=>s.status==='absent').length;
+      document.querySelector('#progressCount').textContent=students.reduce((n,s)=>n+['new','recent','old'].filter(t=>s[t]).length,0);
+    }
+    document.addEventListener('click',e=>{
+      const b=e.target.closest('button'),row=e.target.closest('[data-id]');if(!b)return;
+      const s=row?students.find(x=>x.id===Number(row.dataset.id)):null;
+      if(b.dataset.action==='status'&&s){s.status=b.dataset.status;render();notify('تم تحديث الحضور تلقائياً')}
+      if(b.dataset.action==='track'&&s){const type=b.closest('.track').dataset.type;s[type]=s[type]?null:[1,1];render()}
+      if(b.dataset.action==='score'&&s){s.score=Number(b.dataset.score);render()}
+      if(b.dataset.action==='mistake'&&s){s.mistakes=Math.max(0,s.mistakes+Number(b.dataset.delta));render()}
+      if(b.dataset.mobileTab){b.parentElement.querySelectorAll('button').forEach(x=>x.classList.remove('active'));b.classList.add('active')}
+    });
+    document.querySelector('#applyBulk').onclick=()=>{const type=document.querySelector('#bulkType').value,from=Number(document.querySelector('#bulkFrom').value),to=Number(document.querySelector('#bulkTo').value);students.filter(s=>s.status==='present').forEach(s=>s[type]=[from,to]);render();notify('تم التطبيق على 3 طلاب — يمكنك تعديل أي صف')};
+    document.querySelector('#saveAll').onclick=()=>{document.querySelector('#pendingLabel').textContent='تم حفظ كل التغييرات';notify()};
+    document.querySelector('#confirm').onclick=()=>notify('تم حفظ الحضور والمتابعة ثم تأكيد الجلسة');
+    render();
+  </script>
+</body>
+</html>
