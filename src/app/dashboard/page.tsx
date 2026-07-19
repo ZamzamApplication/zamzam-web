@@ -51,6 +51,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [canManage, setCanManage] = useState(false)
+  const [tahfizName, setTahfizName] = useState('التحفيظ')
   const [error, setError] = useState('')
   const router = useRouter()
 
@@ -80,8 +81,10 @@ export default function DashboardPage() {
   useEffect(() => {
     load()
     try {
-      const role = JSON.parse(localStorage.getItem('user') || '{}').role
-      setCanManage(role === 'admin' || role === 'super_admin')
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      setCanManage(user.role === 'admin' || user.role === 'super_admin')
+      const supportName = localStorage.getItem('support_tahfiz_name')
+      setTahfizName(supportName || user.tahfiz?.name || 'التحفيظ')
     } catch {}
   }, [load])
 
@@ -117,7 +120,7 @@ export default function DashboardPage() {
           <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
             <div>
               <p className="text-sm font-semibold text-cyan-700 dark:text-cyan-300 mb-2">لوحة المتابعة</p>
-              <h1 className="text-2xl md:text-3xl font-bold text-deep-900">زمزم لتحفيظ القرآن</h1>
+              <h1 className="text-2xl md:text-3xl font-bold text-deep-900">{tahfizName}</h1>
               <p className="text-deep-500 text-sm mt-2 max-w-2xl">
                 نظرة سريعة على التحفيظ والجلسات غير المؤكدة، مع وصول مباشر لأهم مهام اليوم.
               </p>
@@ -154,7 +157,7 @@ export default function DashboardPage() {
                 {sessionTimingLabel(nextSession.date)}
               </span>
               <h2 className="text-lg font-bold text-deep-900">جلسة {formatDateWithWeekday(nextSession.date)}</h2>
-              <p className="text-sm text-deep-500 mt-1">{nextSession.circle_name || 'زمزم'}</p>
+              <p className="text-sm text-deep-500 mt-1">{nextSession.circle_name || tahfizName}</p>
             </button>
           ) : (
             <div className="rounded-lg border border-dashed border-water-300/80 p-5 text-center text-deep-500 text-sm">
