@@ -101,8 +101,6 @@ export default function InlineQuranProgress({
   saving: boolean
 }) {
   const enabledDrafts = INLINE_PROGRESS_CATEGORIES.map(({ key }) => drafts[progressDraftKey(student.id, key)]).filter(Boolean)
-  const quality = enabledDrafts[0]?.quality_score || 3
-  const mistakes = enabledDrafts[0]?.mistakes || 0
 
   const updateAll = (patch: Partial<QuranProgressInput>) => {
     enabledDrafts.forEach((draft) => onChange({ ...draft, ...patch }))
@@ -152,6 +150,11 @@ export default function InlineQuranProgress({
                   <AyahSelect label="من آية" value={draft.from_ayah || 1} surah={surah} disabled={disabled} onChange={(value) => onChange({ ...draft, from_ayah: value, to_ayah: Math.max(value, Math.min(draft.to_ayah || value, maxAyah)) })} />
                   <AyahSelect label="إلى آية" value={draft.to_ayah || 1} surah={surah} disabled={disabled} onChange={(value) => onChange({ ...draft, to_ayah: Math.max(draft.from_ayah || 1, value) })} />
                   <button type="button" onClick={() => onChange({ ...draft, from_ayah: 1, to_ayah: maxAyah })} disabled={disabled} className="col-span-2 rounded-lg border border-water-200 bg-water-50 px-2 py-1.5 text-[10px] font-semibold text-cyan-700">السورة كاملة</button>
+                  <label className="col-span-2 text-[11px] font-semibold text-deep-600">التقييم
+                    <select value={draft.quality_score} onChange={(event) => onChange({ ...draft, quality_score: Number(event.target.value) })} disabled={disabled} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm">
+                      {QUALITY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                    </select>
+                  </label>
                 </div>
               )}
             </div>
@@ -161,29 +164,10 @@ export default function InlineQuranProgress({
 
       {enabledDrafts.length > 0 && (
         <div className="mt-3 rounded-xl border border-water-200 bg-white/75 p-3 dark:bg-slate-800/60">
-          <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
-            <div>
-              <p className="mb-1.5 text-[11px] font-semibold text-deep-600">التقييم — يطبق على الأقسام المفعلة</p>
-              <div className="flex flex-wrap gap-1.5">
-                {QUALITY_OPTIONS.map((option) => (
-                  <button key={option.value} type="button" onClick={() => updateAll({ quality_score: option.value })} disabled={disabled} className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold ${quality === option.value ? 'border-cyan-500 bg-cyan-600 text-white' : 'border-water-200 bg-white text-deep-600 dark:bg-slate-900'}`}>{option.label}</button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="mb-1.5 text-[11px] font-semibold text-deep-600">الأخطاء</p>
-              <div className="flex items-center gap-2">
-                <button type="button" onClick={() => updateAll({ mistakes: Math.max(0, mistakes - 1) })} disabled={disabled} className="h-8 w-8 rounded-lg border border-water-200 bg-white font-bold dark:bg-slate-900">−</button>
-                <span className="min-w-6 text-center font-bold">{mistakes}</span>
-                <button type="button" onClick={() => updateAll({ mistakes: mistakes + 1 })} disabled={disabled} className="h-8 w-8 rounded-lg border border-water-200 bg-white font-bold dark:bg-slate-900">+</button>
-              </div>
-            </div>
-          </div>
-          <details className="mt-3">
-            <summary className="cursor-pointer text-[11px] font-semibold text-cyan-700">ملاحظات وتكليف قادم (اختياري)</summary>
-            <div className="mt-2 grid gap-2 md:grid-cols-2">
+          <details>
+            <summary className="cursor-pointer text-[11px] font-semibold text-cyan-700">ملاحظات (اختياري)</summary>
+            <div className="mt-2">
               <input value={enabledDrafts[0]?.notes || ''} onChange={(event) => updateAll({ notes: event.target.value || null })} disabled={disabled} placeholder="ملاحظات المتابعة" className="surface-field rounded-lg px-3 py-2 text-xs" />
-              <input value={enabledDrafts[0]?.next_assignment || ''} onChange={(event) => updateAll({ next_assignment: event.target.value || null })} disabled={disabled} placeholder="التكليف القادم" className="surface-field rounded-lg px-3 py-2 text-xs" />
             </div>
           </details>
           <button type="button" onClick={onSaveNext} disabled={disabled || saving || dirtyKeys.size === 0} className="water-btn mt-3 w-full rounded-lg px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">{saving ? 'جاري الحفظ...' : 'حفظ والطالب التالي'}</button>
