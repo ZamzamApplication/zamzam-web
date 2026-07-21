@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { getArabicDay, mediaUrl } from '@/lib/format'
 import type { ProgressCategory, QuranProgressInput, Session, SessionAttendance, SheikhGroup } from '@/lib/types'
-import InlineQuranProgress, { INLINE_PROGRESS_CATEGORIES, type ProgressDraftMap, progressDraftKey, progressEntryToInput } from '@/components/InlineQuranProgress'
+import InlineQuranProgress, { createRequiredProgressDraft, INLINE_PROGRESS_CATEGORIES, type ProgressDraftMap, progressDraftKey, progressEntryToInput } from '@/components/InlineQuranProgress'
 import { QUALITY_OPTIONS, SURAHS, surahInfo } from '@/lib/quran'
 
 const STATUS_STYLES: Record<string, string> = {
@@ -13,6 +13,18 @@ const STATUS_STYLES: Record<string, string> = {
   'حاضر': 'status-badge bg-green-100/60 text-green-700 border-green-300 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700',
   'غياب بعذر': 'status-badge bg-yellow-100/60 text-yellow-700 border-yellow-300 dark:bg-yellow-900/40 dark:text-yellow-300 dark:border-yellow-700',
   'لا ينطبق': 'status-badge bg-blue-100/60 text-blue-700 border-blue-300 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700',
+}
+
+function isProgressDraftComplete(draft?: QuranProgressInput) {
+  return Boolean(
+    draft
+    && (draft.from_surah || 0) > 0
+    && (draft.from_ayah || 0) > 0
+    && (draft.to_surah || 0) === (draft.from_surah || 0)
+    && (draft.to_ayah || 0) >= (draft.from_ayah || 0)
+    && draft.quality_score >= 1
+    && draft.quality_score <= 5
+  )
 }
 
 function StudentRow({
@@ -31,7 +43,6 @@ function StudentRow({
   dirtyProgressKeys,
   progressSaving,
   onProgressChange,
-  onProgressDiscard,
   onProgressSaveNext,
 }: {
   student: { id: number; name: string; status: string; notes?: string; sheikh_id: number | null; profile_pic?: string | null }
@@ -49,12 +60,9 @@ function StudentRow({
   dirtyProgressKeys: Set<string>
   progressSaving: boolean
   onProgressChange: (draft: QuranProgressInput) => void
-  onProgressDiscard: (key: string) => void
   onProgressSaveNext: () => void
 }) {
   const [notes, setNotes] = useState(student.notes || '')
-  const [progressOpen, setProgressOpen] = useState(false)
-  const previousStatus = useRef(student.status)
 
   const handleNotesChange = (value: string) => {
     setNotes(value)
@@ -64,14 +72,6 @@ function StudentRow({
   useEffect(() => {
     setNotes(student.notes || '')
   }, [student.notes])
-
-  useEffect(() => {
-    if (student.status === 'حاضر' && previousStatus.current !== 'حاضر') setProgressOpen(true)
-    if (student.status !== 'حاضر') setProgressOpen(false)
-    previousStatus.current = student.status
-  }, [student.status])
-
-  const studentProgressCount = INLINE_PROGRESS_CATEGORIES.filter(({ key }) => progressDrafts[progressDraftKey(student.id, key)]).length
 
   return (
     <div id={`student-row-${student.id}`} className="py-3 px-3 md:grid md:grid-cols-[36px_1fr_90px_120px_1fr] md:gap-2 md:items-center md:py-2.5 md:px-4 hover:bg-water-100/30 rounded-xl transition">
@@ -132,26 +132,17 @@ function StudentRow({
         </label>
       </div>
       {progressEnabled && student.status === 'حاضر' && (
-        <div className="mt-2 md:col-span-full">
-          <button type="button" onClick={() => setProgressOpen((current) => !current)} className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-xs font-semibold ${studentProgressCount > 0 ? 'border-emerald-200 bg-emerald-50/80 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300' : 'border-cyan-200 bg-cyan-50/70 text-cyan-700 dark:border-cyan-800 dark:bg-cyan-900/20 dark:text-cyan-300'}`}>
-            <span>{studentProgressCount > 0 ? `متابعة القرآن — ${studentProgressCount} أقسام` : '+ إدخال الحفظ والمراجعة'}</span>
-            <span>{progressOpen ? '▲' : '▼'}</span>
-          </button>
-          {progressOpen && (
-            <InlineQuranProgress
-              student={student}
-              drafts={progressDrafts}
-              previousDrafts={previousProgressDrafts}
-              savedKeys={savedProgressKeys}
-              dirtyKeys={dirtyProgressKeys}
-              disabled={disabled}
-              saving={progressSaving}
-              onChange={onProgressChange}
-              onDiscard={onProgressDiscard}
-              onSaveNext={() => { setProgressOpen(false); onProgressSaveNext() }}
-            />
-          )}
-        </div>
+        <InlineQuranProgress
+          student={student}
+          drafts={progressDrafts}
+          previousDrafts={previousProgressDrafts}
+          savedKeys={savedProgressKeys}
+          dirtyKeys={dirtyProgressKeys}
+          disabled={disabled}
+          saving={progressSaving}
+          onChange={onProgressChange}
+          onSaveNext={onProgressSaveNext}
+        />
       )}
     </div>
   )
@@ -175,7 +166,6 @@ function SheikhAccordion({
   dirtyProgressKeys,
   progressSaving,
   onProgressChange,
-  onProgressDiscard,
   onProgressSaveNext,
 }: {
   group: SheikhGroup
@@ -195,7 +185,6 @@ function SheikhAccordion({
   dirtyProgressKeys: Set<string>
   progressSaving: boolean
   onProgressChange: (draft: QuranProgressInput) => void
-  onProgressDiscard: (key: string) => void
   onProgressSaveNext: (studentId: number) => void
 }) {
 
@@ -238,7 +227,6 @@ function SheikhAccordion({
               dirtyProgressKeys={dirtyProgressKeys}
               progressSaving={progressSaving}
               onProgressChange={onProgressChange}
-              onProgressDiscard={onProgressDiscard}
               onProgressSaveNext={() => onProgressSaveNext(student.id)}
             />
           ))}
@@ -323,12 +311,26 @@ export default function SessionAttendancePage() {
       setUserRole(currentUser.role || '')
       const enabled = Boolean(currentUser.tahfiz?.progress_tracking_enabled)
       setProgressEnabled(enabled)
-      const drafts = Object.fromEntries((enabled ? progress.entries : []).map((entry) => [progressDraftKey(entry.student_id, entry.category), progressEntryToInput(entry)]))
+      const drafts: ProgressDraftMap = Object.fromEntries((enabled ? progress.entries : []).map((entry) => [progressDraftKey(entry.student_id, entry.category), progressEntryToInput(entry)]))
+      const previousDrafts: ProgressDraftMap = Object.fromEntries((progress.previous_entries || []).map((entry) => [progressDraftKey(entry.student_id, entry.category), progressEntryToInput(entry)]))
+      const requiredKeys = new Set<string>()
+      if (enabled && !sessionData.is_confirmed) {
+        sessionData.sheikh_groups.flatMap((group: SheikhGroup) => group.students).filter((student: SheikhGroup['students'][number]) => student.status === 'حاضر').forEach((student: SheikhGroup['students'][number]) => {
+          INLINE_PROGRESS_CATEGORIES.forEach(({ key: category }) => {
+            const key = progressDraftKey(student.id, category)
+            if (drafts[key]) return
+            drafts[key] = createRequiredProgressDraft(student.id, student.sheikh_id, category, previousDrafts[key])
+            requiredKeys.add(key)
+          })
+        })
+      }
       setProgressDrafts(drafts)
-      setPersistedProgressDrafts(drafts)
-      setPreviousProgressDrafts(Object.fromEntries((progress.previous_entries || []).map((entry) => [progressDraftKey(entry.student_id, entry.category), progressEntryToInput(entry)])))
-      setSavedProgressKeys(new Set(Object.keys(drafts)))
-      setDirtyProgressKeys(new Set())
+      const persistedDrafts: ProgressDraftMap = Object.fromEntries((enabled ? progress.entries : []).map((entry) => [progressDraftKey(entry.student_id, entry.category), progressEntryToInput(entry)]))
+      setPersistedProgressDrafts(persistedDrafts)
+      setPreviousProgressDrafts(previousDrafts)
+      setSavedProgressKeys(new Set(Object.keys(persistedDrafts)))
+      setDirtyProgressKeys(requiredKeys)
+      if (requiredKeys.size > 0) setSaveState('pending')
     }).catch((err: any) => {
       if (!cancelled) setLoadError(err.message || 'تعذر تحميل الجلسة')
     }).finally(() => {
@@ -421,25 +423,26 @@ export default function SessionAttendancePage() {
     const key = progressDraftKey(draft.student_id, draft.category)
     setProgressDrafts((current) => ({ ...current, [key]: { ...draft, range_type: 'surah_ayah' } }))
     setDirtyProgressKeys((current) => new Set(current).add(key))
+    setSaveError('')
+    setSaveState('pending')
   }, [])
-
-  const handleProgressDiscard = useCallback((key: string) => {
-    if (savedProgressKeys.has(key)) return
-    setProgressDrafts((current) => {
-      const next = { ...current }
-      delete next[key]
-      return next
-    })
-    setDirtyProgressKeys((current) => {
-      const next = new Set(current)
-      next.delete(key)
-      return next
-    })
-  }, [savedProgressKeys])
 
   const saveProgressDrafts = useCallback(async (): Promise<boolean> => {
     const sessionData = dataRef.current
-    if (!sessionData || dirtyProgressKeys.size === 0) return true
+    if (!sessionData) return true
+    if (progressEnabled && !sessionData.is_confirmed) {
+      const presentStudents = sessionData.sheikh_groups.flatMap((group) => group.students).filter((student) => student.status === 'حاضر')
+      const incompleteStudent = presentStudents.find((student) => INLINE_PROGRESS_CATEGORIES.some(({ key: category }) => !isProgressDraftComplete(progressDrafts[progressDraftKey(student.id, category)])))
+      if (incompleteStudent) {
+        const group = sessionData.sheikh_groups.find((item) => item.students.some((student) => student.id === incompleteStudent.id))
+        if (group) setExpandedSheikhs((current) => new Set(current).add(group.sheikh.id))
+        setSaveError(`أكمل الحفظ والمراجعتين والتقييم للطالب: ${incompleteStudent.name}`)
+        setSaveState('error')
+        window.setTimeout(() => document.getElementById(`student-row-${incompleteStudent.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 0)
+        return false
+      }
+    }
+    if (dirtyProgressKeys.size === 0) return true
     const keys = Array.from(dirtyProgressKeys)
     const updates = keys.map((key) => progressDrafts[key]).filter(Boolean)
     if (updates.length === 0) return true
@@ -467,7 +470,7 @@ export default function SessionAttendancePage() {
     } finally {
       setProgressSaving(false)
     }
-  }, [dirtyProgressKeys, progressDrafts])
+  }, [dirtyProgressKeys, progressDrafts, progressEnabled])
 
   const saveProgressAndOpenNext = useCallback(async (studentId: number) => {
     if (!(await saveProgressDrafts())) return
@@ -537,9 +540,30 @@ export default function SessionAttendancePage() {
         INLINE_PROGRESS_CATEGORIES.forEach(({ key: category }) => next.delete(progressDraftKey(studentId, category)))
         return next
       })
+    } else if (progressEnabled && !dataRef.current?.is_confirmed) {
+      const student = dataRef.current?.sheikh_groups.flatMap((group) => group.students).find((item) => item.id === studentId)
+      if (student) {
+        const additions: ProgressDraftMap = {}
+        const keys: string[] = []
+        INLINE_PROGRESS_CATEGORIES.forEach(({ key: category }) => {
+          const key = progressDraftKey(studentId, category)
+          if (progressDrafts[key]) return
+          additions[key] = createRequiredProgressDraft(studentId, student.sheikh_id, category, previousProgressDrafts[key])
+          keys.push(key)
+        })
+        if (keys.length > 0) {
+          setProgressDrafts((current) => ({ ...additions, ...current }))
+          setDirtyProgressKeys((current) => {
+            const next = new Set(current)
+            keys.forEach((key) => next.add(key))
+            return next
+          })
+          setSaveState('pending')
+        }
+      }
     }
     queueUpdate(studentId, { status: newStatus })
-  }, [persistedProgressDrafts, queueUpdate])
+  }, [persistedProgressDrafts, previousProgressDrafts, progressDrafts, progressEnabled, queueUpdate])
 
   const handleUpdateNotes = useCallback((studentId: number, notes: string) => {
     setData((prev) => {
@@ -862,7 +886,6 @@ export default function SessionAttendancePage() {
             dirtyProgressKeys={dirtyProgressKeys}
             progressSaving={progressSaving}
             onProgressChange={handleProgressChange}
-            onProgressDiscard={handleProgressDiscard}
             onProgressSaveNext={saveProgressAndOpenNext}
           />
         ))}
