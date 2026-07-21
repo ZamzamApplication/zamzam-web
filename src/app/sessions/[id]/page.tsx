@@ -4,7 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { getArabicDay, mediaUrl } from '@/lib/format'
-import type { ProgressCategory, QuranProgressEntry, QuranProgressInput, QuranRangeType, Session, SessionAttendance, SheikhGroup } from '@/lib/types'
+import type { ProgressCategory, QuranProgressInput, Session, SessionAttendance, SheikhGroup } from '@/lib/types'
+import InlineQuranProgress, { INLINE_PROGRESS_CATEGORIES, type ProgressDraftMap, progressDraftKey, progressEntryToInput } from '@/components/InlineQuranProgress'
+import { QUALITY_OPTIONS, SURAHS, surahInfo } from '@/lib/quran'
 
 const STATUS_STYLES: Record<string, string> = {
   'غياب': 'status-badge bg-gray-100/50 text-gray-600 border-gray-200 dark:bg-gray-700/40 dark:text-gray-400 dark:border-gray-700',
@@ -22,6 +24,15 @@ function StudentRow({
   onZoomPic,
   saving,
   disabled,
+  progressEnabled,
+  progressDrafts,
+  previousProgressDrafts,
+  savedProgressKeys,
+  dirtyProgressKeys,
+  progressSaving,
+  onProgressChange,
+  onProgressDiscard,
+  onProgressSaveNext,
 }: {
   student: { id: number; name: string; status: string; notes?: string; sheikh_id: number | null; profile_pic?: string | null }
   circleSheikhs: { id: number; name: string }[]
@@ -31,8 +42,19 @@ function StudentRow({
   onZoomPic: (url: string) => void
   saving: boolean
   disabled: boolean
+  progressEnabled: boolean
+  progressDrafts: ProgressDraftMap
+  previousProgressDrafts: ProgressDraftMap
+  savedProgressKeys: Set<string>
+  dirtyProgressKeys: Set<string>
+  progressSaving: boolean
+  onProgressChange: (draft: QuranProgressInput) => void
+  onProgressDiscard: (key: string) => void
+  onProgressSaveNext: () => void
 }) {
   const [notes, setNotes] = useState(student.notes || '')
+  const [progressOpen, setProgressOpen] = useState(false)
+  const previousStatus = useRef(student.status)
 
   const handleNotesChange = (value: string) => {
     setNotes(value)
@@ -43,8 +65,16 @@ function StudentRow({
     setNotes(student.notes || '')
   }, [student.notes])
 
+  useEffect(() => {
+    if (student.status === 'حاضر' && previousStatus.current !== 'حاضر') setProgressOpen(true)
+    if (student.status !== 'حاضر') setProgressOpen(false)
+    previousStatus.current = student.status
+  }, [student.status])
+
+  const studentProgressCount = INLINE_PROGRESS_CATEGORIES.filter(({ key }) => progressDrafts[progressDraftKey(student.id, key)]).length
+
   return (
-    <div className="py-3 px-3 md:grid md:grid-cols-[36px_1fr_90px_120px_1fr] md:gap-2 md:items-center md:py-2.5 md:px-4 hover:bg-water-100/30 rounded-xl transition">
+    <div id={`student-row-${student.id}`} className="py-3 px-3 md:grid md:grid-cols-[36px_1fr_90px_120px_1fr] md:gap-2 md:items-center md:py-2.5 md:px-4 hover:bg-water-100/30 rounded-xl transition">
       <div className="flex items-center gap-3 md:contents">
         {student.profile_pic ? (
           <img
@@ -101,6 +131,28 @@ function StudentRow({
       />
         </label>
       </div>
+      {progressEnabled && student.status === 'حاضر' && (
+        <div className="mt-2 md:col-span-full">
+          <button type="button" onClick={() => setProgressOpen((current) => !current)} className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-xs font-semibold ${studentProgressCount > 0 ? 'border-emerald-200 bg-emerald-50/80 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300' : 'border-cyan-200 bg-cyan-50/70 text-cyan-700 dark:border-cyan-800 dark:bg-cyan-900/20 dark:text-cyan-300'}`}>
+            <span>{studentProgressCount > 0 ? `متابعة القرآن — ${studentProgressCount} أقسام` : '+ إدخال الحفظ والمراجعة'}</span>
+            <span>{progressOpen ? '▲' : '▼'}</span>
+          </button>
+          {progressOpen && (
+            <InlineQuranProgress
+              student={student}
+              drafts={progressDrafts}
+              previousDrafts={previousProgressDrafts}
+              savedKeys={savedProgressKeys}
+              dirtyKeys={dirtyProgressKeys}
+              disabled={disabled}
+              saving={progressSaving}
+              onChange={onProgressChange}
+              onDiscard={onProgressDiscard}
+              onSaveNext={() => { setProgressOpen(false); onProgressSaveNext() }}
+            />
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -116,6 +168,15 @@ function SheikhAccordion({
   expanded,
   onToggle,
   disabled,
+  progressEnabled,
+  progressDrafts,
+  previousProgressDrafts,
+  savedProgressKeys,
+  dirtyProgressKeys,
+  progressSaving,
+  onProgressChange,
+  onProgressDiscard,
+  onProgressSaveNext,
 }: {
   group: SheikhGroup
   circleSheikhs: { id: number; name: string }[]
@@ -127,6 +188,15 @@ function SheikhAccordion({
   expanded: boolean
   onToggle: () => void
   disabled: boolean
+  progressEnabled: boolean
+  progressDrafts: ProgressDraftMap
+  previousProgressDrafts: ProgressDraftMap
+  savedProgressKeys: Set<string>
+  dirtyProgressKeys: Set<string>
+  progressSaving: boolean
+  onProgressChange: (draft: QuranProgressInput) => void
+  onProgressDiscard: (key: string) => void
+  onProgressSaveNext: (studentId: number) => void
 }) {
 
   return (
@@ -161,6 +231,15 @@ function SheikhAccordion({
               onZoomPic={onZoomPic}
               saving={savingIds.has(student.id)}
               disabled={disabled}
+              progressEnabled={progressEnabled}
+              progressDrafts={progressDrafts}
+              previousProgressDrafts={previousProgressDrafts}
+              savedProgressKeys={savedProgressKeys}
+              dirtyProgressKeys={dirtyProgressKeys}
+              progressSaving={progressSaving}
+              onProgressChange={onProgressChange}
+              onProgressDiscard={onProgressDiscard}
+              onProgressSaveNext={() => onProgressSaveNext(student.id)}
             />
           ))}
         </div>
@@ -174,151 +253,6 @@ function ImagePreviewModal({ src, onClose }: { src: string; onClose: () => void 
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <img src={src} alt="صورة الطالب" className="max-w-[90vw] max-h-[90vh] rounded-2xl shadow-2xl" onClick={(e) => e.stopPropagation()} />
     </div>
-  )
-}
-
-const PROGRESS_CATEGORY_LABELS: Record<ProgressCategory, string> = {
-  new_memorization: 'حفظ جديد',
-  recent_revision: 'مراجعة قريبة',
-  old_revision: 'مراجعة قديمة',
-  test: 'اختبار',
-}
-
-function QuranProgressEditor({
-  students,
-  entries,
-  disabled,
-  onSave,
-}: {
-  students: { id: number; name: string; sheikh_id: number | null }[]
-  entries: QuranProgressEntry[]
-  disabled: boolean
-  onSave: (input: QuranProgressInput) => Promise<void>
-}) {
-  const [studentId, setStudentId] = useState(students[0]?.id || 0)
-  const [category, setCategory] = useState<ProgressCategory>('new_memorization')
-  const [rangeType, setRangeType] = useState<QuranRangeType>('page')
-  const [fromPage, setFromPage] = useState(1)
-  const [toPage, setToPage] = useState(1)
-  const [fromSurah, setFromSurah] = useState(1)
-  const [fromAyah, setFromAyah] = useState(1)
-  const [toSurah, setToSurah] = useState(1)
-  const [toAyah, setToAyah] = useState(1)
-  const [quality, setQuality] = useState(3)
-  const [mistakes, setMistakes] = useState(0)
-  const [notes, setNotes] = useState('')
-  const [nextAssignment, setNextAssignment] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-
-  useEffect(() => {
-    const existing = entries.find((entry) => entry.student_id === studentId && entry.category === category)
-    if (!existing) {
-      setRangeType('page')
-      setFromPage(1)
-      setToPage(1)
-      setFromSurah(1)
-      setFromAyah(1)
-      setToSurah(1)
-      setToAyah(1)
-      setQuality(3)
-      setMistakes(0)
-      setNotes('')
-      setNextAssignment('')
-      return
-    }
-    setRangeType(existing.range_type)
-    setFromPage(existing.from_page || 1)
-    setToPage(existing.to_page || existing.from_page || 1)
-    setFromSurah(existing.from_surah || 1)
-    setFromAyah(existing.from_ayah || 1)
-    setToSurah(existing.to_surah || existing.from_surah || 1)
-    setToAyah(existing.to_ayah || existing.from_ayah || 1)
-    setQuality(existing.quality_score)
-    setMistakes(existing.mistakes)
-    setNotes(existing.notes || '')
-    setNextAssignment(existing.next_assignment || '')
-  }, [category, entries, studentId])
-
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault()
-    const student = students.find((item) => item.id === studentId)
-    if (!student) return
-    setSaving(true)
-    setError('')
-    try {
-      await onSave({
-        student_id: studentId,
-        sheikh_id: student.sheikh_id,
-        category,
-        range_type: rangeType,
-        from_page: rangeType === 'page' ? fromPage : null,
-        to_page: rangeType === 'page' ? toPage : null,
-        from_surah: rangeType === 'surah_ayah' ? fromSurah : null,
-        from_ayah: rangeType === 'surah_ayah' ? fromAyah : null,
-        to_surah: rangeType === 'surah_ayah' ? toSurah : null,
-        to_ayah: rangeType === 'surah_ayah' ? toAyah : null,
-        quality_score: quality,
-        mistakes,
-        notes: notes || null,
-        next_assignment: nextAssignment || null,
-      })
-    } catch (err: any) {
-      setError(err.message || 'تعذر حفظ المتابعة')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  if (students.length === 0) return null
-
-  return (
-    <section className="glass-card rounded-2xl p-4 md:p-5 mt-6">
-      <div className="mb-4">
-        <h2 className="text-lg font-bold text-deep-800">متابعة الحفظ والمراجعة</h2>
-        <p className="text-xs text-deep-500 mt-1">اختياري — اختر الطالب والنوع لإضافة سجل أو تعديل السجل الموجود.</p>
-      </div>
-      {error && <div role="alert" className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
-      <form onSubmit={submit} className="grid gap-3 md:grid-cols-2">
-        <label className="text-sm text-deep-600">
-          الطالب
-          <select value={studentId} onChange={(event) => setStudentId(Number(event.target.value))} disabled={disabled} className="surface-field mt-1 w-full rounded-xl px-3 py-2">
-            {students.map((student) => <option key={student.id} value={student.id}>{student.name}</option>)}
-          </select>
-        </label>
-        <label className="text-sm text-deep-600">
-          النوع
-          <select value={category} onChange={(event) => setCategory(event.target.value as ProgressCategory)} disabled={disabled} className="surface-field mt-1 w-full rounded-xl px-3 py-2">
-            {(Object.keys(PROGRESS_CATEGORY_LABELS) as ProgressCategory[]).map((key) => <option key={key} value={key}>{PROGRESS_CATEGORY_LABELS[key]}</option>)}
-          </select>
-        </label>
-        <label className="text-sm text-deep-600">
-          طريقة تحديد المقدار
-          <select value={rangeType} onChange={(event) => setRangeType(event.target.value as QuranRangeType)} disabled={disabled} className="surface-field mt-1 w-full rounded-xl px-3 py-2">
-            <option value="page">بالصفحات</option>
-            <option value="surah_ayah">بالسورة والآية</option>
-          </select>
-        </label>
-        {rangeType === 'page' ? (
-          <div className="grid grid-cols-2 gap-2">
-            <label className="text-sm text-deep-600">من صفحة<input type="number" min={1} max={604} value={fromPage} onChange={(event) => setFromPage(Number(event.target.value))} disabled={disabled} className="surface-field mt-1 w-full rounded-xl px-3 py-2" /></label>
-            <label className="text-sm text-deep-600">إلى صفحة<input type="number" min={fromPage} max={604} value={toPage} onChange={(event) => setToPage(Number(event.target.value))} disabled={disabled} className="surface-field mt-1 w-full rounded-xl px-3 py-2" /></label>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-2">
-            <label className="text-sm text-deep-600">من سورة/آية<div className="mt-1 flex gap-1"><input aria-label="رقم سورة البداية" type="number" min={1} max={114} value={fromSurah} onChange={(event) => setFromSurah(Number(event.target.value))} disabled={disabled} className="surface-field w-1/2 rounded-xl px-2 py-2" /><input aria-label="رقم آية البداية" type="number" min={1} value={fromAyah} onChange={(event) => setFromAyah(Number(event.target.value))} disabled={disabled} className="surface-field w-1/2 rounded-xl px-2 py-2" /></div></label>
-            <label className="text-sm text-deep-600">إلى سورة/آية<div className="mt-1 flex gap-1"><input aria-label="رقم سورة النهاية" type="number" min={1} max={114} value={toSurah} onChange={(event) => setToSurah(Number(event.target.value))} disabled={disabled} className="surface-field w-1/2 rounded-xl px-2 py-2" /><input aria-label="رقم آية النهاية" type="number" min={1} value={toAyah} onChange={(event) => setToAyah(Number(event.target.value))} disabled={disabled} className="surface-field w-1/2 rounded-xl px-2 py-2" /></div></label>
-          </div>
-        )}
-        <label className="text-sm text-deep-600">التقييم (1–5)<input type="number" min={1} max={5} value={quality} onChange={(event) => setQuality(Number(event.target.value))} disabled={disabled} className="surface-field mt-1 w-full rounded-xl px-3 py-2" /></label>
-        <label className="text-sm text-deep-600">عدد الأخطاء<input type="number" min={0} value={mistakes} onChange={(event) => setMistakes(Number(event.target.value))} disabled={disabled} className="surface-field mt-1 w-full rounded-xl px-3 py-2" /></label>
-        <label className="text-sm text-deep-600 md:col-span-2">ملاحظات<input value={notes} onChange={(event) => setNotes(event.target.value)} disabled={disabled} className="surface-field mt-1 w-full rounded-xl px-3 py-2" /></label>
-        <label className="text-sm text-deep-600 md:col-span-2">التكليف القادم<input value={nextAssignment} onChange={(event) => setNextAssignment(event.target.value)} disabled={disabled} className="surface-field mt-1 w-full rounded-xl px-3 py-2" /></label>
-        <button type="submit" disabled={disabled || saving} className="water-btn rounded-xl px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50 md:col-span-2">
-          {saving ? 'جاري الحفظ...' : entries.some((entry) => entry.student_id === studentId && entry.category === category) ? 'تحديث المتابعة' : 'حفظ المتابعة'}
-        </button>
-      </form>
-    </section>
   )
 }
 
@@ -342,7 +276,17 @@ export default function SessionAttendancePage() {
   const [saveState, setSaveState] = useState<'idle' | 'pending' | 'saving' | 'saved' | 'error'>('idle')
   const [saveError, setSaveError] = useState('')
   const [progressEnabled, setProgressEnabled] = useState(false)
-  const [progressEntries, setProgressEntries] = useState<QuranProgressEntry[]>([])
+  const [progressDrafts, setProgressDrafts] = useState<ProgressDraftMap>({})
+  const [persistedProgressDrafts, setPersistedProgressDrafts] = useState<ProgressDraftMap>({})
+  const [previousProgressDrafts, setPreviousProgressDrafts] = useState<ProgressDraftMap>({})
+  const [savedProgressKeys, setSavedProgressKeys] = useState<Set<string>>(new Set())
+  const [dirtyProgressKeys, setDirtyProgressKeys] = useState<Set<string>>(new Set())
+  const [progressSaving, setProgressSaving] = useState(false)
+  const [bulkCategory, setBulkCategory] = useState<ProgressCategory>('new_memorization')
+  const [bulkSurah, setBulkSurah] = useState(1)
+  const [bulkFromAyah, setBulkFromAyah] = useState(1)
+  const [bulkToAyah, setBulkToAyah] = useState(1)
+  const [bulkQuality, setBulkQuality] = useState(3)
   const [showReopen, setShowReopen] = useState(false)
   const [reopenReason, setReopenReason] = useState('')
   const [reopening, setReopening] = useState(false)
@@ -379,7 +323,12 @@ export default function SessionAttendancePage() {
       setUserRole(currentUser.role || '')
       const enabled = Boolean(currentUser.tahfiz?.progress_tracking_enabled)
       setProgressEnabled(enabled)
-      setProgressEntries(enabled ? progress.entries : [])
+      const drafts = Object.fromEntries((enabled ? progress.entries : []).map((entry) => [progressDraftKey(entry.student_id, entry.category), progressEntryToInput(entry)]))
+      setProgressDrafts(drafts)
+      setPersistedProgressDrafts(drafts)
+      setPreviousProgressDrafts(Object.fromEntries((progress.previous_entries || []).map((entry) => [progressDraftKey(entry.student_id, entry.category), progressEntryToInput(entry)])))
+      setSavedProgressKeys(new Set(Object.keys(drafts)))
+      setDirtyProgressKeys(new Set())
     }).catch((err: any) => {
       if (!cancelled) setLoadError(err.message || 'تعذر تحميل الجلسة')
     }).finally(() => {
@@ -468,6 +417,98 @@ export default function SessionAttendancePage() {
     flushTimer.current = setTimeout(() => flushUpdates(), 400)
   }, [flushUpdates])
 
+  const handleProgressChange = useCallback((draft: QuranProgressInput) => {
+    const key = progressDraftKey(draft.student_id, draft.category)
+    setProgressDrafts((current) => ({ ...current, [key]: { ...draft, range_type: 'surah_ayah' } }))
+    setDirtyProgressKeys((current) => new Set(current).add(key))
+  }, [])
+
+  const handleProgressDiscard = useCallback((key: string) => {
+    if (savedProgressKeys.has(key)) return
+    setProgressDrafts((current) => {
+      const next = { ...current }
+      delete next[key]
+      return next
+    })
+    setDirtyProgressKeys((current) => {
+      const next = new Set(current)
+      next.delete(key)
+      return next
+    })
+  }, [savedProgressKeys])
+
+  const saveProgressDrafts = useCallback(async (): Promise<boolean> => {
+    const sessionData = dataRef.current
+    if (!sessionData || dirtyProgressKeys.size === 0) return true
+    const keys = Array.from(dirtyProgressKeys)
+    const updates = keys.map((key) => progressDrafts[key]).filter(Boolean)
+    if (updates.length === 0) return true
+    setProgressSaving(true)
+    setSaveState('saving')
+    setSaveError('')
+    try {
+      await api.saveSessionProgress(sessionData.session_id, updates)
+      const refreshed = await api.getSessionProgress(sessionData.session_id)
+      const refreshedDrafts = Object.fromEntries(refreshed.entries.map((entry) => [progressDraftKey(entry.student_id, entry.category), progressEntryToInput(entry)]))
+      setProgressDrafts((current) => ({ ...current, ...refreshedDrafts }))
+      setPersistedProgressDrafts(refreshedDrafts)
+      setSavedProgressKeys(new Set(Object.keys(refreshedDrafts)))
+      setDirtyProgressKeys((current) => {
+        const next = new Set(current)
+        keys.forEach((key) => next.delete(key))
+        return next
+      })
+      setSaveState('saved')
+      return true
+    } catch (err: any) {
+      setSaveError(err.message || 'تعذر حفظ متابعة القرآن')
+      setSaveState('error')
+      return false
+    } finally {
+      setProgressSaving(false)
+    }
+  }, [dirtyProgressKeys, progressDrafts])
+
+  const saveProgressAndOpenNext = useCallback(async (studentId: number) => {
+    if (!(await saveProgressDrafts())) return
+    const students = dataRef.current?.sheikh_groups.flatMap((group) => group.students) || []
+    const currentIndex = students.findIndex((student) => student.id === studentId)
+    const next = students.slice(currentIndex + 1).find((student) => student.status === 'حاضر')
+    if (next) document.getElementById(`student-row-${next.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [saveProgressDrafts])
+
+  const applyProgressToPresent = useCallback(() => {
+    const presentStudents = dataRef.current?.sheikh_groups.flatMap((group) => group.students).filter((student) => student.status === 'حاضر') || []
+    if (presentStudents.length === 0) return
+    const additions: ProgressDraftMap = {}
+    const keys: string[] = []
+    presentStudents.forEach((student) => {
+      const key = progressDraftKey(student.id, bulkCategory)
+      keys.push(key)
+      additions[key] = {
+        student_id: student.id,
+        sheikh_id: student.sheikh_id,
+        category: bulkCategory,
+        range_type: 'surah_ayah',
+        from_surah: bulkSurah,
+        from_ayah: bulkFromAyah,
+        to_surah: bulkSurah,
+        to_ayah: bulkToAyah,
+        quality_score: bulkQuality,
+        mistakes: 0,
+        notes: null,
+        next_assignment: null,
+      }
+    })
+    setProgressDrafts((current) => ({ ...current, ...additions }))
+    setDirtyProgressKeys((current) => {
+      const next = new Set(current)
+      keys.forEach((key) => next.add(key))
+      return next
+    })
+    setSaveState('pending')
+  }, [bulkCategory, bulkFromAyah, bulkQuality, bulkSurah, bulkToAyah])
+
   const handleUpdateStatus = useCallback((studentId: number, newStatus: string) => {
     setData((prev) => {
       if (!prev) return prev
@@ -481,8 +522,24 @@ export default function SessionAttendancePage() {
         })),
       }
     })
+    if (newStatus !== 'حاضر') {
+      setProgressDrafts((current) => {
+        const next = { ...current }
+        INLINE_PROGRESS_CATEGORIES.forEach(({ key: category }) => {
+          const key = progressDraftKey(studentId, category)
+          if (persistedProgressDrafts[key]) next[key] = persistedProgressDrafts[key]
+          else delete next[key]
+        })
+        return next
+      })
+      setDirtyProgressKeys((current) => {
+        const next = new Set(current)
+        INLINE_PROGRESS_CATEGORIES.forEach(({ key: category }) => next.delete(progressDraftKey(studentId, category)))
+        return next
+      })
+    }
     queueUpdate(studentId, { status: newStatus })
-  }, [queueUpdate])
+  }, [persistedProgressDrafts, queueUpdate])
 
   const handleUpdateNotes = useCallback((studentId: number, notes: string) => {
     setData((prev) => {
@@ -528,16 +585,18 @@ export default function SessionAttendancePage() {
 
   const navigateAfterSave = async (href: string) => {
     if (flushTimer.current) clearTimeout(flushTimer.current)
-    const saved = await flushUpdates()
-    if (saved && pendingUpdates.current.size === 0) router.push(href)
+    const attendanceSaved = await flushUpdates()
+    const progressSaved = attendanceSaved ? await saveProgressDrafts() : false
+    if (attendanceSaved && progressSaved && pendingUpdates.current.size === 0) router.push(href)
   }
 
   const handleConfirm = async () => {
     if (!data) return
     try {
       if (flushTimer.current) clearTimeout(flushTimer.current)
-      const saved = await flushUpdates()
-      if (!saved || pendingUpdates.current.size > 0) return
+      const attendanceSaved = await flushUpdates()
+      const progressSaved = attendanceSaved ? await saveProgressDrafts() : false
+      if (!attendanceSaved || !progressSaved || pendingUpdates.current.size > 0) return
       const result = await api.confirmSession(data.session_id, dataRef.current?.version ?? data.version)
       setData((current) => current ? { ...current, is_confirmed: true, status: 'confirmed', version: result.version } : current)
     } catch (err: any) {
@@ -563,16 +622,9 @@ export default function SessionAttendancePage() {
     }
   }
 
-  const saveProgress = async (input: QuranProgressInput) => {
-    if (!data) return
-    await api.saveSessionProgress(data.session_id, [input])
-    const refreshed = await api.getSessionProgress(data.session_id)
-    setProgressEntries(refreshed.entries)
-  }
-
   useEffect(() => {
     const warnBeforeLeave = (event: BeforeUnloadEvent) => {
-      if (pendingUpdates.current.size === 0 && !flushInFlight.current) return
+      if (pendingUpdates.current.size === 0 && !flushInFlight.current && dirtyProgressKeys.size === 0 && !progressSaving) return
       event.preventDefault()
       event.returnValue = ''
     }
@@ -581,7 +633,7 @@ export default function SessionAttendancePage() {
       window.removeEventListener('beforeunload', warnBeforeLeave)
       if (flushTimer.current) clearTimeout(flushTimer.current)
     }
-  }, [])
+  }, [dirtyProgressKeys, progressSaving])
 
   if (loading) return <div className="page-loading" aria-label="جاري التحميل" />
 
@@ -735,6 +787,52 @@ export default function SessionAttendancePage() {
         ))}
       </div>
 
+      {progressEnabled && !data.is_confirmed && (
+        <section className="glass-card mb-4 rounded-xl p-3 md:p-4">
+          <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <h2 className="text-sm font-bold text-deep-800">تطبيق سريع على الحاضرين</h2>
+              <p className="mt-1 text-[11px] text-deep-500">طبّق نفس المقدار على الجميع، ثم عدّل الاستثناءات داخل صف كل طالب.</p>
+            </div>
+            <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-700 dark:bg-cyan-900/25 dark:text-cyan-300">{presentCount} حاضر</span>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[1fr_1.35fr_.7fr_.7fr_1.1fr_auto] lg:items-end">
+            <label className="text-[11px] text-deep-500">النوع
+              <select value={bulkCategory} onChange={(event) => setBulkCategory(event.target.value as ProgressCategory)} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm">
+                {INLINE_PROGRESS_CATEGORIES.map((category) => <option key={category.key} value={category.key}>{category.label}</option>)}
+              </select>
+            </label>
+            <label className="text-[11px] text-deep-500">السورة
+              <select value={bulkSurah} onChange={(event) => { setBulkSurah(Number(event.target.value)); setBulkFromAyah(1); setBulkToAyah(1) }} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm">
+                {SURAHS.map((surah) => <option key={surah.number} value={surah.number}>{surah.number}. {surah.name} — {surah.ayahs} آية</option>)}
+              </select>
+            </label>
+            <label className="text-[11px] text-deep-500">من آية
+              <select value={bulkFromAyah} onChange={(event) => { const value = Number(event.target.value); setBulkFromAyah(value); setBulkToAyah((current) => Math.max(current, value)) }} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm">
+                {Array.from({ length: surahInfo(bulkSurah).ayahs }, (_, index) => index + 1).map((ayah) => <option key={ayah} value={ayah}>{ayah}</option>)}
+              </select>
+            </label>
+            <label className="text-[11px] text-deep-500">إلى آية
+              <select value={bulkToAyah} onChange={(event) => setBulkToAyah(Number(event.target.value))} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm">
+                {Array.from({ length: surahInfo(bulkSurah).ayahs - bulkFromAyah + 1 }, (_, index) => bulkFromAyah + index).map((ayah) => <option key={ayah} value={ayah}>{ayah}</option>)}
+              </select>
+            </label>
+            <label className="text-[11px] text-deep-500">التقييم
+              <select value={bulkQuality} onChange={(event) => setBulkQuality(Number(event.target.value))} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm">
+                {QUALITY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </label>
+            <button type="button" onClick={applyProgressToPresent} disabled={presentCount === 0} className="water-btn rounded-lg px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">تطبيق على الحاضرين</button>
+          </div>
+          {dirtyProgressKeys.size > 0 && (
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-800 dark:bg-amber-900/20">
+              <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">{dirtyProgressKeys.size} سجلات متابعة بانتظار الحفظ</span>
+              <button type="button" onClick={() => saveProgressDrafts()} disabled={progressSaving} className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">{progressSaving ? 'جاري الحفظ...' : 'حفظ المتابعة الآن'}</button>
+            </div>
+          )}
+        </section>
+      )}
+
       <div className="flex justify-start mb-2">
         <button
           onClick={() => setExpandedSheikhs(allExpanded ? new Set() : new Set(data.sheikh_groups.map((g) => g.sheikh.id)))}
@@ -757,6 +855,15 @@ export default function SessionAttendancePage() {
             expanded={expandedSheikhs.has(group.sheikh.id)}
             onToggle={() => toggleSheikh(group.sheikh.id)}
             disabled={data.is_confirmed}
+            progressEnabled={progressEnabled}
+            progressDrafts={progressDrafts}
+            previousProgressDrafts={previousProgressDrafts}
+            savedProgressKeys={savedProgressKeys}
+            dirtyProgressKeys={dirtyProgressKeys}
+            progressSaving={progressSaving}
+            onProgressChange={handleProgressChange}
+            onProgressDiscard={handleProgressDiscard}
+            onProgressSaveNext={saveProgressAndOpenNext}
           />
         ))}
       </div>
@@ -765,19 +872,6 @@ export default function SessionAttendancePage() {
         <div className="mt-6 glass-strong text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800 rounded-2xl p-4 text-center">
           تم تأكيد هذه الجلسة
         </div>
-      )}
-
-      {progressEnabled && (
-        <QuranProgressEditor
-          students={data.sheikh_groups.flatMap((group) => group.students.map((student) => ({
-            id: student.id,
-            name: student.name,
-            sheikh_id: student.sheikh_id,
-          })))}
-          entries={progressEntries}
-          disabled={data.is_confirmed}
-          onSave={saveProgress}
-        />
       )}
 
       {showReopen && (

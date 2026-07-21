@@ -172,7 +172,11 @@ export const api = {
   },
 
   getSessionProgress(sessionId: number) {
-    return request<{ enabled: boolean; entries: import('./types').QuranProgressEntry[] }>(`/sessions/${sessionId}/progress`)
+    return request<{
+      enabled: boolean
+      entries: import('./types').QuranProgressEntry[]
+      previous_entries: import('./types').QuranProgressEntry[]
+    }>(`/sessions/${sessionId}/progress`)
   },
 
   saveSessionProgress(sessionId: number, updates: QuranProgressInput[]) {
