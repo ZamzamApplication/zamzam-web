@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '@/lib/api'
 import { mediaUrl } from '@/lib/format'
-import { currentMonthValue, formatMonth, monthRange } from '@/lib/month'
+import { currentMonthValue, formatMonthPeriod, monthRange } from '@/lib/month'
 import type { Circle, CircleAttendanceRate, StudentStatsItem } from '@/lib/types'
 import ExcelPreviewModal, { type SpreadsheetSheet } from '@/components/ExcelPreviewModal'
 import MonthSwitcher from '@/components/MonthSwitcher'
@@ -58,7 +58,9 @@ export default function ReportsPage() {
       const tahfiz = circlesData[0]
       if (tahfiz) {
         setSelectedCircle(tahfiz.id)
-        const range = monthRange(currentMonthValue())
+        const month = currentMonthValue(tahfiz.month_start_day ?? 1)
+        setSelectedMonth(month)
+        const range = monthRange(month, tahfiz.month_start_day ?? 1)
         await loadStatistics(tahfiz.id, range.start, range.end)
       }
     } catch (err: any) {
@@ -103,7 +105,8 @@ export default function ReportsPage() {
       setStudentStats([])
       return
     }
-    const range = monthRange(selectedMonth)
+    const monthStartDay = circles.find((circle) => circle.id === circleId)?.month_start_day ?? 1
+    const range = monthRange(selectedMonth, monthStartDay)
     await loadStatistics(circleId, range.start, range.end)
   }
 
@@ -111,7 +114,8 @@ export default function ReportsPage() {
     setSelectedMonth(month)
     setPeriodMode('month')
     if (!selectedCircle) return
-    const range = monthRange(month)
+    const monthStartDay = circles.find((circle) => circle.id === selectedCircle)?.month_start_day ?? 1
+    const range = monthRange(month, monthStartDay)
     await loadStatistics(selectedCircle, range.start, range.end)
   }
 
@@ -127,8 +131,9 @@ export default function ReportsPage() {
     sortAsc ? a.attendance_rate - b.attendance_rate : b.attendance_rate - a.attendance_rate
   ))
   const selectedCircleName = circles.find((circle) => circle.id === selectedCircle)?.name || ''
+  const monthStartDay = circles.find((circle) => circle.id === selectedCircle)?.month_start_day ?? 1
   const periodLabel = periodMode === 'month'
-    ? formatMonth(selectedMonth)
+    ? formatMonthPeriod(selectedMonth, monthStartDay)
     : 'كل الوقت'
 
   const openExcelPreview = () => {
@@ -210,7 +215,7 @@ export default function ReportsPage() {
             </button>
           </div>
           {periodMode === 'month' && (
-            <MonthSwitcher value={selectedMonth} onChange={handleMonthChange} disabled={reportLoading} />
+            <MonthSwitcher value={selectedMonth} onChange={handleMonthChange} disabled={reportLoading} label={formatMonthPeriod(selectedMonth, monthStartDay)} />
           )}
         </div>
       )}

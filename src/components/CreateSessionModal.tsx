@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
+import { configuredAttendanceStatuses, DEFAULT_ATTENDANCE_STATUSES } from '@/lib/attendance'
 
 function todayLocalDate(): string {
   const today = new Date()
@@ -20,8 +21,17 @@ export default function CreateSessionModal({
 }) {
   const [sessionDate, setSessionDate] = useState(todayLocalDate)
   const [defaultStatus, setDefaultStatus] = useState('غياب')
+  const [attendanceStatuses, setAttendanceStatuses] = useState<string[]>(DEFAULT_ATTENDANCE_STATUSES)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    api.getMe().then((user) => {
+      const statuses = configuredAttendanceStatuses(user.tahfiz?.attendance_statuses)
+      setAttendanceStatuses(statuses)
+      setDefaultStatus((current) => statuses.includes(current) ? current : statuses[0])
+    }).catch(() => {})
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -67,10 +77,7 @@ export default function CreateSessionModal({
               onChange={(e) => setDefaultStatus(e.target.value)}
               className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400"
             >
-              <option value="غياب">غياب</option>
-              <option value="حاضر">حاضر</option>
-              <option value="غياب بعذر">غياب بعذر</option>
-              <option value="لا ينطبق">لا ينطبق</option>
+              {attendanceStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
             </select>
           </div>
 

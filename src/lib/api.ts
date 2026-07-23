@@ -6,11 +6,12 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 async function request<T = any>(path: string, options?: RequestInit): Promise<T> {
   const runtime = getApiRuntime()
   const token = await runtime.getAccessToken()
+  const activeTahfizId = typeof window !== 'undefined'
+    ? localStorage.getItem('support_tahfiz_id') || localStorage.getItem('active_tahfiz_id')
+    : null
   const headers: Record<string, string> = {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...(typeof window !== 'undefined' && localStorage.getItem('support_tahfiz_id')
-      ? { 'X-Tahfiz-ID': localStorage.getItem('support_tahfiz_id')! }
-      : {}),
+    ...(activeTahfizId ? { 'X-Tahfiz-ID': activeTahfizId } : {}),
     ...(options?.headers as Record<string, string> || {}),
   }
 
@@ -226,6 +227,53 @@ export const api = {
     return request(`/platform/tahfiz${status ? `?status=${encodeURIComponent(status)}` : ''}`)
   },
 
+  getPlatformUsers(query?: string) {
+    return request(`/platform/users${query ? `?query=${encodeURIComponent(query)}` : ''}`)
+  },
+
+  grantPlatformMembership(userId: number, tahfizId: number, role: 'admin' | 'sheikh' = 'admin', sheikhId?: number | null) {
+    return request(`/platform/users/${userId}/memberships`, {
+      method: 'POST',
+      body: JSON.stringify({ tahfiz_id: tahfizId, role, sheikh_id: sheikhId ?? null }),
+    })
+  },
+
+  revokePlatformMembership(userId: number, tahfizId: number) {
+    return request(`/platform/users/${userId}/memberships/${tahfizId}`, { method: 'DELETE' })
+  },
+
+  getInvitations() {
+    return request<import('./types').TahfizInvitation[]>('/invitations/')
+  },
+
+  createInvitation(role: 'admin' | 'sheikh', sheikhId?: number | null, expiresHours = 48) {
+    return request<import('./types').TahfizInvitation>('/invitations/', {
+      method: 'POST',
+      body: JSON.stringify({ role, sheikh_id: sheikhId ?? null, expires_hours: expiresHours }),
+    })
+  },
+
+  getInvitationPreview(token: string) {
+    return request<import('./types').TahfizInvitation>(`/invitations/preview/${encodeURIComponent(token)}`)
+  },
+
+  acceptInvitation(token: string) {
+    return request<{ message: string; tahfiz_id: number; role: 'admin' | 'sheikh' }>(`/invitations/accept/${encodeURIComponent(token)}`, {
+      method: 'POST',
+    })
+  },
+
+  registerWithInvitation(token: string, username: string, password: string) {
+    return request<{ access_token: string; token_type: string }>(`/invitations/register/${encodeURIComponent(token)}`, {
+      method: 'POST',
+      body: JSON.stringify({ username, password }),
+    })
+  },
+
+  revokeInvitation(id: number) {
+    return request(`/invitations/${id}`, { method: 'DELETE' })
+  },
+
   platformTahfizAction(id: number, action: 'approve' | 'reject' | 'suspend' | 'reactivate', reason?: string) {
     return request(`/platform/tahfiz/${id}/${action}`, {
       method: 'POST',
@@ -439,7 +487,9 @@ export const api = {
   async exportDb() {
     const runtime = getApiRuntime()
     const token = await runtime.getAccessToken()
-    const supportTahfizId = typeof window !== 'undefined' ? localStorage.getItem('support_tahfiz_id') : null
+    const supportTahfizId = typeof window !== 'undefined'
+      ? localStorage.getItem('support_tahfiz_id') || localStorage.getItem('active_tahfiz_id')
+      : null
     const res = await fetch(`${API_BASE}/tahfiz/export-db`, {
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),

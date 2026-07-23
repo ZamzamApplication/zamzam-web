@@ -2,16 +2,51 @@ export interface User {
   id: number
   username: string
   role: 'super_admin' | 'admin' | 'sheikh'
+  global_role?: 'super_admin' | 'admin' | 'sheikh'
   sheikh_id: number | null
   tahfiz_id: number | null
+  default_tahfiz_id?: number | null
   capabilities?: string[]
+  memberships?: TahfizMembership[]
   tahfiz?: {
     id: number
     name: string
     status: 'pending' | 'active' | 'rejected' | 'suspended'
     status_reason?: string | null
+    week_start_day?: number
+    month_start_day?: number
+    attendance_statuses?: string[]
     progress_tracking_enabled?: boolean
   } | null
+}
+
+export interface TahfizMembership {
+  id: number
+  tahfiz_id: number
+  tahfiz_name: string
+  tahfiz_status: 'pending' | 'active' | 'rejected' | 'suspended'
+  role: 'admin' | 'sheikh'
+  sheikh_id: number | null
+  is_active?: boolean
+}
+
+export interface TahfizInvitation {
+  id: number
+  tahfiz_id: number
+  tahfiz_name?: string
+  role: 'admin' | 'sheikh'
+  sheikh_id: number | null
+  sheikh_name?: string | null
+  status: 'active' | 'used' | 'revoked' | 'expired'
+  created_at: string
+  expires_at: string
+  used_at?: string | null
+  used_by_id?: number | null
+  creator_username?: string | null
+  available?: boolean
+  already_member?: boolean
+  token?: string
+  path?: string
 }
 
 export interface Circle {
@@ -20,6 +55,8 @@ export interface Circle {
   description?: string
   max_warnings?: number
   week_start_day?: number
+  month_start_day?: number
+  attendance_statuses?: string[]
   contact_phone?: string
   whatsend_api_url?: string
   whatsend_groups_url?: string
@@ -73,6 +110,7 @@ export interface SheikhInfo {
   circle_id: number
   circle_name: string
   week_start_day?: number
+  month_start_day?: number
 }
 
 export interface WhatsAppGroup {

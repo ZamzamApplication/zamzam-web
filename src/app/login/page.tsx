@@ -20,6 +20,15 @@ export default function LoginPage() {
       localStorage.setItem('token', res.access_token)
       const user = await api.getMe()
       localStorage.setItem('user', JSON.stringify(user))
+      if (user.tahfiz_id) {
+        localStorage.setItem('active_tahfiz_id', String(user.tahfiz_id))
+        if (user.tahfiz?.name) localStorage.setItem('active_tahfiz_name', user.tahfiz.name)
+      }
+      const nextPath = new URLSearchParams(window.location.search).get('next')
+      if (nextPath?.startsWith('/invite/')) {
+        router.push(nextPath)
+        return
+      }
       if (user.role === 'super_admin') router.push('/platform')
       else if (user.tahfiz?.status !== 'active') router.push('/pending')
       else router.push('/dashboard')

@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import { formatDateWithWeekday } from '@/lib/format'
 import type { AttendanceGridSession, FilterRule, FilterGroup } from '@/lib/types'
+import { configuredAttendanceStatuses } from '@/lib/attendance'
 
-const STATUS_OPTIONS = ['حاضر', 'غياب', 'غياب بعذر', 'لا ينطبق']
 const WEEKDAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
 const OPERATORS = [
   { value: 'is', label: 'يساوي' },
@@ -13,12 +13,12 @@ const OPERATORS = [
 
 let groupCounter = 0
 
-function makeRule(sessionId: number, connector?: 'and' | 'or'): FilterRule {
-  return { target: 'session', sessionId, operator: 'is', status: 'حاضر', connector }
+function makeRule(sessionId: number, defaultStatus: string, connector?: 'and' | 'or'): FilterRule {
+  return { target: 'session', sessionId, operator: 'is', status: defaultStatus, connector }
 }
 
-function makeGroup(sessionId: number): FilterGroup {
-  return { id: `g${++groupCounter}`, rules: [makeRule(sessionId)] }
+function makeGroup(sessionId: number, defaultStatus: string): FilterGroup {
+  return { id: `g${++groupCounter}`, rules: [makeRule(sessionId, defaultStatus)] }
 }
 
 interface Props {
@@ -26,13 +26,15 @@ interface Props {
   initialGroups: FilterGroup[]
   onApply: (groups: FilterGroup[]) => void
   onCancel: () => void
+  attendanceStatuses?: string[]
 }
 
-export default function AttendanceFilter({ sessions, initialGroups, onApply, onCancel }: Props) {
+export default function AttendanceFilter({ sessions, initialGroups, onApply, onCancel, attendanceStatuses }: Props) {
+  const statusOptions = configuredAttendanceStatuses(attendanceStatuses)
   const [groups, setGroups] = useState<FilterGroup[]>(
     initialGroups.length > 0
       ? initialGroups
-      : [makeGroup(sessions[0]?.id || 0)]
+      : [makeGroup(sessions[0]?.id || 0, statusOptions[0])]
   )
 
   const updateGroupConnector = (gi: number, connector: 'and' | 'or') => {
@@ -94,7 +96,7 @@ export default function AttendanceFilter({ sessions, initialGroups, onApply, onC
               ...g,
               rules: [
                 ...g.rules,
-                makeRule(sessions[0]?.id || 0, 'and'),
+                makeRule(sessions[0]?.id || 0, statusOptions[0], 'and'),
               ],
             }
           : g
@@ -105,7 +107,7 @@ export default function AttendanceFilter({ sessions, initialGroups, onApply, onC
   const addGroup = () => {
     setGroups((prev) => [
       ...prev,
-      { ...makeGroup(sessions[0]?.id || 0), connector: 'and' },
+      { ...makeGroup(sessions[0]?.id || 0, statusOptions[0]), connector: 'and' },
     ])
   }
 
@@ -208,7 +210,7 @@ export default function AttendanceFilter({ sessions, initialGroups, onApply, onC
                   onChange={(e) => updateRule(gi, ri, 'status', e.target.value)}
                   className="surface-field w-[72px] shrink-0 px-2 py-1.5 rounded-lg text-xs"
                 >
-                  {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                  {statusOptions.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
                 <button
                   onClick={() => removeRule(gi, ri)}

@@ -7,6 +7,7 @@ import { getArabicDay, mediaUrl } from '@/lib/format'
 import type { ProgressCategory, QuranProgressInput, Session, SessionAttendance, SheikhGroup } from '@/lib/types'
 import InlineQuranProgress, { createRequiredProgressDraft, INLINE_PROGRESS_CATEGORIES, isSurahAyahRangeComplete, type ProgressDraftMap, progressDraftKey, progressEntryToInput } from '@/components/InlineQuranProgress'
 import { QUALITY_OPTIONS, SURAHS, surahInfo } from '@/lib/quran'
+import { configuredAttendanceStatuses, DEFAULT_ATTENDANCE_STATUSES } from '@/lib/attendance'
 
 const STATUS_STYLES: Record<string, string> = {
   'غياب': 'status-badge bg-gray-100/50 text-gray-600 border-gray-200 dark:bg-gray-700/40 dark:text-gray-400 dark:border-gray-700',
@@ -36,6 +37,7 @@ function StudentRow({
   progressSaving,
   onProgressChange,
   onProgressSaveNext,
+  attendanceStatuses,
 }: {
   student: { id: number; name: string; status: string; notes?: string; sheikh_id: number | null; profile_pic?: string | null }
   circleSheikhs: { id: number; name: string }[]
@@ -53,6 +55,7 @@ function StudentRow({
   progressSaving: boolean
   onProgressChange: (draft: QuranProgressInput) => void
   onProgressSaveNext: () => void
+  attendanceStatuses: string[]
 }) {
   const [notes, setNotes] = useState(student.notes || '')
 
@@ -93,10 +96,9 @@ function StudentRow({
         disabled={disabled}
             className={`w-full px-2 py-2 md:py-1.5 rounded-lg text-sm font-medium transition text-center ${STATUS_STYLES[student.status] || STATUS_STYLES['غياب']} ${saving ? 'opacity-60' : ''}`}
       >
-        <option value="غياب" className="bg-gray-100 text-gray-600">غياب</option>
-        <option value="حاضر" className="bg-green-100 text-green-700">حاضر</option>
-        <option value="غياب بعذر" className="bg-yellow-100 text-yellow-700">غياب بعذر</option>
-        <option value="لا ينطبق" className="bg-blue-100 text-blue-700">لا ينطبق</option>
+        {(attendanceStatuses.includes(student.status) ? attendanceStatuses : [student.status, ...attendanceStatuses]).map((status) => (
+          <option key={status} value={status}>{status}</option>
+        ))}
       </select>
         </label>
         <label className="block md:contents">
@@ -159,6 +161,7 @@ function SheikhAccordion({
   progressSaving,
   onProgressChange,
   onProgressSaveNext,
+  attendanceStatuses,
 }: {
   group: SheikhGroup
   circleSheikhs: { id: number; name: string }[]
@@ -178,6 +181,7 @@ function SheikhAccordion({
   progressSaving: boolean
   onProgressChange: (draft: QuranProgressInput) => void
   onProgressSaveNext: (studentId: number) => void
+  attendanceStatuses: string[]
 }) {
 
   return (
@@ -220,6 +224,7 @@ function SheikhAccordion({
               progressSaving={progressSaving}
               onProgressChange={onProgressChange}
               onProgressSaveNext={() => onProgressSaveNext(student.id)}
+              attendanceStatuses={attendanceStatuses}
             />
           ))}
         </div>
@@ -256,6 +261,7 @@ export default function SessionAttendancePage() {
   const [saveState, setSaveState] = useState<'idle' | 'pending' | 'saving' | 'saved' | 'error'>('idle')
   const [saveError, setSaveError] = useState('')
   const [progressEnabled, setProgressEnabled] = useState(false)
+  const [attendanceStatuses, setAttendanceStatuses] = useState<string[]>(DEFAULT_ATTENDANCE_STATUSES)
   const [progressDrafts, setProgressDrafts] = useState<ProgressDraftMap>({})
   const [persistedProgressDrafts, setPersistedProgressDrafts] = useState<ProgressDraftMap>({})
   const [previousProgressDrafts, setPreviousProgressDrafts] = useState<ProgressDraftMap>({})
@@ -304,6 +310,7 @@ export default function SessionAttendancePage() {
       setUserRole(currentUser.role || '')
       const enabled = Boolean(currentUser.tahfiz?.progress_tracking_enabled)
       setProgressEnabled(enabled)
+      setAttendanceStatuses(configuredAttendanceStatuses(currentUser.tahfiz?.attendance_statuses))
       const drafts: ProgressDraftMap = Object.fromEntries((enabled ? progress.entries : []).map((entry) => [progressDraftKey(entry.student_id, entry.category), progressEntryToInput(entry)]))
       const previousDrafts: ProgressDraftMap = Object.fromEntries((progress.previous_entries || []).map((entry) => [progressDraftKey(entry.student_id, entry.category), progressEntryToInput(entry)]))
       const requiredKeys = new Set<string>()
@@ -675,42 +682,24 @@ export default function SessionAttendancePage() {
     (acc, g) => acc + g.students.filter((s) => s.status === 'حاضر').length,
     0
   )
-  const absentCount = data.sheikh_groups.reduce(
-    (acc, g) => acc + g.students.filter((s) => s.status === 'غياب').length,
-    0
-  )
-  const notApplicableCount = data.sheikh_groups.reduce(
-    (acc, g) => acc + g.students.filter((s) => s.status === 'لا ينطبق').length,
-    0
-  )
-  const excusedAbsentCount = data.sheikh_groups.reduce(
-    (acc, g) => acc + g.students.filter((s) => s.status === 'غياب بعذر').length,
-    0
-  )
-  const totalCount = data.sheikh_groups.reduce((acc, g) => acc + g.students.length, 0)
-  const summaryItems = [
-    {
-      label: 'حاضر',
-      value: presentCount,
-      suffix: `/ ${totalCount}`,
-      className: 'border-emerald-200 bg-emerald-50/80 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/25 dark:text-emerald-300',
-    },
-    {
-      label: 'غياب',
-      value: absentCount,
-      className: 'border-slate-200 bg-slate-50/90 text-slate-700 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300',
-    },
-    {
-      label: 'لا ينطبق',
-      value: notApplicableCount,
-      className: 'border-sky-200 bg-sky-50/80 text-sky-700 dark:border-sky-800 dark:bg-sky-900/25 dark:text-sky-300',
-    },
-    {
-      label: 'غياب بعذر',
-      value: excusedAbsentCount,
-      className: 'border-amber-200 bg-amber-50/80 text-amber-700 dark:border-amber-800 dark:bg-amber-900/25 dark:text-amber-300',
-    },
-  ]
+  const allStudents = data.sheikh_groups.flatMap((group) => group.students)
+  const totalCount = allStudents.length
+  const visibleSummaryStatuses = Array.from(new Set([
+    ...attendanceStatuses,
+    ...allStudents.map((student) => student.status),
+  ]))
+  const summaryStyles: Record<string, string> = {
+    'حاضر': 'border-emerald-200 bg-emerald-50/80 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/25 dark:text-emerald-300',
+    'غياب': 'border-slate-200 bg-slate-50/90 text-slate-700 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300',
+    'لا ينطبق': 'border-sky-200 bg-sky-50/80 text-sky-700 dark:border-sky-800 dark:bg-sky-900/25 dark:text-sky-300',
+    'غياب بعذر': 'border-amber-200 bg-amber-50/80 text-amber-700 dark:border-amber-800 dark:bg-amber-900/25 dark:text-amber-300',
+  }
+  const summaryItems = visibleSummaryStatuses.map((status) => ({
+    label: status,
+    value: allStudents.filter((student) => student.status === status).length,
+    suffix: status === 'حاضر' ? `/ ${totalCount}` : undefined,
+    className: summaryStyles[status] || 'border-cyan-200 bg-cyan-50/80 text-cyan-700 dark:border-cyan-800 dark:bg-cyan-900/25 dark:text-cyan-300',
+  }))
 
   return (
     <div>
@@ -888,6 +877,7 @@ export default function SessionAttendancePage() {
             progressSaving={progressSaving}
             onProgressChange={handleProgressChange}
             onProgressSaveNext={saveProgressAndOpenNext}
+            attendanceStatuses={attendanceStatuses}
           />
         ))}
       </div>

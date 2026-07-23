@@ -1,6 +1,11 @@
-export function currentMonthValue(): string {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+function toLocalDateString(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+export function currentMonthValue(monthStartDay = 1, now = new Date()): string {
+  const anchor = new Date(now.getFullYear(), now.getMonth(), 1)
+  if (now.getDate() < monthStartDay) anchor.setMonth(anchor.getMonth() - 1)
+  return `${anchor.getFullYear()}-${String(anchor.getMonth() + 1).padStart(2, '0')}`
 }
 
 export function shiftMonth(value: string, offset: number): string {
@@ -9,12 +14,13 @@ export function shiftMonth(value: string, offset: number): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
 }
 
-export function monthRange(value: string): { start: string; end: string } {
+export function monthRange(value: string, monthStartDay = 1): { start: string; end: string } {
   const [year, month] = value.split('-').map(Number)
-  const lastDay = new Date(year, month, 0).getDate()
+  const start = new Date(year, month - 1, monthStartDay)
+  const end = new Date(year, month, monthStartDay - 1)
   return {
-    start: `${value}-01`,
-    end: `${value}-${String(lastDay).padStart(2, '0')}`,
+    start: toLocalDateString(start),
+    end: toLocalDateString(end),
   }
 }
 
@@ -24,4 +30,11 @@ export function formatMonth(value: string): string {
     month: 'long',
     year: 'numeric',
   }).format(new Date(year, month - 1, 1))
+}
+
+export function formatMonthPeriod(value: string, monthStartDay = 1): string {
+  if (monthStartDay === 1) return formatMonth(value)
+  const range = monthRange(value, monthStartDay)
+  const format = new Intl.DateTimeFormat('ar-EG', { day: 'numeric', month: 'short', year: 'numeric' })
+  return `${format.format(new Date(`${range.start}T12:00:00`))} - ${format.format(new Date(`${range.end}T12:00:00`))}`
 }

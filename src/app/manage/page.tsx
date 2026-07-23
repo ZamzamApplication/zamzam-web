@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { api } from '@/lib/api'
 import { mediaUrl } from '@/lib/format'
 import { compressProfileImage } from '@/lib/image'
-import type { Circle, ExcusedWeekdayInfo, QuranProgressEntry, QuranProgressTrendPoint, QuranRangeType, SheikhInfo, StudentGoal, StudentInfo, UserInfo, WarningInfo, WarningRow, WhatsAppGroup } from '@/lib/types'
+import { configuredAttendanceStatuses } from '@/lib/attendance'
+import type { Circle, ExcusedWeekdayInfo, QuranProgressEntry, QuranProgressTrendPoint, QuranRangeType, SheikhInfo, StudentGoal, StudentInfo, TahfizInvitation, UserInfo, WarningInfo, WarningRow, WhatsAppGroup } from '@/lib/types'
 import AsyncState from '@/components/AsyncState'
 
 const WEEKDAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
@@ -136,11 +138,14 @@ function EditCircleModal({ circle, onClose, onUpdated }: { circle: Circle; onClo
   const [description, setDescription] = useState(circle.description || '')
   const [maxWarnings, setMaxWarnings] = useState(circle.max_warnings || 3)
   const [weekStartDay, setWeekStartDay] = useState(circle.week_start_day ?? 6)
+  const [monthStartDay, setMonthStartDay] = useState(circle.month_start_day ?? 1)
   const [contactPhone, setContactPhone] = useState(circle.contact_phone || '')
   const [whatsendApiUrl, setWhatsendApiUrl] = useState(circle.whatsend_api_url || '')
   const [whatsendGroupsUrl, setWhatsendGroupsUrl] = useState(circle.whatsend_groups_url || '')
   const [whatsendApiKey, setWhatsendApiKey] = useState('')
   const [progressTrackingEnabled, setProgressTrackingEnabled] = useState(Boolean(circle.progress_tracking_enabled))
+  const [attendanceStatuses, setAttendanceStatuses] = useState(configuredAttendanceStatuses(circle.attendance_statuses))
+  const [newAttendanceStatus, setNewAttendanceStatus] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -156,6 +161,8 @@ function EditCircleModal({ circle, onClose, onUpdated }: { circle: Circle; onClo
         contact_phone: contactPhone,
         max_warnings: maxWarnings,
         week_start_day: weekStartDay,
+        month_start_day: monthStartDay,
+        attendance_statuses: attendanceStatuses,
         whatsend_api_url: whatsendApiUrl,
         whatsend_groups_url: whatsendGroupsUrl,
         progress_tracking_enabled: progressTrackingEnabled,
@@ -167,6 +174,13 @@ function EditCircleModal({ circle, onClose, onUpdated }: { circle: Circle; onClo
     } finally {
       setLoading(false)
     }
+  }
+
+  const addAttendanceStatus = () => {
+    const status = newAttendanceStatus.trim()
+    if (!status || attendanceStatuses.includes(status)) return
+    setAttendanceStatuses((current) => [...current, status])
+    setNewAttendanceStatus('')
   }
 
   return (
@@ -215,6 +229,50 @@ function EditCircleModal({ circle, onClose, onUpdated }: { circle: Circle; onClo
           <select id="edit-circle-week-start" value={weekStartDay} onChange={(e) => setWeekStartDay(Number(e.target.value))} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
             {WEEKDAY_NAMES.map((day, index) => <option key={day} value={index}>{day}</option>)}
           </select>
+        </div>
+        <div>
+          <label htmlFor="edit-circle-month-start" className="block text-sm font-medium text-deep-700 mb-1">بداية الشهر</label>
+          <select id="edit-circle-month-start" value={monthStartDay} onChange={(e) => setMonthStartDay(Number(e.target.value))} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
+            {Array.from({ length: 28 }, (_, index) => index + 1).map((day) => <option key={day} value={day}>اليوم {day}</option>)}
+          </select>
+          <p className="mt-1 text-xs text-deep-500">يبدأ عرض الشهر في سجل الحضور والتقارير من هذا اليوم وينتهي قبله بيوم في الشهر التالي.</p>
+        </div>
+        <div className="border-t border-water-200 pt-4 space-y-3">
+          <div>
+            <h3 className="font-bold text-deep-800">خيارات حالة الحضور</h3>
+            <p className="mt-1 text-xs text-deep-500">تظهر هذه الخيارات عند إنشاء الجلسات وتسجيل الحضور.</p>
+          </div>
+          <div className="space-y-2">
+            {attendanceStatuses.map((status) => (
+              <div key={status} className="flex items-center justify-between gap-3 rounded-xl border border-water-200 bg-white/40 px-3 py-2">
+                <span className="text-sm text-deep-800">{status}</span>
+                <button
+                  type="button"
+                  disabled={attendanceStatuses.length === 1}
+                  onClick={() => setAttendanceStatuses((current) => current.filter((item) => item !== status))}
+                  className="text-xs text-red-500 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  حذف
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <input
+              value={newAttendanceStatus}
+              onChange={(event) => setNewAttendanceStatus(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  addAttendanceStatus()
+                }
+              }}
+              maxLength={50}
+              placeholder="حالة جديدة"
+              className="min-w-0 flex-1 px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 border border-water-300 rounded-xl"
+            />
+            <button type="button" onClick={addAttendanceStatus} disabled={!newAttendanceStatus.trim()} className="water-btn-outline rounded-xl px-4 text-sm disabled:opacity-40">إضافة</button>
+          </div>
         </div>
         <div className="flex gap-3 pt-2">
           <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 water-btn-outline rounded-xl text-sm">إلغاء</button>
@@ -755,6 +813,114 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
 }
 
 // ─── User Modals ────────────────────────────────────────────────────────────
+
+function InviteUserModal({ sheikhs, onClose }: { sheikhs: SheikhInfo[]; onClose: () => void }) {
+  const [role, setRole] = useState<'admin' | 'sheikh'>('sheikh')
+  const [sheikhId, setSheikhId] = useState<number | null>(null)
+  const [invitations, setInvitations] = useState<TahfizInvitation[]>([])
+  const [createdLink, setCreatedLink] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [copied, setCopied] = useState(false)
+
+  const loadInvitations = useCallback(() => {
+    return api.getInvitations()
+      .then(setInvitations)
+      .catch((err: any) => setError(err.message || 'تعذر تحميل الدعوات'))
+  }, [])
+
+  useEffect(() => { loadInvitations() }, [loadInvitations])
+
+  const create = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setLoading(true)
+    setError('')
+    setCopied(false)
+    try {
+      const invitation = await api.createInvitation(role, role === 'sheikh' ? sheikhId : null, 48)
+      setCreatedLink(`${window.location.origin}${invitation.path}`)
+      await loadInvitations()
+    } catch (err: any) {
+      setError(err.message || 'تعذر إنشاء رابط الدعوة')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const copy = async () => {
+    await navigator.clipboard.writeText(createdLink)
+    setCopied(true)
+  }
+
+  const revoke = async (invitation: TahfizInvitation) => {
+    if (!confirm('إلغاء رابط الدعوة؟')) return
+    setLoading(true)
+    setError('')
+    try {
+      await api.revokeInvitation(invitation.id)
+      await loadInvitations()
+    } catch (err: any) {
+      setError(err.message || 'تعذر إلغاء الدعوة')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Modal title="إنشاء رابط دعوة" onClose={onClose}>
+      <ErrorMsg error={error} />
+      <form onSubmit={create} className="space-y-4">
+        <p className="rounded-xl bg-cyan-50/70 p-3 text-xs leading-5 text-cyan-900 dark:bg-cyan-900/25 dark:text-cyan-100">
+          الرابط صالح لمدة 48 ساعة ويُستخدم مرة واحدة فقط. يجب على المستلم تسجيل الدخول قبل قبوله.
+        </p>
+        <label className="block text-sm font-medium text-deep-700">
+          الصلاحية
+          <select value={role} onChange={event => setRole(event.target.value as 'admin' | 'sheikh')} className="surface-field mt-1.5 w-full rounded-xl px-4 py-2.5">
+            <option value="sheikh">مستخدم / شيخ</option>
+            <option value="admin">مدير التحفيظ</option>
+          </select>
+        </label>
+        {role === 'sheikh' && (
+          <label className="block text-sm font-medium text-deep-700">
+            ربط بشيخ محدد (اختياري)
+            <select value={sheikhId || ''} onChange={event => setSheikhId(event.target.value ? Number(event.target.value) : null)} className="surface-field mt-1.5 w-full rounded-xl px-4 py-2.5">
+              <option value="">بدون ربط</option>
+              {sheikhs.map(sheikh => <option key={sheikh.id} value={sheikh.id}>{sheikh.name}</option>)}
+            </select>
+          </label>
+        )}
+        <button type="submit" disabled={loading} className="water-btn w-full rounded-xl px-4 py-3 font-semibold text-white disabled:opacity-50">
+          {loading ? 'جاري الإنشاء...' : 'إنشاء رابط وحيد الاستخدام'}
+        </button>
+      </form>
+
+      {createdLink && (
+        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/80 p-3 dark:border-emerald-800 dark:bg-emerald-900/20">
+          <p className="text-xs font-bold text-emerald-800 dark:text-emerald-200">انسخ الرابط الآن — لن يظهر كاملاً مرة أخرى</p>
+          <input readOnly value={createdLink} dir="ltr" className="surface-field mt-2 w-full rounded-lg px-3 py-2 text-xs" />
+          <button type="button" onClick={copy} className="water-btn-outline mt-2 w-full rounded-lg px-3 py-2 text-sm">{copied ? 'تم النسخ ✓' : 'نسخ الرابط'}</button>
+        </div>
+      )}
+
+      <div className="mt-5 border-t border-water-200 pt-4">
+        <h3 className="text-sm font-bold text-deep-800">الدعوات النشطة</h3>
+        <div className="mt-2 space-y-2">
+          {invitations.filter(invitation => invitation.status === 'active').length === 0 ? (
+            <p className="text-xs text-deep-500">لا توجد دعوات نشطة</p>
+          ) : invitations.filter(invitation => invitation.status === 'active').map(invitation => (
+            <div key={invitation.id} className="flex items-center justify-between gap-3 rounded-xl border border-water-200 px-3 py-2 text-xs">
+              <span>
+                {invitation.role === 'admin' ? 'مدير' : 'مستخدم / شيخ'}
+                {invitation.sheikh_name ? ` · ${invitation.sheikh_name}` : ''}
+              </span>
+              <button type="button" onClick={() => revoke(invitation)} disabled={loading} className="font-semibold text-red-500 disabled:opacity-50">إلغاء</button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Modal>
+  )
+}
 
 function AddUserModal({ sheikhs, onClose, onCreated }: { sheikhs: SheikhInfo[]; onClose: () => void; onCreated: () => void }) {
   const [username, setUsername] = useState('')
@@ -1490,12 +1656,12 @@ export default function ManagePage() {
   const [viewStudent, setViewStudent] = useState<{ student: StudentInfo; sheikhName: string } | null>(null)
 
   const [showAddCircle, setShowAddCircle] = useState(false)
-  const [editCircle, setEditCircle] = useState<Circle | null>(null)
   const [showAddSheikh, setShowAddSheikh] = useState(false)
   const [editSheikh, setEditSheikh] = useState<SheikhInfo | null>(null)
   const [addingStudent, setAddingStudent] = useState<{ id: number; name: string } | null>(null)
   const [editStudent, setEditStudent] = useState<{ student: StudentInfo; sheikhName: string } | null>(null)
   const [showAddUser, setShowAddUser] = useState(false)
+  const [showInviteUser, setShowInviteUser] = useState(false)
   const [editUser, setEditUser] = useState<UserInfo | null>(null)
   const load = useCallback(async () => {
     setLoading(true)
@@ -1612,14 +1778,16 @@ export default function ManagePage() {
   const tabs = [
     { key: 'sheikhs', label: 'الشيوخ والطلاب' },
     { key: 'users', label: 'المستخدمين' },
-    { key: 'circles', label: 'إعدادات التحفيظ' },
     { key: 'warnings', label: 'الإنذارات' },
   ] as const
 
   return (
     <div>
       <h1 className="text-2xl font-bold text-deep-800 mb-1">الإدارة</h1>
-      <p className="text-deep-500 text-sm mb-4">إجمالي الطلاب المقيدين: {sheikhs.reduce((sum, s) => sum + s.students.filter((st) => st.status === 'مقيد').length, 0)}</p>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-deep-500 text-sm">إجمالي الطلاب المقيدين: {sheikhs.reduce((sum, s) => sum + s.students.filter((st) => st.status === 'مقيد').length, 0)}</p>
+        <Link href="/settings" className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">⚙ إعدادات التحفيظ</Link>
+      </div>
 
       <div className="mobile-scroll-tabs flex gap-2 mb-6 border-b border-water-200/30">
         {tabs.map((t) => (
@@ -1693,7 +1861,8 @@ export default function ManagePage() {
       {/* ─── Users Tab ──────────────────────────────────────────────────── */}
       {activeTab === 'users' && (
         <div>
-          <div className="flex justify-end mb-4">
+          <div className="mb-4 flex flex-wrap justify-end gap-2">
+            <button onClick={() => setShowInviteUser(true)} className="water-btn-outline px-4 py-2 rounded-xl text-sm">🔗 دعوة مستخدم</button>
             <button onClick={() => setShowAddUser(true)} className="water-btn text-white px-4 py-2 rounded-xl text-sm">+ إضافة مستخدم</button>
           </div>
 
@@ -1731,41 +1900,14 @@ export default function ManagePage() {
         <WarningsTab sheikhs={sheikhs} />
       )}
 
-      {/* ─── Circles Tab ────────────────────────────────────────────────── */}
-      {activeTab === 'circles' && (
-        <div>
-          {circles.length === 0 ? (
-            <div className="glass-card rounded-2xl p-8 text-center text-deep-600/60">
-              تعذر تحميل إعدادات التحفيظ
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {circles.map((c) => (
-                <div key={c.id} className="glass-card rounded-2xl overflow-hidden">
-                  <div className="flex items-center justify-between px-5 py-4 bg-water-100/30">
-                    <div>
-                      <span className="text-lg font-bold text-deep-800">{c.name}</span>
-                      {c.description && <span className="text-deep-500 text-sm mr-3">{c.description}</span>}
-                    </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => setEditCircle(c)} className="water-btn-outline px-3 py-1.5 rounded-xl text-xs">تعديل الإعدادات</button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Modals */}
       {showAddCircle && <AddCircleModal onClose={() => setShowAddCircle(false)} onCreated={() => { setShowAddCircle(false); load() }} />}
-      {editCircle && <EditCircleModal circle={editCircle} onClose={() => setEditCircle(null)} onUpdated={() => { setEditCircle(null); load() }} />}
       {showAddSheikh && <AddSheikhModal circles={circles} onClose={() => setShowAddSheikh(false)} onCreated={() => { setShowAddSheikh(false); load() }} />}
       {editSheikh && <EditSheikhModal sheikh={editSheikh} circles={circles} onClose={() => setEditSheikh(null)} onUpdated={() => { setEditSheikh(null); load() }} />}
       {addingStudent && <AddStudentModal sheikhId={addingStudent.id} sheikhName={addingStudent.name} onClose={() => setAddingStudent(null)} onCreated={() => { setAddingStudent(null); load() }} />}
       {editStudent && <EditStudentModal student={editStudent.student} sheikhName={editStudent.sheikhName} onClose={() => setEditStudent(null)} onUpdated={() => { setEditStudent(null); load() }} />}
       {showAddUser && <AddUserModal sheikhs={sheikhs} onClose={() => setShowAddUser(false)} onCreated={() => { setShowAddUser(false); load() }} />}
+      {showInviteUser && <InviteUserModal sheikhs={sheikhs} onClose={() => setShowInviteUser(false)} />}
       {editUser && <EditUserModal user={editUser} sheikhs={sheikhs} onClose={() => setEditUser(null)} onUpdated={() => { setEditUser(null); load() }} />}
       {previewPic && <ImagePreviewModal src={previewPic} onClose={() => setPreviewPic(null)} />}
       {deleteConfirm && (

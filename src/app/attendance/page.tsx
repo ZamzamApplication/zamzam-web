@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api } from '@/lib/api'
 import { formatDateWithWeekday, mediaUrl } from '@/lib/format'
-import { currentMonthValue, formatMonth, monthRange } from '@/lib/month'
+import { currentMonthValue, formatMonthPeriod, monthRange } from '@/lib/month'
 import type { User, SheikhInfo, AttendanceGrid, AttendanceGridSession, AttendanceGridStudent, FilterRule, FilterGroup } from '@/lib/types'
 import AttendanceFilter from '@/components/AttendanceFilter'
 import ExcelPreviewModal, { type SpreadsheetSheet } from '@/components/ExcelPreviewModal'
@@ -158,7 +158,10 @@ export default function AttendancePage() {
   const [deletingFilter, setDeletingFilter] = useState(false)
 
   useEffect(() => {
-    api.getMe().then(setUser).catch(() => {})
+    api.getMe().then((currentUser) => {
+      setUser(currentUser)
+      setSelectedMonth(currentMonthValue(currentUser.tahfiz?.month_start_day ?? 1))
+    }).catch(() => {})
     api.getSavedFilters().then((data: any[]) => {
       setSavedFilters(data.map(parseSavedFilter))
     }).catch(() => {})
@@ -276,7 +279,8 @@ export default function AttendancePage() {
   const hasActiveFilter = filterGroups.some((g) => g.rules.length > 0)
   const weekStartDay = selectedSheikh
     ? (sheikhs.find((sheikh) => sheikh.id === selectedSheikh)?.week_start_day ?? 6)
-    : 6
+    : (user?.tahfiz?.week_start_day ?? 6)
+  const monthStartDay = user?.tahfiz?.month_start_day ?? 1
 
   const weekRange = useMemo(() => {
     const d = new Date()
@@ -292,14 +296,19 @@ export default function AttendancePage() {
     return `${format.format(new Date(`${weekRange.start}T12:00:00`))} - ${format.format(new Date(`${weekRange.end}T12:00:00`))}`
   }, [weekRange])
 
+  const selectedMonthRange = useMemo(
+    () => monthRange(selectedMonth, monthStartDay),
+    [monthStartDay, selectedMonth]
+  )
+
   const activeRange = useMemo(
-    () => periodMode === 'week' ? weekRange : monthRange(selectedMonth),
-    [periodMode, selectedMonth, weekRange]
+    () => periodMode === 'week' ? weekRange : selectedMonthRange,
+    [periodMode, selectedMonthRange, weekRange]
   )
 
   const periodLabel = useMemo(
-    () => periodMode === 'week' ? weekLabel : formatMonth(selectedMonth),
-    [periodMode, selectedMonth, weekLabel]
+    () => periodMode === 'week' ? weekLabel : formatMonthPeriod(selectedMonth, monthStartDay),
+    [monthStartDay, periodMode, selectedMonth, weekLabel]
   )
 
   useEffect(() => {
@@ -537,6 +546,7 @@ export default function AttendancePage() {
             key={activeSavedFilter?.id ?? 'custom-filter'}
             sessions={allSessions}
             initialGroups={filterGroups}
+            attendanceStatuses={user?.tahfiz?.attendance_statuses}
             onApply={handleApplyFilter}
             onCancel={() => setShowFilter(false)}
           />
@@ -596,7 +606,7 @@ export default function AttendancePage() {
           </button>
           </div>
           ) : (
-            <MonthSwitcher value={selectedMonth} onChange={setSelectedMonth} />
+            <MonthSwitcher value={selectedMonth} onChange={setSelectedMonth} label={formatMonthPeriod(selectedMonth, monthStartDay)} />
           )}
         </div>
       )}

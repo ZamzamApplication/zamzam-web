@@ -18,6 +18,24 @@ type PlatformTahfiz = {
   approved_at?: string | null
 }
 
+type PlatformMembership = {
+  id: number
+  tahfiz_id: number
+  tahfiz_name: string
+  tahfiz_status: TahfizStatus
+  role: 'admin' | 'sheikh'
+  sheikh_id: number | null
+  is_active: boolean
+}
+
+type PlatformUser = {
+  id: number
+  username: string
+  is_active: boolean
+  default_tahfiz_id: number | null
+  memberships: PlatformMembership[]
+}
+
 const STATUS_META: Record<TahfizStatus, { label: string; className: string }> = {
   pending: { label: 'قيد المراجعة', className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/35 dark:text-amber-200' },
   active: { label: 'نشط', className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/35 dark:text-emerald-200' },
@@ -35,6 +53,10 @@ function formatDate(value: string) {
 
 export default function PlatformPage() {
   const [items, setItems] = useState<PlatformTahfiz[]>([])
+  const [platformUsers, setPlatformUsers] = useState<PlatformUser[]>([])
+  const [selectedUserId, setSelectedUserId] = useState('')
+  const [membershipTahfizId, setMembershipTahfizId] = useState('')
+  const [accessBusy, setAccessBusy] = useState(false)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -51,7 +73,12 @@ export default function PlatformPage() {
     else setLoading(true)
     setError('')
     try {
-      setItems(await api.getPlatformTahfiz())
+      const [nextItems, nextUsers] = await Promise.all([
+        api.getPlatformTahfiz(),
+        api.getPlatformUsers(),
+      ])
+      setItems(nextItems)
+      setPlatformUsers(nextUsers)
     } catch (err: any) {
       setError(err.message || 'تعذر تحميل حسابات التحفيظ')
       throw err
@@ -86,6 +113,39 @@ export default function PlatformPage() {
       return matchesStatus && matchesQuery
     })
   }, [items, query, statusFilter])
+
+  const selectedUser = useMemo(
+    () => platformUsers.find(user => user.id === Number(selectedUserId)) || null,
+    [platformUsers, selectedUserId],
+  )
+
+  async function grantMembership() {
+    if (!selectedUser || !membershipTahfizId) return
+    setAccessBusy(true)
+    setError('')
+    try {
+      await api.grantPlatformMembership(selectedUser.id, Number(membershipTahfizId), 'admin')
+      await load(true)
+    } catch (err: any) {
+      setError(err.message || 'تعذر منح صلاحية التحفيظ')
+    } finally {
+      setAccessBusy(false)
+    }
+  }
+
+  async function revokeMembership(membership: PlatformMembership) {
+    if (!selectedUser || !window.confirm(`إلغاء وصول ${selectedUser.username} إلى ${membership.tahfiz_name}؟`)) return
+    setAccessBusy(true)
+    setError('')
+    try {
+      await api.revokePlatformMembership(selectedUser.id, membership.tahfiz_id)
+      await load(true)
+    } catch (err: any) {
+      setError(err.message || 'تعذر إلغاء الصلاحية')
+    } finally {
+      setAccessBusy(false)
+    }
+  }
 
   async function runAction(item: PlatformTahfiz, action: 'approve' | 'reactivate', actionReason?: string) {
     setBusyId(item.id)
@@ -210,6 +270,66 @@ export default function PlatformPage() {
             </div>
           </div>
         ))}
+      </section>
+
+      <section className="glass-card rounded-2xl p-4 md:p-5">
+        <div>
+          <h2 className="font-bold text-deep-900">وصول المستخدم لعدة تحفيظات</h2>
+          <p className="mt-1 text-xs text-deep-500">اربط حساباً واحداً بتحفيظات محددة. لا يمنح هذا صلاحية إدارة المنصة.</p>
+        </div>
+        <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1fr_auto]">
+          <label className="text-sm font-semibold text-deep-700">
+            المستخدم
+            <select
+              value={selectedUserId}
+              onChange={event => setSelectedUserId(event.target.value)}
+              className="surface-field mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm"
+            >
+              <option value="">اختر المستخدم</option>
+              {platformUsers.map(user => <option key={user.id} value={user.id}>{user.username}</option>)}
+            </select>
+          </label>
+          <label className="text-sm font-semibold text-deep-700">
+            التحفيظ
+            <select
+              value={membershipTahfizId}
+              onChange={event => setMembershipTahfizId(event.target.value)}
+              className="surface-field mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm"
+            >
+              <option value="">اختر التحفيظ</option>
+              {items.filter(item => item.status === 'active').map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </select>
+          </label>
+          <button
+            onClick={grantMembership}
+            disabled={!selectedUser || !membershipTahfizId || accessBusy}
+            className="water-btn self-end rounded-xl px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+          >
+            {accessBusy ? 'جاري الحفظ...' : 'منح صلاحية مدير'}
+          </button>
+        </div>
+        {selectedUser && (
+          <div className="mt-4 border-t border-water-200/70 pt-4">
+            <p className="text-sm font-semibold text-deep-700">صلاحيات {selectedUser.username}</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {selectedUser.memberships.filter(membership => membership.is_active).length === 0 ? (
+                <span className="text-sm text-deep-500">لا توجد صلاحيات نشطة</span>
+              ) : selectedUser.memberships.filter(membership => membership.is_active).map(membership => (
+                <span key={membership.id} className="inline-flex items-center gap-2 rounded-xl bg-cyan-50 px-3 py-2 text-sm text-cyan-900 dark:bg-cyan-900/30 dark:text-cyan-100">
+                  <span>{membership.tahfiz_name} · {membership.role === 'admin' ? 'مدير' : 'شيخ'}</span>
+                  <button
+                    onClick={() => revokeMembership(membership)}
+                    disabled={accessBusy}
+                    className="font-bold text-red-600 disabled:opacity-50"
+                    aria-label={`إلغاء الوصول إلى ${membership.tahfiz_name}`}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="glass-card rounded-2xl p-4 md:p-5">

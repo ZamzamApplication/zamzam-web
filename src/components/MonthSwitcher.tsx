@@ -6,10 +6,12 @@ export default function MonthSwitcher({
   value,
   onChange,
   disabled = false,
+  label,
 }: {
   value: string
   onChange: (value: string) => void
   disabled?: boolean
+  label?: string
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -22,7 +24,7 @@ export default function MonthSwitcher({
         الشهر السابق
       </button>
       <div className="text-center">
-        <div className="text-sm font-semibold text-deep-800">{formatMonth(value)}</div>
+        <div className="text-sm font-semibold text-deep-800">{label || formatMonth(value)}</div>
         <input
           type="month"
           value={value}

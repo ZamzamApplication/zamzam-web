@@ -11,6 +11,10 @@ const browserRuntime: ApiRuntime = {
     if (typeof window === 'undefined') return
     window.localStorage.removeItem('token')
     window.localStorage.removeItem('user')
+    window.localStorage.removeItem('active_tahfiz_id')
+    window.localStorage.removeItem('active_tahfiz_name')
+    window.localStorage.removeItem('support_tahfiz_id')
+    window.localStorage.removeItem('support_tahfiz_name')
     window.location.assign('/login')
   },
 }
