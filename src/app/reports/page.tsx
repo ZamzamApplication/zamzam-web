@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '@/lib/api'
 import { mediaUrl } from '@/lib/format'
 import { currentMonthValue, formatMonthPeriod, monthRange } from '@/lib/month'
-import type { Circle, CircleAttendanceRate, StudentStatsItem } from '@/lib/types'
+import { formatQuranRange } from '@/lib/quran'
+import type { Circle, CircleAttendanceRate, QuranProgressEntry, StudentStatsItem } from '@/lib/types'
 import ExcelPreviewModal, { type SpreadsheetSheet } from '@/components/ExcelPreviewModal'
 import MonthSwitcher from '@/components/MonthSwitcher'
 import ScrollableTable from '@/components/ScrollableTable'
@@ -25,7 +26,7 @@ export default function ReportsPage() {
   const reportRequestId = useRef(0)
   const [progressReport, setProgressReport] = useState<{
     enabled: boolean
-    students: { student_id: number; student_name: string; entries: number; average_quality: number; mistakes: number }[]
+    students: { student_id: number; student_name: string; entries: number; average_quality: number; mistakes: number; latest_entry: QuranProgressEntry | null }[]
     category_totals: Record<string, number>
   }>({ enabled: false, students: [], category_totals: {} })
 
@@ -171,12 +172,14 @@ export default function ReportsPage() {
           { id: 'entries', label: 'عدد سجلات المتابعة' },
           { id: 'quality', label: 'متوسط التقييم' },
           { id: 'mistakes', label: 'إجمالي الأخطاء' },
+          { id: 'latestRange', label: 'آخر مقدار' },
         ],
         rows: progressReport.students.map((student) => ({
           student: student.student_name,
           entries: student.entries,
           quality: student.average_quality,
           mistakes: student.mistakes,
+          latestRange: student.latest_entry ? formatQuranRange(student.latest_entry) : '',
         })),
       })
     }
@@ -369,11 +372,12 @@ export default function ReportsPage() {
               ) : (
                 <ScrollableTable>
                   <table className="mt-4 w-full text-sm">
-                    <thead><tr className="border-b border-water-200/40 text-deep-600"><th className="px-3 py-2 text-right">الطالب</th><th className="px-3 py-2 text-center">السجلات</th><th className="px-3 py-2 text-center">متوسط التقييم</th><th className="px-3 py-2 text-center">الأخطاء</th></tr></thead>
+                    <thead><tr className="border-b border-water-200/40 text-deep-600"><th className="px-3 py-2 text-right">الطالب</th><th className="px-3 py-2 text-center">آخر مقدار</th><th className="px-3 py-2 text-center">السجلات</th><th className="px-3 py-2 text-center">متوسط التقييم</th><th className="px-3 py-2 text-center">الأخطاء</th></tr></thead>
                     <tbody>
                       {progressReport.students.map((student) => (
                         <tr key={student.student_id} className="border-b border-water-200/20">
                           <td className="px-3 py-2 font-medium text-deep-800">{student.student_name}</td>
+                          <td className="px-3 py-2 text-center text-xs text-cyan-800 dark:text-cyan-200">{student.latest_entry ? formatQuranRange(student.latest_entry) : '—'}</td>
                           <td className="px-3 py-2 text-center">{student.entries}</td>
                           <td className="px-3 py-2 text-center font-bold text-cyan-700">{student.average_quality}/5</td>
                           <td className="px-3 py-2 text-center">{student.mistakes}</td>

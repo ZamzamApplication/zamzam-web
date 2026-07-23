@@ -7,7 +7,8 @@ import { api } from '@/lib/api'
 import { mediaUrl } from '@/lib/format'
 import { compressProfileImage } from '@/lib/image'
 import { configuredAttendanceStatuses } from '@/lib/attendance'
-import type { Circle, ExcusedWeekdayInfo, QuranProgressEntry, QuranProgressTrendPoint, QuranRangeType, SheikhInfo, StudentGoal, StudentInfo, TahfizInvitation, UserInfo, WarningInfo, WarningRow, WhatsAppGroup } from '@/lib/types'
+import { formatQuranRange } from '@/lib/quran'
+import type { Circle, ExcusedWeekdayInfo, QuranProgressEntry, QuranProgressRevision, QuranProgressTrendPoint, QuranRangeType, SheikhInfo, StudentGoal, StudentInfo, TahfizInvitation, UserInfo, WarningInfo, WarningRow, WhatsAppGroup } from '@/lib/types'
 import AsyncState from '@/components/AsyncState'
 
 const WEEKDAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
@@ -1119,6 +1120,7 @@ function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete, onMo
   const [progressEntries, setProgressEntries] = useState<QuranProgressEntry[]>([])
   const [goals, setGoals] = useState<StudentGoal[]>([])
   const [progressTrend, setProgressTrend] = useState<QuranProgressTrendPoint[]>([])
+  const [progressRevisions, setProgressRevisions] = useState<QuranProgressRevision[]>([])
   const [averageQuality, setAverageQuality] = useState(0)
   const [goalRangeType, setGoalRangeType] = useState<QuranRangeType>('page')
   const [goalFromPage, setGoalFromPage] = useState(1)
@@ -1139,6 +1141,7 @@ function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete, onMo
       setGoals(result.goals)
       setAverageQuality(result.average_quality)
       setProgressTrend(result.trend || [])
+      setProgressRevisions(result.revisions || [])
     } catch (err: any) {
       setProgressError(err.message || 'تعذر تحميل تقدم الطالب')
     }
@@ -1284,6 +1287,7 @@ function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete, onMo
                         <span className="font-semibold">{entry.category === 'new_memorization' ? 'حفظ جديد' : entry.category === 'recent_revision' ? 'مراجعة قريبة' : entry.category === 'old_revision' ? 'مراجعة قديمة' : 'اختبار'}</span>
                         <span>{entry.quality_score}/5 — {entry.mistakes} أخطاء</span>
                       </div>
+                      <p className="mt-1 font-semibold text-cyan-800 dark:text-cyan-200">{formatQuranRange(entry)}</p>
                       {entry.next_assignment && <p className="mt-1 text-deep-500">التالي: {entry.next_assignment}</p>}
                     </div>
                   ))}
@@ -1305,6 +1309,25 @@ function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete, onMo
                     ))}
                   </div>
                 </div>
+              )}
+              {progressRevisions.length > 0 && (
+                <details className="mt-3 border-t border-cyan-200/60 pt-3">
+                  <summary className="cursor-pointer text-xs font-semibold text-deep-700">سجل تعديلات المتابعة ({progressRevisions.length})</summary>
+                  <div className="mt-2 space-y-2">
+                    {progressRevisions.slice(0, 10).map((revision) => (
+                      <div key={revision.id} className="rounded-lg bg-amber-50/75 px-2.5 py-2 text-[11px] dark:bg-amber-950/25">
+                        <p className="font-semibold text-deep-800">{revision.editor_username} — {new Date(revision.created_at).toLocaleString('ar-EG')}</p>
+                        <p className="mt-1 text-deep-500">
+                          {formatQuranRange(revision.before as QuranProgressEntry)} ← {formatQuranRange(revision.after as QuranProgressEntry)}
+                        </p>
+                        <p className="mt-1 text-deep-500">
+                          التقييم {revision.before.quality_score ?? '—'} ← {revision.after.quality_score ?? '—'}،
+                          الأخطاء {revision.before.mistakes ?? '—'} ← {revision.after.mistakes ?? '—'}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </details>
               )}
               <div className="mt-3 border-t border-cyan-200/60 pt-3">
                 <div className="mb-2 flex items-center justify-between gap-2">

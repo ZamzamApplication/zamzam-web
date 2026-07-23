@@ -72,6 +72,13 @@ export const api = {
     return request('/auth/me')
   },
 
+  setDefaultTahfiz(tahfizId: number) {
+    return request<{ tahfiz_id: number; message: string }>('/auth/default-tahfiz', {
+      method: 'POST',
+      body: JSON.stringify({ tahfiz_id: tahfizId }),
+    })
+  },
+
   getDashboardSummary() {
     return request('/reports/dashboard-summary')
   },
@@ -194,6 +201,7 @@ export const api = {
       goals: import('./types').StudentGoal[]
       average_quality: number
       trend: import('./types').QuranProgressTrendPoint[]
+      revisions: import('./types').QuranProgressRevision[]
     }>(`/students/${studentId}/progress`)
   },
 
@@ -218,7 +226,7 @@ export const api = {
     const query = params.toString()
     return request<{
       enabled: boolean
-      students: { student_id: number; student_name: string; entries: number; average_quality: number; mistakes: number }[]
+      students: { student_id: number; student_name: string; entries: number; average_quality: number; mistakes: number; latest_entry: import('./types').QuranProgressEntry | null }[]
       category_totals: Record<string, number>
     }>(`/reports/quran-progress${query ? `?${query}` : ''}`)
   },
@@ -272,6 +280,10 @@ export const api = {
 
   revokeInvitation(id: number) {
     return request(`/invitations/${id}`, { method: 'DELETE' })
+  },
+
+  resendInvitation(id: number) {
+    return request<import('./types').TahfizInvitation>(`/invitations/${id}/resend`, { method: 'POST' })
   },
 
   platformTahfizAction(id: number, action: 'approve' | 'reject' | 'suspend' | 'reactivate', reason?: string) {

@@ -22,6 +22,28 @@ export function surahInfo(number: number): SurahInfo {
   return SURAHS[number - 1] || SURAHS[0]
 }
 
+export function formatQuranRange(range: {
+  range_type: 'surah_ayah' | 'page'
+  from_surah?: number | null
+  from_ayah?: number | null
+  to_surah?: number | null
+  to_ayah?: number | null
+  from_page?: number | null
+  to_page?: number | null
+}) {
+  if (range.range_type === 'page') {
+    return range.from_page === range.to_page
+      ? `صفحة ${range.from_page}`
+      : `صفحات ${range.from_page}–${range.to_page}`
+  }
+  const fromName = surahInfo(range.from_surah || 1).name
+  const toName = surahInfo(range.to_surah || range.from_surah || 1).name
+  if (range.from_surah === range.to_surah) {
+    return `${fromName} ${range.from_ayah}–${range.to_ayah}`
+  }
+  return `${fromName} ${range.from_ayah} ← ${toName} ${range.to_ayah}`
+}
+
 export const QUALITY_OPTIONS = [
   { value: 5, label: 'ممتاز' },
   { value: 4, label: 'جيد جداً' },

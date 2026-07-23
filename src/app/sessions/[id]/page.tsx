@@ -20,6 +20,16 @@ function isProgressDraftComplete(draft?: QuranProgressInput) {
   return isSurahAyahRangeComplete(draft)
 }
 
+function progressRangeChanged(before: QuranProgressInput, after: QuranProgressInput) {
+  return before.range_type !== after.range_type
+    || before.from_surah !== after.from_surah
+    || before.from_ayah !== after.from_ayah
+    || before.to_surah !== after.to_surah
+    || before.to_ayah !== after.to_ayah
+    || before.from_page !== after.from_page
+    || before.to_page !== after.to_page
+}
+
 function StudentRow({
   student,
   circleSheikhs,
@@ -446,6 +456,14 @@ export default function SessionAttendancePage() {
     const keys = Array.from(dirtyProgressKeys)
     const updates = keys.map((key) => progressDrafts[key]).filter(Boolean)
     if (updates.length === 0) return true
+    const editedSavedRanges = keys.filter((key) => (
+      persistedProgressDrafts[key]
+      && progressDrafts[key]
+      && progressRangeChanged(persistedProgressDrafts[key], progressDrafts[key])
+    ))
+    if (editedSavedRanges.length > 0 && !window.confirm(`سيتم تعديل مقدار محفوظ في ${editedSavedRanges.length} سجل/سجلات، وسيُحفظ التغيير في سجل التدقيق. هل تريد المتابعة؟`)) {
+      return false
+    }
     setProgressSaving(true)
     setSaveState('saving')
     setSaveError('')
@@ -470,7 +488,7 @@ export default function SessionAttendancePage() {
     } finally {
       setProgressSaving(false)
     }
-  }, [dirtyProgressKeys, progressDrafts, progressEnabled])
+  }, [dirtyProgressKeys, persistedProgressDrafts, progressDrafts, progressEnabled])
 
   const saveProgressAndOpenNext = useCallback(async (studentId: number) => {
     if (!(await saveProgressDrafts())) return

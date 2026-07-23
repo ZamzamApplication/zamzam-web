@@ -68,7 +68,7 @@ function ThemeToggle() {
   )
 }
 
-function TahfizSwitcher({ user, onSwitch }: { user: User; onSwitch: (tahfizId: number) => void }) {
+function TahfizSwitcher({ user, onSwitch, switchingId }: { user: User; onSwitch: (tahfizId: number) => void; switchingId: number | null }) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const memberships = user.memberships || []
@@ -132,7 +132,7 @@ function TahfizSwitcher({ user, onSwitch }: { user: User; onSwitch: (tahfizId: n
                   key={membership.id}
                   type="button"
                   role="menuitem"
-                  disabled={!isAvailable}
+                  disabled={!isAvailable || switchingId !== null}
                   onClick={() => {
                     setOpen(false)
                     onSwitch(membership.tahfiz_id)
@@ -161,7 +161,9 @@ function TahfizSwitcher({ user, onSwitch }: { user: User; onSwitch: (tahfizId: n
                       {!isAvailable && <span className="text-[10px] text-red-500">غير نشط</span>}
                     </span>
                   </span>
-                  {isCurrent && (
+                  {switchingId === membership.tahfiz_id ? (
+                    <span className="h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-cyan-200 border-t-cyan-600" aria-label="جاري التبديل" />
+                  ) : isCurrent && (
                     <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-cyan-600 text-xs font-bold text-white" aria-label="التحفيظ الحالي">✓</span>
                   )}
                 </button>
@@ -178,6 +180,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [supportName, setSupportName] = useState('')
+  const [switchingTahfizId, setSwitchingTahfizId] = useState<number | null>(null)
+  const [switchError, setSwitchError] = useState('')
   const verifiedToken = useRef<string | null>(null)
   const router = useRouter()
   const pathname = usePathname()
@@ -201,14 +205,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     router.push('/login')
   }
 
-  const switchTahfiz = (tahfizId: number) => {
+  const switchTahfiz = async (tahfizId: number) => {
     const membership = user?.memberships?.find(item => item.tahfiz_id === tahfizId)
     if (!membership || membership.tahfiz_status !== 'active' || tahfizId === user?.tahfiz_id) return
-    localStorage.setItem('active_tahfiz_id', String(tahfizId))
-    localStorage.setItem('active_tahfiz_name', membership.tahfiz_name)
-    localStorage.removeItem('support_tahfiz_id')
-    localStorage.removeItem('support_tahfiz_name')
-    window.location.assign('/dashboard')
+    setSwitchingTahfizId(tahfizId)
+    setSwitchError('')
+    try {
+      await api.setDefaultTahfiz(tahfizId)
+      localStorage.setItem('active_tahfiz_id', String(tahfizId))
+      localStorage.setItem('active_tahfiz_name', membership.tahfiz_name)
+      localStorage.removeItem('support_tahfiz_id')
+      localStorage.removeItem('support_tahfiz_name')
+      window.location.assign('/dashboard')
+    } catch (error: any) {
+      setSwitchError(error.message || 'تعذر تبديل التحفيظ')
+      setSwitchingTahfizId(null)
+    }
   }
 
   const mobileNavItems: { href: string; label: string; icon: NavIconName; adminOnly?: boolean }[] = [
@@ -345,7 +357,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <span className="nav-brand-mark">💧</span> زمزم
             </Link>
             <div className="flex items-center gap-2">
-              <TahfizSwitcher user={user} onSwitch={switchTahfiz} />
+              <TahfizSwitcher user={user} onSwitch={switchTahfiz} switchingId={switchingTahfizId} />
               {(!user.memberships || user.memberships.length <= 1) && <span className="mobile-user-badge" title={user.username}>{user.username.charAt(0).toUpperCase()}</span>}
               <ThemeToggle />
               <button onClick={logout} className="nav-icon-btn" title="تسجيل الخروج" aria-label="تسجيل الخروج">
@@ -375,7 +387,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               )}
             </div>
             <div className="flex items-center gap-2 md:gap-3">
-              <TahfizSwitcher user={user} onSwitch={switchTahfiz} />
+              <TahfizSwitcher user={user} onSwitch={switchTahfiz} switchingId={switchingTahfizId} />
               <ThemeToggle />
               <span className="nav-username">{user.username}</span>
               <button
@@ -400,7 +412,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </Link>
             ))}
           </nav>}
+          {!isDedicatedPlatform && user.tahfiz && (
+            <div className="border-b border-cyan-200/70 bg-cyan-50/85 px-4 py-1.5 text-center text-xs font-semibold text-cyan-900 dark:border-cyan-900 dark:bg-cyan-950/70 dark:text-cyan-100">
+              تعمل الآن داخل: <span className="font-bold">{user.tahfiz.name}</span>
+              {switchingTahfizId && <span className="mr-2">— جاري التبديل…</span>}
+            </div>
+          )}
           </>
+        )}
+        {switchError && (
+          <div role="alert" className="bg-red-50 px-4 py-2 text-center text-sm font-semibold text-red-700 dark:bg-red-950/70 dark:text-red-200">
+            {switchError}
+          </div>
         )}
         {!loading && user?.role === 'super_admin' && supportName && !isDedicatedPlatform && (
           <div className="bg-amber-100 text-amber-900 text-center text-sm py-2 px-4">

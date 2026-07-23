@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { configuredAttendanceStatuses } from '@/lib/attendance'
-import type { Circle } from '@/lib/types'
+import type { Circle, SheikhInfo, TahfizInvitation } from '@/lib/types'
 import AsyncState from '@/components/AsyncState'
 
 const WEEKDAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
@@ -28,6 +28,13 @@ export default function TahfizSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [invitations, setInvitations] = useState<TahfizInvitation[]>([])
+  const [sheikhs, setSheikhs] = useState<SheikhInfo[]>([])
+  const [invitationRole, setInvitationRole] = useState<'admin' | 'sheikh'>('sheikh')
+  const [invitationSheikhId, setInvitationSheikhId] = useState<number | null>(null)
+  const [invitationHours, setInvitationHours] = useState(48)
+  const [invitationBusy, setInvitationBusy] = useState(false)
+  const [latestInvitationLink, setLatestInvitationLink] = useState('')
 
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem('user') || '{}')
@@ -52,6 +59,65 @@ export default function TahfizSettingsPage() {
       .catch((err: any) => setError(err.message || 'تعذر تحميل إعدادات التحفيظ'))
       .finally(() => setLoading(false))
   }, [router])
+
+  const loadInvitations = async () => {
+    const [invitationRows, sheikhRows] = await Promise.all([
+      api.getInvitations(),
+      api.getSheikhs() as Promise<SheikhInfo[]>,
+    ])
+    setInvitations(invitationRows)
+    setSheikhs(sheikhRows)
+  }
+
+  useEffect(() => {
+    loadInvitations().catch((err: any) => setError(err.message || 'تعذر تحميل الدعوات'))
+  }, [])
+
+  const showInvitationLink = (invitation: TahfizInvitation) => {
+    if (!invitation.path) return
+    setLatestInvitationLink(`${window.location.origin}${invitation.path}`)
+  }
+
+  const createInvitation = async () => {
+    setInvitationBusy(true)
+    setError('')
+    try {
+      const invitation = await api.createInvitation(invitationRole, invitationRole === 'sheikh' ? invitationSheikhId : null, invitationHours)
+      showInvitationLink(invitation)
+      await loadInvitations()
+    } catch (err: any) {
+      setError(err.message || 'تعذر إنشاء الدعوة')
+    } finally {
+      setInvitationBusy(false)
+    }
+  }
+
+  const resendInvitation = async (id: number) => {
+    setInvitationBusy(true)
+    setError('')
+    try {
+      const invitation = await api.resendInvitation(id)
+      showInvitationLink(invitation)
+      await loadInvitations()
+    } catch (err: any) {
+      setError(err.message || 'تعذر إعادة إرسال الدعوة')
+    } finally {
+      setInvitationBusy(false)
+    }
+  }
+
+  const revokeInvitation = async (id: number) => {
+    if (!window.confirm('هل تريد إلغاء هذه الدعوة؟ لن يعمل رابطها بعد ذلك.')) return
+    setInvitationBusy(true)
+    try {
+      await api.revokeInvitation(id)
+      await loadInvitations()
+    } catch (err: any) {
+      setError(err.message || 'تعذر إلغاء الدعوة')
+    } finally {
+      setInvitationBusy(false)
+    }
+  }
 
   const addAttendanceStatus = () => {
     const status = newAttendanceStatus.trim()
@@ -189,6 +255,51 @@ export default function TahfizSettingsPage() {
               />
               <button type="button" onClick={addAttendanceStatus} disabled={!newAttendanceStatus.trim()} className="water-btn-outline rounded-xl px-4 text-sm disabled:opacity-40">إضافة</button>
             </div>
+          </div>
+        </section>
+
+        <section className="glass-card rounded-2xl p-5">
+          <h2 className="font-bold text-deep-900">دعوات الانضمام</h2>
+          <p className="mt-1 text-xs text-deep-500">أنشئ روابط مؤقتة، وتابع المقبول والمنتهي، أو ألغِ وأعد إرسال الدعوات.</p>
+          <div className="mt-4 grid gap-3 md:grid-cols-4">
+            <select value={invitationRole} onChange={event => { setInvitationRole(event.target.value as 'admin' | 'sheikh'); setInvitationSheikhId(null) }} className="surface-field rounded-xl px-3 py-2.5 text-sm">
+              <option value="sheikh">دعوة شيخ</option>
+              <option value="admin">دعوة مدير</option>
+            </select>
+            <select value={invitationSheikhId ?? ''} onChange={event => setInvitationSheikhId(event.target.value ? Number(event.target.value) : null)} disabled={invitationRole !== 'sheikh'} className="surface-field rounded-xl px-3 py-2.5 text-sm disabled:opacity-50">
+              <option value="">بدون ربط بشيخ</option>
+              {sheikhs.map(sheikh => <option key={sheikh.id} value={sheikh.id}>{sheikh.name}</option>)}
+            </select>
+            <select value={invitationHours} onChange={event => setInvitationHours(Number(event.target.value))} className="surface-field rounded-xl px-3 py-2.5 text-sm">
+              <option value={24}>صالحة ليوم</option>
+              <option value={48}>صالحة ليومين</option>
+              <option value={168}>صالحة لأسبوع</option>
+            </select>
+            <button type="button" onClick={createInvitation} disabled={invitationBusy} className="water-btn rounded-xl px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">إنشاء دعوة</button>
+          </div>
+          {latestInvitationLink && (
+            <div className="mt-3 flex flex-col gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 sm:flex-row sm:items-center">
+              <input readOnly value={latestInvitationLink} dir="ltr" className="surface-field min-w-0 flex-1 rounded-lg px-3 py-2 text-xs" />
+              <button type="button" onClick={async () => { await navigator.clipboard.writeText(latestInvitationLink); setNotice('تم نسخ رابط الدعوة') }} className="water-btn-outline rounded-lg px-4 py-2 text-xs font-semibold">نسخ الرابط</button>
+            </div>
+          )}
+          <div className="mt-4 space-y-2">
+            {invitations.length === 0 && <p className="text-xs text-deep-500">لا توجد دعوات بعد.</p>}
+            {invitations.map(invitation => (
+              <div key={invitation.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-water-200 bg-white/45 px-3 py-3 dark:bg-slate-800/45">
+                <div>
+                  <p className="text-sm font-bold text-deep-800">{invitation.role === 'admin' ? 'مدير' : `شيخ${invitation.sheikh_name ? ` — ${invitation.sheikh_name}` : ''}`}</p>
+                  <p className="mt-1 text-[11px] text-deep-500">أنشأها {invitation.creator_username || '—'} · تنتهي {new Date(invitation.expires_at).toLocaleString('ar-EG')}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${invitation.status === 'active' ? 'bg-emerald-100 text-emerald-700' : invitation.status === 'used' ? 'bg-cyan-100 text-cyan-700' : 'bg-slate-100 text-slate-600'}`}>
+                    {invitation.status === 'active' ? 'نشطة' : invitation.status === 'used' ? 'مقبولة' : invitation.status === 'expired' ? 'منتهية' : 'ملغاة'}
+                  </span>
+                  {invitation.status !== 'used' && <button type="button" onClick={() => resendInvitation(invitation.id)} disabled={invitationBusy} className="text-xs font-semibold text-cyan-700 disabled:opacity-50">إعادة إرسال</button>}
+                  {invitation.status === 'active' && <button type="button" onClick={() => revokeInvitation(invitation.id)} disabled={invitationBusy} className="text-xs font-semibold text-red-600 disabled:opacity-50">إلغاء</button>}
+                </div>
+              </div>
+            ))}
           </div>
         </section>
 

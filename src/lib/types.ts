@@ -283,6 +283,18 @@ export interface QuranProgressTrendPoint {
   mistakes: number
 }
 
+export interface QuranProgressRevision {
+  id: number
+  progress_entry_id: number
+  session_id: number
+  category: ProgressCategory
+  editor_user_id: number
+  editor_username: string
+  before: Partial<QuranProgressInput>
+  after: Partial<QuranProgressInput>
+  created_at: string
+}
+
 export interface QuranProgressInput {
   student_id: number
   sheikh_id?: number | null
