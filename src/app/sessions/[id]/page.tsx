@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { getArabicDay, mediaUrl } from '@/lib/format'
 import type { ProgressCategory, QuranProgressInput, Session, SessionAttendance, SheikhGroup } from '@/lib/types'
-import InlineQuranProgress, { createRequiredProgressDraft, INLINE_PROGRESS_CATEGORIES, type ProgressDraftMap, progressDraftKey, progressEntryToInput } from '@/components/InlineQuranProgress'
+import InlineQuranProgress, { createRequiredProgressDraft, INLINE_PROGRESS_CATEGORIES, isSurahAyahRangeComplete, type ProgressDraftMap, progressDraftKey, progressEntryToInput } from '@/components/InlineQuranProgress'
 import { QUALITY_OPTIONS, SURAHS, surahInfo } from '@/lib/quran'
 
 const STATUS_STYLES: Record<string, string> = {
@@ -16,15 +16,7 @@ const STATUS_STYLES: Record<string, string> = {
 }
 
 function isProgressDraftComplete(draft?: QuranProgressInput) {
-  return Boolean(
-    draft
-    && (draft.from_surah || 0) > 0
-    && (draft.from_ayah || 0) > 0
-    && (draft.to_surah || 0) === (draft.from_surah || 0)
-    && (draft.to_ayah || 0) >= (draft.from_ayah || 0)
-    && draft.quality_score >= 1
-    && draft.quality_score <= 5
-  )
+  return isSurahAyahRangeComplete(draft)
 }
 
 function StudentRow({
@@ -271,8 +263,9 @@ export default function SessionAttendancePage() {
   const [dirtyProgressKeys, setDirtyProgressKeys] = useState<Set<string>>(new Set())
   const [progressSaving, setProgressSaving] = useState(false)
   const [bulkCategory, setBulkCategory] = useState<ProgressCategory>('new_memorization')
-  const [bulkSurah, setBulkSurah] = useState(1)
+  const [bulkFromSurah, setBulkFromSurah] = useState(1)
   const [bulkFromAyah, setBulkFromAyah] = useState(1)
+  const [bulkToSurah, setBulkToSurah] = useState(1)
   const [bulkToAyah, setBulkToAyah] = useState(1)
   const [bulkQuality, setBulkQuality] = useState(3)
   const [showReopen, setShowReopen] = useState(false)
@@ -493,9 +486,9 @@ export default function SessionAttendancePage() {
         sheikh_id: student.sheikh_id,
         category: bulkCategory,
         range_type: 'surah_ayah',
-        from_surah: bulkSurah,
+        from_surah: bulkFromSurah,
         from_ayah: bulkFromAyah,
-        to_surah: bulkSurah,
+        to_surah: bulkToSurah,
         to_ayah: bulkToAyah,
         quality_score: bulkQuality,
         mistakes: 0,
@@ -510,7 +503,7 @@ export default function SessionAttendancePage() {
       return next
     })
     setSaveState('pending')
-  }, [bulkCategory, bulkFromAyah, bulkQuality, bulkSurah, bulkToAyah])
+  }, [bulkCategory, bulkFromAyah, bulkFromSurah, bulkQuality, bulkToAyah, bulkToSurah])
 
   const handleUpdateStatus = useCallback((studentId: number, newStatus: string) => {
     setData((prev) => {
@@ -820,25 +813,33 @@ export default function SessionAttendancePage() {
             </div>
             <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-700 dark:bg-cyan-900/25 dark:text-cyan-300">{presentCount} حاضر</span>
           </div>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[1fr_1.35fr_.7fr_.7fr_1.1fr_auto] lg:items-end">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[1fr_1.2fr_.7fr_1.2fr_.7fr_1.1fr_auto] lg:items-end">
             <label className="text-[11px] text-deep-500">النوع
               <select value={bulkCategory} onChange={(event) => setBulkCategory(event.target.value as ProgressCategory)} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm">
                 {INLINE_PROGRESS_CATEGORIES.map((category) => <option key={category.key} value={category.key}>{category.label}</option>)}
               </select>
             </label>
-            <label className="text-[11px] text-deep-500">السورة
-              <select value={bulkSurah} onChange={(event) => { setBulkSurah(Number(event.target.value)); setBulkFromAyah(1); setBulkToAyah(1) }} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm">
+            <label className="text-[11px] text-deep-500">من سورة
+              <select value={bulkFromSurah} onChange={(event) => { const value = Number(event.target.value); setBulkFromSurah(value); setBulkToSurah((current) => Math.max(current, value)); setBulkFromAyah(1); setBulkToAyah(1) }} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm">
                 {SURAHS.map((surah) => <option key={surah.number} value={surah.number}>{surah.number}. {surah.name} — {surah.ayahs} آية</option>)}
               </select>
             </label>
             <label className="text-[11px] text-deep-500">من آية
-              <select value={bulkFromAyah} onChange={(event) => { const value = Number(event.target.value); setBulkFromAyah(value); setBulkToAyah((current) => Math.max(current, value)) }} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm">
-                {Array.from({ length: surahInfo(bulkSurah).ayahs }, (_, index) => index + 1).map((ayah) => <option key={ayah} value={ayah}>{ayah}</option>)}
+              <select value={bulkFromAyah} onChange={(event) => { const value = Number(event.target.value); setBulkFromAyah(value); if (bulkToSurah === bulkFromSurah) setBulkToAyah((current) => Math.max(current, value)) }} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm">
+                {Array.from({ length: surahInfo(bulkFromSurah).ayahs }, (_, index) => index + 1).map((ayah) => <option key={ayah} value={ayah}>{ayah}</option>)}
+              </select>
+            </label>
+            <label className="text-[11px] text-deep-500">إلى سورة
+              <select value={bulkToSurah} onChange={(event) => { const value = Number(event.target.value); setBulkToSurah(value); setBulkToAyah(value === bulkFromSurah ? bulkFromAyah : 1) }} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm">
+                {SURAHS.filter((surah) => surah.number >= bulkFromSurah).map((surah) => <option key={surah.number} value={surah.number}>{surah.number}. {surah.name} — {surah.ayahs} آية</option>)}
               </select>
             </label>
             <label className="text-[11px] text-deep-500">إلى آية
               <select value={bulkToAyah} onChange={(event) => setBulkToAyah(Number(event.target.value))} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm">
-                {Array.from({ length: surahInfo(bulkSurah).ayahs - bulkFromAyah + 1 }, (_, index) => bulkFromAyah + index).map((ayah) => <option key={ayah} value={ayah}>{ayah}</option>)}
+                {Array.from(
+                  { length: surahInfo(bulkToSurah).ayahs - (bulkToSurah === bulkFromSurah ? bulkFromAyah : 1) + 1 },
+                  (_, index) => (bulkToSurah === bulkFromSurah ? bulkFromAyah : 1) + index,
+                ).map((ayah) => <option key={ayah} value={ayah}>{ayah}</option>)}
               </select>
             </label>
             <label className="text-[11px] text-deep-500">التقييم

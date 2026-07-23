@@ -15,6 +15,21 @@ export function progressDraftKey(studentId: number, category: ProgressCategory) 
   return `${studentId}:${category}`
 }
 
+export function isSurahAyahRangeComplete(draft?: QuranProgressInput) {
+  if (!draft) return false
+  const fromSurah = draft.from_surah || 0
+  const fromAyah = draft.from_ayah || 0
+  const toSurah = draft.to_surah || 0
+  const toAyah = draft.to_ayah || 0
+  return fromSurah > 0
+    && fromAyah > 0
+    && toSurah > 0
+    && toAyah > 0
+    && (toSurah > fromSurah || (toSurah === fromSurah && toAyah >= fromAyah))
+    && draft.quality_score >= 1
+    && draft.quality_score <= 5
+}
+
 export function progressEntryToInput(entry: QuranProgressEntry): QuranProgressInput {
   return {
     student_id: entry.student_id,
@@ -50,19 +65,28 @@ function makeDraft(studentId: number, sheikhId: number | null, category: Progres
 }
 
 function continueDraft(previous: QuranProgressInput, studentId: number, sheikhId: number | null, category: ProgressCategory): QuranProgressInput {
-  const surah = previous.to_surah || previous.from_surah || 1
+  const draft = makeDraft(studentId, sheikhId, category)
+  if (category !== 'new_memorization') {
+    return {
+      ...draft,
+      from_surah: previous.from_surah || 1,
+      from_ayah: previous.from_ayah || 1,
+      to_surah: previous.to_surah || previous.from_surah || 1,
+      to_ayah: previous.to_ayah || previous.from_ayah || 1,
+    }
+  }
+
+  const previousSurah = previous.to_surah || previous.from_surah || 1
   const previousEnd = previous.to_ayah || previous.from_ayah || 1
-  const shouldAdvance = category === 'new_memorization' && previousEnd < surahInfo(surah).ayahs
-  const fromAyah = shouldAdvance ? previousEnd + 1 : (previous.from_ayah || 1)
-  const toAyah = shouldAdvance ? fromAyah : Math.max(fromAyah, previous.to_ayah || fromAyah)
+  const hasNextAyah = previousEnd < surahInfo(previousSurah).ayahs
+  const nextSurah = hasNextAyah || previousSurah === 114 ? previousSurah : previousSurah + 1
+  const nextAyah = hasNextAyah ? previousEnd + 1 : previousSurah === 114 ? previousEnd : 1
   return {
-    ...makeDraft(studentId, sheikhId, category),
-    from_surah: surah,
-    to_surah: surah,
-    from_ayah: fromAyah,
-    to_ayah: toAyah,
-    // Keep the suggested range, but require a fresh evaluation for this session.
-    quality_score: 0,
+    ...draft,
+    from_surah: nextSurah,
+    to_surah: nextSurah,
+    from_ayah: nextAyah,
+    to_ayah: nextAyah,
   }
 }
 
@@ -105,7 +129,7 @@ export default function InlineQuranProgress({
   saving: boolean
 }) {
   const requiredDrafts = INLINE_PROGRESS_CATEGORIES.map(({ key }) => drafts[progressDraftKey(student.id, key)] || createRequiredProgressDraft(student.id, student.sheikh_id, key, previousDrafts[progressDraftKey(student.id, key)]))
-  const allComplete = requiredDrafts.every((draft) => (draft.from_surah || 0) > 0 && (draft.from_ayah || 0) > 0 && (draft.to_ayah || 0) >= (draft.from_ayah || 0) && draft.quality_score >= 1)
+  const allComplete = requiredDrafts.every(isSurahAyahRangeComplete)
 
   const updateAll = (patch: Partial<QuranProgressInput>) => {
     requiredDrafts.forEach((draft) => onChange({ ...draft, ...patch }))
@@ -127,8 +151,9 @@ export default function InlineQuranProgress({
           const draft = drafts[draftKey] || createRequiredProgressDraft(student.id, student.sheikh_id, key, previousDrafts[draftKey])
           const isSaved = savedKeys.has(draftKey)
           const isDirty = dirtyKeys.has(draftKey)
-          const surah = draft.from_surah || 0
-          const maxAyah = surah > 0 ? surahInfo(surah).ayahs : 0
+          const fromSurah = draft.from_surah || 0
+          const toSurah = draft.to_surah || 0
+          const toSurahMaxAyah = toSurah > 0 ? surahInfo(toSurah).ayahs : 0
           return (
             <div key={key} className="rounded-xl border border-cyan-300 bg-white/90 p-2.5 dark:border-cyan-700 dark:bg-slate-800/80">
               <div className="flex items-center justify-between gap-2">
@@ -136,15 +161,21 @@ export default function InlineQuranProgress({
                 <span className={`rounded-lg px-2 py-1 text-[10px] ${isDirty ? 'bg-amber-50 text-amber-700' : isSaved ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{isDirty ? 'غير محفوظ' : isSaved ? '✓ محفوظ' : 'مطلوب'}</span>
               </div>
               <div className="mt-2 grid grid-cols-2 gap-2">
-                  <label className="col-span-2 text-[11px] text-deep-500">السورة
-                    <select value={surah} onChange={(event) => { const nextSurah = Number(event.target.value); onChange({ ...draft, from_surah: nextSurah, to_surah: nextSurah, from_ayah: 1, to_ayah: 1 }) }} disabled={disabled} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm">
+                  <label className="text-[11px] text-deep-500">من سورة
+                    <select value={fromSurah} onChange={(event) => { const nextSurah = Number(event.target.value); const nextToSurah = Math.max(nextSurah, toSurah || nextSurah); onChange({ ...draft, from_surah: nextSurah, to_surah: nextToSurah, from_ayah: 1, to_ayah: 1 }) }} disabled={disabled} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm">
                       <option value={0}>اختر السورة</option>
                       {SURAHS.map((item) => <option key={item.number} value={item.number}>{item.number}. {item.name} — {item.ayahs} آية</option>)}
                     </select>
                   </label>
-                  <AyahSelect label="من آية" value={draft.from_ayah || 1} surah={surah} disabled={disabled} onChange={(value) => onChange({ ...draft, from_ayah: value, to_ayah: Math.max(value, Math.min(draft.to_ayah || value, maxAyah)) })} />
-                  <AyahSelect label="إلى آية" value={draft.to_ayah || 1} surah={surah} disabled={disabled} onChange={(value) => onChange({ ...draft, to_ayah: Math.max(draft.from_ayah || 1, value) })} />
-                  <button type="button" onClick={() => onChange({ ...draft, from_ayah: 1, to_ayah: maxAyah })} disabled={disabled || surah === 0} className="col-span-2 rounded-lg border border-water-200 bg-water-50 px-2 py-1.5 text-[10px] font-semibold text-cyan-700 disabled:opacity-50">السورة كاملة</button>
+                  <AyahSelect label="من آية" value={draft.from_ayah || 1} surah={fromSurah} disabled={disabled} onChange={(value) => onChange({ ...draft, from_ayah: value, to_ayah: toSurah === fromSurah ? Math.max(value, Math.min(draft.to_ayah || value, toSurahMaxAyah)) : draft.to_ayah })} />
+                  <label className="text-[11px] text-deep-500">إلى سورة
+                    <select value={toSurah} onChange={(event) => { const nextSurah = Number(event.target.value); onChange({ ...draft, to_surah: nextSurah, to_ayah: nextSurah === fromSurah ? Math.max(draft.from_ayah || 1, 1) : 1 }) }} disabled={disabled || fromSurah === 0} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm disabled:opacity-60">
+                      {fromSurah === 0 && <option value={0}>اختر سورة البداية</option>}
+                      {SURAHS.filter((item) => item.number >= fromSurah).map((item) => <option key={item.number} value={item.number}>{item.number}. {item.name} — {item.ayahs} آية</option>)}
+                    </select>
+                  </label>
+                  <AyahSelect label="إلى آية" value={draft.to_ayah || 1} surah={toSurah} disabled={disabled} onChange={(value) => onChange({ ...draft, to_ayah: toSurah === fromSurah ? Math.max(draft.from_ayah || 1, value) : value })} />
+                  <button type="button" onClick={() => onChange({ ...draft, from_ayah: 1, to_ayah: toSurahMaxAyah })} disabled={disabled || fromSurah === 0 || toSurah === 0} className="col-span-2 rounded-lg border border-water-200 bg-water-50 px-2 py-1.5 text-[10px] font-semibold text-cyan-700 disabled:opacity-50">السور المحددة كاملة</button>
                   <div className="col-span-2">
                     <p className="mb-1 text-[11px] font-semibold text-deep-600">التقييم</p>
                     <div className="flex flex-wrap gap-1">
