@@ -553,18 +553,22 @@ table {
   }
 
   .mobile-sheet-backdrop {
-    align-items: flex-end;
-    padding-top: env(safe-area-inset-top);
+    align-items: center;
+    overflow-y: auto;
+    padding:
+      max(1rem, env(safe-area-inset-top))
+      1rem
+      max(1rem, env(safe-area-inset-bottom));
+    overscroll-behavior: contain;
   }
 
   .mobile-sheet {
     width: 100%;
     max-width: none;
-    max-height: min(88vh, 760px);
+    max-height: calc(100dvh - max(1rem, env(safe-area-inset-top)) - max(1rem, env(safe-area-inset-bottom)) - 2rem);
     margin: 0;
-    padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
-    border-end-start-radius: 0;
-    border-end-end-radius: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 }
 .table-scroll-no-bar {
