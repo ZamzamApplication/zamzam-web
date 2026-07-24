@@ -49,6 +49,28 @@ export interface TahfizInvitation {
   path?: string
 }
 
+export type FeedbackCategory = 'bug' | 'suggestion' | 'other'
+export type FeedbackStatus = 'open' | 'in_review' | 'resolved' | 'not_an_issue'
+
+export interface FeedbackReport {
+  id: number
+  reporter_user_id: number | null
+  reporter_username: string
+  tahfiz_id: number | null
+  tahfiz_name: string | null
+  category: FeedbackCategory
+  title: string
+  description: string
+  page_url: string | null
+  status: FeedbackStatus
+  resolution_note: string | null
+  reviewed_by_id: number | null
+  reviewer_username: string | null
+  reviewed_at: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface Circle {
   id: number
   name: string

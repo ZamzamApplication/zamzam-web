@@ -297,6 +297,37 @@ export const api = {
     return request(`/platform/tahfiz/${id}/support-access`, { method: 'POST' })
   },
 
+  createFeedback(data: {
+    category: import('./types').FeedbackCategory
+    title: string
+    description: string
+    page_url?: string | null
+  }) {
+    return request<import('./types').FeedbackReport>('/feedback', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+
+  getPlatformFeedback(status?: import('./types').FeedbackStatus, query?: string) {
+    const params = new URLSearchParams()
+    if (status) params.set('status', status)
+    if (query) params.set('query', query)
+    const qs = params.toString()
+    return request<import('./types').FeedbackReport[]>(`/platform/feedback${qs ? `?${qs}` : ''}`)
+  },
+
+  updatePlatformFeedback(
+    id: number,
+    status: import('./types').FeedbackStatus,
+    resolutionNote?: string | null,
+  ) {
+    return request<import('./types').FeedbackReport>(`/platform/feedback/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, resolution_note: resolutionNote || null }),
+    })
+  },
+
   createSheikh(name: string, circleId: number, phone?: string, whatsappGroupId?: string) {
     return request('/sheikhs', {
       method: 'POST',

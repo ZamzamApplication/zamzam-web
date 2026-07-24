@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
+import PlatformFeedbackPanel from '@/components/PlatformFeedbackPanel'
 
 type TahfizStatus = 'pending' | 'active' | 'rejected' | 'suspended'
 type PlatformAction = 'reject' | 'suspend'
@@ -271,6 +272,8 @@ export default function PlatformPage() {
           </div>
         ))}
       </section>
+
+      <PlatformFeedbackPanel />
 
       <section className="glass-card rounded-2xl p-4 md:p-5">
         <div>

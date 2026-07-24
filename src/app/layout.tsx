@@ -7,6 +7,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
 import type { User } from '@/lib/types'
+import FeedbackButton from '@/components/FeedbackButton'
 import PwaRegistration from '@/components/PwaRegistration'
 
 const cairoFont = Cairo({ subsets: ['arabic'], display: 'swap', variable: '--font-cairo' })
@@ -440,6 +441,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             children
           )}
         </main>
+        {!loading && user && user.role !== 'super_admin' && <FeedbackButton />}
       </body>
     </html>
   )
