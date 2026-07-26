@@ -58,12 +58,12 @@ export default function AttendanceStatusControl({
 
   return (
     <div ref={rootRef} className="relative min-w-0">
-      <div className={`grid min-h-10 grid-cols-[minmax(0,1fr)_2.5rem] overflow-hidden rounded-xl border shadow-sm transition ${attendanceStatusColorClass(colorKey)} ${saving ? 'opacity-60' : ''}`}>
+      <div className={`grid min-h-11 grid-cols-[minmax(0,1fr)_2.5rem] overflow-hidden rounded-xl border shadow-sm transition ${attendanceStatusColorClass(colorKey)} ${saving ? 'opacity-60' : ''}`}>
         <button
           type="button"
           disabled={disabled}
           onClick={cycle}
-          className="min-w-0 truncate border-l border-current/20 px-2 py-2 text-sm font-bold hover:bg-white/30 disabled:cursor-not-allowed"
+          className="min-w-0 whitespace-normal break-words border-l border-current/20 px-2 py-2 text-sm font-bold leading-5 hover:bg-white/30 disabled:cursor-not-allowed"
           aria-label={`الحالة الحالية ${value}، اضغط للانتقال إلى الحالة التالية`}
         >
           {value}{saving ? '…' : ''}

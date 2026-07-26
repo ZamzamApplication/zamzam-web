@@ -77,7 +77,7 @@ function StudentRow({
   }, [student.notes])
 
   return (
-    <div id={`student-row-${student.id}`} className="py-3 px-3 md:grid md:grid-cols-[36px_1fr_90px_120px_1fr] md:gap-2 md:items-center md:py-2.5 md:px-4 hover:bg-water-100/30 rounded-xl transition">
+    <div id={`student-row-${student.id}`} className="py-3 px-3 md:grid md:grid-cols-[36px_1fr_90px_minmax(145px,180px)_1fr] md:gap-2 md:items-center md:py-2.5 md:px-4 hover:bg-water-100/30 rounded-xl transition">
       <div className="flex items-center gap-3 md:contents">
         {student.profile_pic ? (
           <img
