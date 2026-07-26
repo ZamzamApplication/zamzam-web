@@ -103,8 +103,8 @@ export default function DashboardPage() {
   const metricCards = [
     { label: 'الطلاب', value: stats.students, href: canManage ? '/manage' : undefined, accent: 'bg-cyan-500', detail: 'طالب مقيد في التحفيظ' },
     { label: 'الشيوخ', value: stats.sheikhs, href: canManage ? '/manage' : undefined, accent: 'bg-emerald-500', detail: 'شيخ مسؤول عن المتابعة' },
-    { label: 'الجلسات', value: stats.sessions, href: '/sessions', accent: 'bg-amber-500', detail: `${stats.pendingSessions} جلسة قيد الانتظار` },
-    { label: 'الحضور المؤكد', value: stats.confirmedSessions, href: '/attendance', accent: 'bg-indigo-500', detail: 'جلسة مكتملة في سجل الحضور' },
+    { label: 'الحلقات', value: stats.sessions, href: '/sessions', accent: 'bg-amber-500', detail: `${stats.pendingSessions} حلقة قيد الانتظار` },
+    { label: 'الحضور المؤكد', value: stats.confirmedSessions, href: '/attendance', accent: 'bg-indigo-500', detail: 'حلقة مكتملة في سجل الحضور' },
   ]
 
   const actionCards = [
@@ -122,17 +122,17 @@ export default function DashboardPage() {
               <p className="text-sm font-semibold text-cyan-700 dark:text-cyan-300 mb-2">لوحة المتابعة</p>
               <h1 className="text-2xl md:text-3xl font-bold text-deep-900">{tahfizName}</h1>
               <p className="text-deep-500 text-sm mt-2 max-w-2xl">
-                نظرة سريعة على التحفيظ والجلسات غير المؤكدة، مع وصول مباشر لأهم مهام اليوم.
+                نظرة سريعة على التحفيظ والحلقات غير المؤكدة، مع وصول مباشر لأهم مهام اليوم.
               </p>
             </div>
             {canManage && <button onClick={() => setShowModal(true)} className="water-btn text-white px-5 py-2.5 rounded-lg text-sm font-semibold self-start">
-              إضافة جلسة جديدة
+              إضافة حلقة جديدة
             </button>}
           </div>
 
           <div className="grid sm:grid-cols-3 gap-3 mt-6">
             <div className="rounded-lg border border-water-200/70 bg-white/60 dark:bg-slate-800/60 p-4">
-              <p className="text-xs text-deep-500 mb-1">الجلسات المؤكدة</p>
+              <p className="text-xs text-deep-500 mb-1">الحلقات المؤكدة</p>
               <p className="text-2xl font-bold text-deep-900">{stats.confirmedSessions}</p>
             </div>
             <div className="rounded-lg border border-water-200/70 bg-white/60 dark:bg-slate-800/60 p-4">
@@ -147,7 +147,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="glass-card rounded-lg p-5 md:p-6">
-          <p className="text-sm font-bold text-deep-800 mb-4">أقرب جلسة</p>
+          <p className="text-sm font-bold text-deep-800 mb-4">أقرب حلقة</p>
           {nextSession ? (
             <button
               onClick={() => router.push(`/sessions/${nextSession.id}`)}
@@ -156,12 +156,12 @@ export default function DashboardPage() {
               <span className="inline-flex px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200 mb-3">
                 {sessionTimingLabel(nextSession.date)}
               </span>
-              <h2 className="text-lg font-bold text-deep-900">جلسة {formatDateWithWeekday(nextSession.date)}</h2>
+              <h2 className="text-lg font-bold text-deep-900">حلقة {formatDateWithWeekday(nextSession.date)}</h2>
               <p className="text-sm text-deep-500 mt-1">{nextSession.circle_name || tahfizName}</p>
             </button>
           ) : (
             <div className="rounded-lg border border-dashed border-water-300/80 p-5 text-center text-deep-500 text-sm">
-              لا توجد جلسات قيد الانتظار
+              لا توجد حلقات قيد الانتظار
             </div>
           )}
         </div>
@@ -212,8 +212,8 @@ export default function DashboardPage() {
         <div className="glass-card rounded-lg p-5">
           <div className="flex justify-between items-center gap-3 mb-4">
             <div>
-              <h2 className="text-lg font-bold text-deep-800">الجلسات قيد الانتظار</h2>
-              <p className="text-xs text-deep-500 mt-1">آخر الجلسات التي تحتاج متابعة أو تأكيد</p>
+              <h2 className="text-lg font-bold text-deep-800">الحلقات قيد الانتظار</h2>
+              <p className="text-xs text-deep-500 mt-1">آخر الحلقات التي تحتاج متابعة أو تأكيد</p>
             </div>
             <Link href="/sessions" className="text-sm font-semibold text-cyan-700 hover:text-cyan-900 dark:text-cyan-300 dark:hover:text-cyan-200 transition">
               عرض الكل
@@ -222,7 +222,7 @@ export default function DashboardPage() {
 
       {sessions.length === 0 ? (
         <div className="rounded-lg border border-dashed border-water-300/80 p-8 text-center text-deep-600/70">
-          لا توجد جلسات قيد الانتظار
+          لا توجد حلقات قيد الانتظار
         </div>
       ) : (
         <div className="divide-y divide-water-200/50">
@@ -234,7 +234,7 @@ export default function DashboardPage() {
             >
               <div className="flex justify-between items-center gap-4 rounded-lg px-2 py-2 hover:bg-water-50/80 dark:hover:bg-slate-800/70">
                 <div className="min-w-0">
-                  <h3 className="font-semibold text-deep-800">جلسة {formatDateWithWeekday(s.date)}</h3>
+                  <h3 className="font-semibold text-deep-800">حلقة {formatDateWithWeekday(s.date)}</h3>
                   {s.circle_name && <p className="text-xs text-deep-500 mt-0.5">{s.circle_name}</p>}
                 </div>
                 <span className="status-badge shrink-0 px-3 py-1 rounded-lg text-xs bg-yellow-100/70 text-yellow-700 border-yellow-300 dark:bg-yellow-900/40 dark:text-yellow-300 dark:border-yellow-700">

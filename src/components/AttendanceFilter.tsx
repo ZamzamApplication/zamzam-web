@@ -178,7 +178,7 @@ export default function AttendanceFilter({ sessions, initialGroups, onApply, onC
                       (rule.target || 'session') === 'session' ? 'bg-water-400/30 text-deep-800' : 'text-deep-500 hover:text-deep-700'
                     }`}
                   >
-                    جلسة
+                    حلقة
                   </button>
                   <button
                     onClick={() => updateRuleTarget(gi, ri, 'weekday')}

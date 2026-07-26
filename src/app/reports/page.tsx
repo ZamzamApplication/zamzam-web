@@ -158,7 +158,7 @@ export default function ReportsPage() {
         columns: [
           { id: 'student', label: 'الطالب' },
           { id: 'sheikh', label: 'الشيخ' },
-          { id: 'sessions', label: 'إجمالي الجلسات' },
+          { id: 'sessions', label: 'إجمالي الحلقات' },
           { id: 'present', label: 'حاضر' },
           { id: 'excused', label: 'غياب بعذر' },
           { id: 'absent', label: 'غائب' },

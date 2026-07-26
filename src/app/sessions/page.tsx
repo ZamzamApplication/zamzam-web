@@ -27,7 +27,7 @@ export default function SessionsPage() {
     try {
       setAllSessions(await api.getAllSessions())
     } catch {
-      setError('لم نتمكن من تحميل الجلسات. تحقق من الاتصال ثم حاول مرة أخرى.')
+      setError('لم نتمكن من تحميل الحلقات. تحقق من الاتصال ثم حاول مرة أخرى.')
     } finally {
       setLoading(false)
     }
@@ -65,7 +65,7 @@ export default function SessionsPage() {
       setAllSessions((current) => current.filter((session) => session.id !== deleteTarget.id))
       setDeleteTarget(null)
     } catch {
-      setError('تعذر حذف الجلسة. لم يتم إجراء أي تغيير، ويمكنك المحاولة مرة أخرى.')
+      setError('تعذر حذف الحلقة. لم يتم إجراء أي تغيير، ويمكنك المحاولة مرة أخرى.')
       setDeleteTarget(null)
     } finally {
       setDeleting(false)
@@ -82,16 +82,16 @@ export default function SessionsPage() {
   return (
     <div>
       <div className="flex justify-between items-center gap-3 mb-5">
-        <h1 className="text-2xl font-bold text-deep-800">الجلسات</h1>
+        <h1 className="text-2xl font-bold text-deep-800">الحلقات</h1>
         {canManage && <button
           onClick={() => setShowModal(true)}
           className="water-btn text-white px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap"
         >
-          + إضافة جلسة
+          + إضافة حلقة
         </button>}
       </div>
 
-      <div className="grid grid-cols-3 gap-2 mb-5 p-1 rounded-xl bg-water-100/35" role="tablist" aria-label="تصفية الجلسات">
+      <div className="grid grid-cols-3 gap-2 mb-5 p-1 rounded-xl bg-water-100/35" role="tablist" aria-label="تصفية الحلقات">
         {[
           { key: 'upcoming', label: 'غير مؤكدة', count: counts.upcoming },
           { key: 'past', label: 'مؤكدة', count: counts.past },
@@ -108,7 +108,7 @@ export default function SessionsPage() {
               filter === f.key ? 'water-btn text-white' : 'water-btn-outline'
             }`}
           >
-            {f.label} <span className="tab-count" aria-label={`${f.count} جلسة`}>{f.count}</span>
+            {f.label} <span className="tab-count" aria-label={`${f.count} حلقة`}>{f.count}</span>
           </button>
         ))}
       </div>
@@ -118,7 +118,7 @@ export default function SessionsPage() {
       ) : sessions.length === 0 ? (
         <div className="glass-card rounded-2xl p-8 text-center text-deep-600/60">
           <div className="text-4xl mb-3">💧</div>
-          لا توجد جلسات
+          لا توجد حلقات
         </div>
       ) : (
         <div className="grid gap-4">
@@ -130,7 +130,7 @@ export default function SessionsPage() {
             >
               <div className="flex justify-between items-start gap-3">
                 <div className="min-w-0">
-                  <h3 className="font-semibold text-base sm:text-lg text-deep-800 leading-7">جلسة {formatDateWithWeekday(s.date)}</h3>
+                  <h3 className="font-semibold text-base sm:text-lg text-deep-800 leading-7">حلقة {formatDateWithWeekday(s.date)}</h3>
                   {s.circle_name && <p className="text-xs text-deep-500 mt-0.5">{s.circle_name}</p>}
                 </div>
                 <div className="flex flex-col-reverse sm:flex-row items-end sm:items-center gap-2 shrink-0">
@@ -163,9 +163,9 @@ export default function SessionsPage() {
       )}
       <ConfirmDialog
         open={Boolean(deleteTarget)}
-        title="حذف الجلسة"
-        message="سيتم حذف الجلسة وجميع سجلات الحضور المرتبطة بها. لا يمكن التراجع عن هذا الإجراء."
-        confirmLabel="حذف الجلسة"
+        title="حذف الحلقة"
+        message="سيتم حذف الحلقة وجميع سجلات الحضور المرتبطة بها. لا يمكن التراجع عن هذا الإجراء."
+        confirmLabel="حذف الحلقة"
         busy={deleting}
         onConfirm={handleDelete}
         onClose={() => setDeleteTarget(null)}

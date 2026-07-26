@@ -6,8 +6,8 @@ import { api } from '@/lib/api'
 import type { User } from '@/lib/types'
 
 const features = [
-  { icon: '📋', title: 'إدارة الجلسات', desc: 'إنشاء وتنظيم جلسات التحفيظ بسهولة ومتابعة مواعيدها' },
-  { icon: '✅', title: 'تسجيل الحضور', desc: 'تسجيل حضور وغياب الطلاب في كل جلسة بلمسة واحدة' },
+  { icon: '📋', title: 'إدارة الحلقات', desc: 'إنشاء وتنظيم حلقات التحفيظ بسهولة ومتابعة مواعيدها' },
+  { icon: '✅', title: 'تسجيل الحضور', desc: 'تسجيل حضور وغياب الطلاب في كل حلقة بلمسة واحدة' },
   { icon: '📊', title: 'تقارير شاملة', desc: 'إحصائيات دقيقة عن نسب الحضور وأداء الطلاب' },
 ]
 
@@ -55,7 +55,7 @@ export default function LandingPage() {
             زمزم لتحفيظ القرآن
           </h1>
           <p className="text-lg md:text-xl text-cyan-200/90 mb-8 max-w-xl mx-auto drop-shadow">
-            منصة متابعة حضور حلقات تحفيظ القرآن الكريم — إدارة الجلسات، تسجيل الحضور، والتقارير
+            منصة متابعة حضور حلقات تحفيظ القرآن الكريم — إدارة الحلقات، تسجيل الحضور، والتقارير
           </p>
           <div className="flex gap-4 justify-center flex-wrap">
             {user ? (

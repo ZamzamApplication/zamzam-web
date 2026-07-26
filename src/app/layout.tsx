@@ -122,7 +122,7 @@ function TahfizSwitcher({ user, onSwitch, switchingId }: { user: User; onSwitch:
         <div role="menu" className="absolute end-0 top-full z-[70] mt-2 w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-water-200 bg-white/95 p-2 shadow-2xl shadow-slate-900/20 backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/95">
           <div className="px-3 pb-2 pt-1">
             <p className="text-sm font-bold text-deep-900">التبديل بين التحفيظات</p>
-            <p className="mt-0.5 text-[11px] text-deep-500">ستتغير البيانات والجلسات حسب التحفيظ المختار</p>
+            <p className="mt-0.5 text-[11px] text-deep-500">ستتغير البيانات والحلقات حسب التحفيظ المختار</p>
           </div>
           <div className="space-y-1" role="none">
             {memberships.map(membership => {
@@ -226,7 +226,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   const mobileNavItems: { href: string; label: string; icon: NavIconName; adminOnly?: boolean }[] = [
     { href: '/dashboard', label: 'الرئيسية', icon: 'home' },
-    { href: '/sessions', label: 'الجلسات', icon: 'sessions' },
+    { href: '/sessions', label: 'الحلقات', icon: 'sessions' },
     { href: '/attendance', label: 'الحضور', icon: 'attendance' },
     { href: '/reports', label: 'التقارير', icon: 'reports' },
     { href: '/manage', label: 'الإدارة', icon: 'manage', adminOnly: true },
@@ -378,7 +378,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <span className="nav-link nav-link-active">إدارة المنصة</span>
               ) : (
                 <>
-                  <Link href="/sessions" className={navLinkClass('/sessions')} aria-current={isActive('/sessions') ? 'page' : undefined}>الجلسات</Link>
+                  <Link href="/sessions" className={navLinkClass('/sessions')} aria-current={isActive('/sessions') ? 'page' : undefined}>الحلقات</Link>
                   <Link href="/attendance" className={navLinkClass('/attendance')} aria-current={isActive('/attendance') ? 'page' : undefined}>سجل الحضور</Link>
                   {(user?.role === 'admin' || user?.role === 'super_admin') && <Link href="/manage" className={navLinkClass('/manage')} aria-current={isActive('/manage') ? 'page' : undefined}>الإدارة</Link>}
                   {(user?.role === 'admin' || user?.role === 'super_admin') && <Link href="/settings" className={navLinkClass('/settings')} aria-current={isActive('/settings') ? 'page' : undefined}>إعدادات التحفيظ</Link>}

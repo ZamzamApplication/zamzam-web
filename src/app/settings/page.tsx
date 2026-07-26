@@ -419,7 +419,7 @@ export default function TahfizSettingsPage() {
           </div>}
         </section>
 
-        <div className="sticky bottom-20 z-20 flex justify-end md:bottom-4">
+        <div className="sticky bottom-40 z-20 flex justify-start md:bottom-4">
           <button type="submit" disabled={saving || !name.trim() || attendanceStatuses.length === 0} className="water-btn rounded-xl px-7 py-3 font-semibold text-white shadow-lg disabled:opacity-50">
             {saving ? 'جاري الحفظ...' : 'حفظ الإعدادات'}
           </button>

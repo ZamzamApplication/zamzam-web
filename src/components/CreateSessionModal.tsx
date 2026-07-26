@@ -42,7 +42,7 @@ export default function CreateSessionModal({
       const res = await api.createSession(sessionDate, undefined, defaultStatus)
       onCreated(res.id)
     } catch (err: any) {
-      setError(err.message || 'فشل إنشاء الجلسة')
+      setError(err.message || 'فشل إنشاء الحلقة')
     } finally {
       setLoading(false)
     }
@@ -51,7 +51,7 @@ export default function CreateSessionModal({
   return (
     <div className="mobile-sheet-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={onClose}>
       <div className="mobile-sheet glass-strong rounded-2xl p-6 w-full max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-xl font-bold text-deep-800 mb-4">إضافة جلسة جديدة</h2>
+        <h2 className="text-xl font-bold text-deep-800 mb-4">إضافة حلقة جديدة</h2>
 
         {error && (
           <div className="bg-red-50/80 dark:bg-red-900/30 backdrop-blur-sm text-red-700 dark:text-red-300 px-4 py-2 rounded-xl mb-4 text-sm text-center border border-red-200 dark:border-red-800">

@@ -30,8 +30,8 @@
 <body>
   <div class="page">
     <header class="top">
-      <div><div class="brand">💧 زمزم · نموذج تجريبي</div><h1>الحضور ومتابعة القرآن — جلسة واحدة</h1><div class="muted">السبت 19 يوليو 2026 · الشيخ الأرقم · التغييرات هنا تجريبية فقط</div></div>
-      <div class="actions"><button class="btn outline">رجوع</button><button class="btn green" id="confirm">تأكيد الجلسة</button></div>
+      <div><div class="brand">💧 زمزم · نموذج تجريبي</div><h1>الحضور ومتابعة القرآن — حلقة واحدة</h1><div class="muted">السبت 19 يوليو 2026 · الشيخ الأرقم · التغييرات هنا تجريبية فقط</div></div>
+      <div class="actions"><button class="btn outline">رجوع</button><button class="btn green" id="confirm">تأكيد الحلقة</button></div>
     </header>
     <section class="summary"><div class="stat"><b id="presentCount">3</b><span>حاضر</span></div><div class="stat"><b id="absentCount">1</b><span>غائب</span></div><div class="stat"><b id="progressCount">5</b><span>سجلات حفظ ومراجعة</span></div><div class="stat"><b>4</b><span>طلاب المجموعة</span></div></section>
     <div class="save-state">✓ الحضور يُحفظ تلقائياً · متابعة القرآن تُجمع ثم تُحفظ مرة واحدة</div>
@@ -93,7 +93,7 @@
     });
     document.querySelector('#applyBulk').onclick=()=>{const type=document.querySelector('#bulkType').value,from=Number(document.querySelector('#bulkFrom').value),to=Number(document.querySelector('#bulkTo').value);students.filter(s=>s.status==='present').forEach(s=>s[type]=[from,to]);render();notify('تم التطبيق على 3 طلاب — يمكنك تعديل أي صف')};
     document.querySelector('#saveAll').onclick=()=>{document.querySelector('#pendingLabel').textContent='تم حفظ كل التغييرات';notify()};
-    document.querySelector('#confirm').onclick=()=>notify('تم حفظ الحضور والمتابعة ثم تأكيد الجلسة');
+    document.querySelector('#confirm').onclick=()=>notify('تم حفظ الحضور والمتابعة ثم تأكيد الحلقة');
     render();
   </script>
 </body>

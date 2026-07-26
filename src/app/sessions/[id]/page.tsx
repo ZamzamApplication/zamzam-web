@@ -367,7 +367,7 @@ export default function SessionAttendancePage() {
       setDirtyProgressKeys(requiredKeys)
       if (requiredKeys.size > 0) setSaveState('pending')
     }).catch((err: any) => {
-      if (!cancelled) setLoadError(err.message || 'تعذر تحميل الجلسة')
+      if (!cancelled) setLoadError(err.message || 'تعذر تحميل الحلقة')
     }).finally(() => {
       if (!cancelled) setLoading(false)
     })
@@ -646,7 +646,7 @@ export default function SessionAttendancePage() {
       setData((prev) => prev ? { ...prev, date: result.date, version: result.version } : prev)
       setEditingDate(false)
     } catch (err: any) {
-      setSaveError(err.message || 'تعذر تعديل تاريخ الجلسة')
+      setSaveError(err.message || 'تعذر تعديل تاريخ الحلقة')
       setSaveState('error')
     }
   }
@@ -674,7 +674,7 @@ export default function SessionAttendancePage() {
       const result = await api.confirmSession(data.session_id, dataRef.current?.version ?? data.version)
       setData((current) => current ? { ...current, is_confirmed: true, status: 'confirmed', version: result.version } : current)
     } catch (err: any) {
-      setSaveError(err.message || 'تعذر تأكيد الجلسة')
+      setSaveError(err.message || 'تعذر تأكيد الحلقة')
       setSaveState('error')
     }
   }
@@ -689,7 +689,7 @@ export default function SessionAttendancePage() {
       setShowReopen(false)
       setReopenReason('')
     } catch (err: any) {
-      setSaveError(err.message || 'تعذر إعادة فتح الجلسة')
+      setSaveError(err.message || 'تعذر إعادة فتح الحلقة')
       setSaveState('error')
     } finally {
       setReopening(false)
@@ -723,7 +723,7 @@ export default function SessionAttendancePage() {
   if (!data) {
     return (
       <div className="glass-card rounded-2xl p-8 text-center text-deep-600/60">
-        الجلسة غير موجودة
+        الحلقة غير موجودة
       </div>
     )
   }
@@ -824,12 +824,12 @@ export default function SessionAttendancePage() {
               disabled={saveState === 'saving'}
               className="water-btn text-white px-4 py-2 rounded-xl text-sm font-medium flex-1 md:flex-none"
             >
-              تأكيد الجلسة
+              تأكيد الحلقة
             </button>
           )}
           {data.is_confirmed && (userRole === 'admin' || userRole === 'super_admin') && (
             <button type="button" onClick={() => setShowReopen(true)} className="water-btn-outline px-4 py-2 rounded-xl text-sm flex-1 md:flex-none">
-              إعادة فتح الجلسة
+              إعادة فتح الحلقة
             </button>
           )}
         </div>
@@ -963,14 +963,14 @@ export default function SessionAttendancePage() {
 
       {data.is_confirmed && (
         <div className="mt-6 glass-strong text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800 rounded-2xl p-4 text-center">
-          تم تأكيد هذه الجلسة
+          تم تأكيد هذه الحلقة
         </div>
       )}
 
       {showReopen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="reopen-title" onClick={() => setShowReopen(false)}>
           <div className="glass-strong w-full max-w-md rounded-2xl p-6" onClick={(event) => event.stopPropagation()}>
-            <h2 id="reopen-title" className="text-xl font-bold text-deep-800">إعادة فتح الجلسة</h2>
+            <h2 id="reopen-title" className="text-xl font-bold text-deep-800">إعادة فتح الحلقة</h2>
             <p className="mt-2 text-sm text-deep-500">سيتم السماح بتعديل الحضور والمتابعة، وسيُحفظ السبب في سجل التدقيق.</p>
             <textarea value={reopenReason} onChange={(event) => setReopenReason(event.target.value)} rows={3} autoFocus className="surface-field mt-4 w-full rounded-xl px-4 py-3 text-sm" placeholder="سبب إعادة الفتح" />
             <div className="mt-4 flex gap-3">

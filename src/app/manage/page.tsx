@@ -241,7 +241,7 @@ function EditCircleModal({ circle, onClose, onUpdated }: { circle: Circle; onClo
         <div className="border-t border-water-200 pt-4 space-y-3">
           <div>
             <h3 className="font-bold text-deep-800">خيارات حالة الحضور</h3>
-            <p className="mt-1 text-xs text-deep-500">تظهر هذه الخيارات عند إنشاء الجلسات وتسجيل الحضور.</p>
+            <p className="mt-1 text-xs text-deep-500">تظهر هذه الخيارات عند إنشاء الحلقات وتسجيل الحضور.</p>
           </div>
           <div className="space-y-2">
             {attendanceStatuses.map((status) => (
@@ -1041,7 +1041,7 @@ function DeleteStudentModal({ onClose, onConfirm }: { onClose: () => void; onCon
         <p className="text-deep-600 text-sm mb-4">اختر نوع الحذف:</p>
         <div className="space-y-3">
           <button onClick={() => onConfirm(true)} className="w-full px-4 py-3 rounded-xl border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm font-medium hover:bg-red-50/50 dark:hover:bg-red-900/30 transition text-right">
-            <div className="font-medium">حذف مع الجلسات</div>
+            <div className="font-medium">حذف مع الحلقات</div>
             <div className="text-xs text-deep-400 font-normal mt-0.5">سيتم حذف الطالب وجميع سجلات حضوره</div>
           </button>
           <button onClick={() => onConfirm(false)} className="w-full px-4 py-3 rounded-xl border border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400 text-sm font-medium hover:bg-amber-50/50 dark:hover:bg-amber-900/30 transition text-right">
@@ -1796,7 +1796,7 @@ export default function ManagePage() {
   }
 
   const handleDeleteCircle = async (id: number) => {
-    if (!confirm('تحذير: سيتم حذف الحلقة وجميع ما فيها بما في ذلك الجلسات وسجلات الحضور والشيوخ. هل أنت متأكد؟')) return
+    if (!confirm('تحذير: سيتم حذف الحلقة وجميع ما فيها بما في ذلك الحلقات وسجلات الحضور والشيوخ. هل أنت متأكد؟')) return
     await api.deleteCircle(id)
     load()
   }

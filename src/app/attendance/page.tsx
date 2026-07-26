@@ -422,7 +422,7 @@ export default function AttendancePage() {
       <div className="flex justify-between items-center mb-5">
         <div>
           <h1 className="text-2xl font-bold text-deep-900">سجل الحضور</h1>
-          <p className="text-sm text-deep-500 mt-1">متابعة حضور الطلاب حسب الجلسات والتصفيات المحفوظة</p>
+          <p className="text-sm text-deep-500 mt-1">متابعة حضور الطلاب حسب الحلقات والتصفيات المحفوظة</p>
         </div>
       </div>
 
@@ -610,7 +610,7 @@ export default function AttendancePage() {
 
       {grid && displaySessions.length === 0 && (
         <div className="glass-card rounded-lg p-8 text-center text-deep-600/80">
-          لا توجد جلسات في هذه الفترة
+          لا توجد حلقات في هذه الفترة
         </div>
       )}
 
@@ -832,7 +832,7 @@ ${selectedLabels.map((label) => `* ${label}`).join('\n') || '* ...'}
 
   const handleSend = async () => {
     if (selectedLabels.length === 0) {
-      setError('اختر جلسة واحدة على الأقل')
+      setError('اختر حلقة واحدة على الأقل')
       return
     }
     setLoading(true)
@@ -867,7 +867,7 @@ ${selectedLabels.map((label) => `* ${label}`).join('\n') || '* ...'}
         )}
 
         <div className="space-y-3">
-          <p className="text-sm font-medium text-deep-700">اختر الجلسات المعروضة حسب التصفية التي غاب عنها الطالب بدون اعتذار</p>
+          <p className="text-sm font-medium text-deep-700">اختر الحلقات المعروضة حسب التصفية التي غاب عنها الطالب بدون اعتذار</p>
           {sessions.length === 0 ? (
             <div className="rounded-xl border border-water-200/50 bg-white/40 dark:bg-slate-800/40 p-4 text-sm text-deep-500 text-center">
               لا توجد حلقات مطابقة للتصفية
