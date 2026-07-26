@@ -1504,6 +1504,7 @@ function StudentStatusTabs({
 // ─── Warnings Tab ────────────────────────────────────────────────────────────
 
 function WarningsTab({ sheikhs }: { sheikhs: SheikhInfo[] }) {
+  const router = useRouter()
   const [warnings, setWarnings] = useState<WarningRow[]>([])
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [sending, setSending] = useState(false)
@@ -1616,7 +1617,11 @@ function WarningsTab({ sheikhs }: { sheikhs: SheikhInfo[] }) {
                     <input type="checkbox" checked={selectedIds.has(w.id)} onChange={() => toggleSelect(w.id)} className="rounded" />
                   </td>
                   <td className="px-3 py-3 text-deep-800 font-medium">{w.warning_number}</td>
-                  <td className="px-3 py-3 text-deep-800">{w.student_name}</td>
+                  <td className="px-3 py-3 text-deep-800">
+                    <button type="button" onClick={() => router.push(`/students/${w.student_id}`)} className="hover:text-cyan-700 hover:underline">
+                      {w.student_name}
+                    </button>
+                  </td>
                   <td className="px-3 py-3 text-deep-600">{w.sheikh_name || '-'}</td>
                   <td className="px-3 py-3 text-deep-600 max-w-[200px] truncate">{w.reason}</td>
                   <td className="px-3 py-3 text-deep-600 text-xs">{new Date(w.created_at).toLocaleDateString('ar-SA')}</td>
@@ -1649,6 +1654,7 @@ export default function ManagePage() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [expandedSheikhs, setExpandedSheikhs] = useState<Set<number>>(new Set())
+  const [studentSearch, setStudentSearch] = useState('')
 
   useEffect(() => {
     const u = JSON.parse(localStorage.getItem('user') || '{}')
@@ -1798,6 +1804,20 @@ export default function ManagePage() {
   if (loading) return <div className="page-loading" aria-label="جاري التحميل" />
   if (loadError) return <AsyncState message={loadError} onRetry={load} />
 
+  const normalizedStudentSearch = studentSearch.trim().toLocaleLowerCase('ar')
+  const visibleSheikhs = sheikhs
+    .map(sheikh => ({
+      ...sheikh,
+      students: sheikh.students.filter(student => (
+        !normalizedStudentSearch
+        || student.name.toLocaleLowerCase('ar').includes(normalizedStudentSearch)
+        || student.student_id?.toLocaleLowerCase('ar').includes(normalizedStudentSearch)
+        || student.phone?.toLocaleLowerCase('ar').includes(normalizedStudentSearch)
+        || sheikh.name.toLocaleLowerCase('ar').includes(normalizedStudentSearch)
+      )),
+    }))
+    .filter(sheikh => !normalizedStudentSearch || sheikh.students.length > 0)
+
   const tabs = [
     { key: 'sheikhs', label: 'الشيوخ والطلاب' },
     { key: 'users', label: 'المستخدمين' },
@@ -1829,6 +1849,11 @@ export default function ManagePage() {
       {/* ─── Sheikhs & Students Tab ─────────────────────────────────────── */}
       {activeTab === 'sheikhs' && (
         <div>
+          <label className="relative mb-4 block">
+            <span className="sr-only">بحث عن طالب</span>
+            <input value={studentSearch} onChange={event => setStudentSearch(event.target.value)} placeholder="ابحث باسم الطالب أو رقمه أو هاتفه أو الشيخ..." className="surface-field w-full rounded-xl py-2.5 pr-4 pl-10 text-sm" />
+            {studentSearch && <button type="button" onClick={() => setStudentSearch('')} aria-label="مسح البحث" className="absolute left-3 top-1/2 -translate-y-1/2 text-deep-400">×</button>}
+          </label>
           <div className="flex justify-between items-center gap-3 mb-4">
             <button onClick={toggleAllSheikhs} className="water-btn-outline px-4 py-2 rounded-xl text-sm">
               {allExpanded ? 'طي الكل' : 'فتح الكل'}
@@ -1836,15 +1861,15 @@ export default function ManagePage() {
             <button onClick={() => setShowAddSheikh(true)} className="water-btn text-white px-4 py-2 rounded-xl text-sm">+ إضافة شيخ</button>
           </div>
 
-          {sheikhs.length === 0 ? (
+          {visibleSheikhs.length === 0 ? (
             <div className="glass-card rounded-2xl p-8 text-center text-deep-600/60">
               <div className="text-4xl mb-3">💧</div>
               لا يوجد شيوخ بعد
             </div>
           ) : (
             <div className="space-y-4">
-              {sheikhs.map((sheikh) => {
-                const isExpanded = expandedSheikhs.has(sheikh.id)
+              {visibleSheikhs.map((sheikh) => {
+                const isExpanded = normalizedStudentSearch ? true : expandedSheikhs.has(sheikh.id)
                 return (
                 <div key={sheikh.id} className="glass-card rounded-2xl overflow-hidden">
                   <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-4 bg-water-100/30 cursor-pointer" onClick={() => toggleSheikh(sheikh.id)}>
@@ -1864,7 +1889,7 @@ export default function ManagePage() {
                       students={sheikh.students}
                       sheikhName={sheikh.name}
                       sheikhId={sheikh.id}
-                      onViewStudent={(s) => setViewStudent({ student: s, sheikhName: sheikh.name })}
+                      onViewStudent={(s) => router.push(`/students/${s.id}`)}
                       onEditStudent={(s) => setEditStudent({ student: s, sheikhName: sheikh.name })}
                       onDeleteStudent={handleDeleteStudent}
                       onDragStart={handleDragStart}

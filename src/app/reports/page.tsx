@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { mediaUrl } from '@/lib/format'
 import { currentMonthValue, formatMonthPeriod, monthRange } from '@/lib/month'
@@ -11,6 +12,7 @@ import MonthSwitcher from '@/components/MonthSwitcher'
 import ScrollableTable from '@/components/ScrollableTable'
 
 export default function ReportsPage() {
+  const router = useRouter()
   const [circles, setCircles] = useState<Circle[]>([])
   const [selectedCircle, setSelectedCircle] = useState<number | null>(null)
   const [circleRate, setCircleRate] = useState<CircleAttendanceRate | null>(null)
@@ -23,6 +25,7 @@ export default function ReportsPage() {
   const [error, setError] = useState('')
   const [excelSheets, setExcelSheets] = useState<SpreadsheetSheet[] | null>(null)
   const [previewPic, setPreviewPic] = useState<string | null>(null)
+  const [studentSearch, setStudentSearch] = useState('')
   const reportRequestId = useRef(0)
   const [progressReport, setProgressReport] = useState<{
     enabled: boolean
@@ -131,6 +134,16 @@ export default function ReportsPage() {
   const sortedStudents = [...studentStats].sort((a, b) => (
     sortAsc ? a.attendance_rate - b.attendance_rate : b.attendance_rate - a.attendance_rate
   ))
+  const normalizedStudentSearch = studentSearch.trim().toLocaleLowerCase('ar')
+  const displayStudents = sortedStudents.filter(student => (
+    !normalizedStudentSearch
+    || student.student_name.toLocaleLowerCase('ar').includes(normalizedStudentSearch)
+    || student.sheikh_name?.toLocaleLowerCase('ar').includes(normalizedStudentSearch)
+  ))
+  const displayProgressStudents = progressReport?.students.filter(student => (
+    !normalizedStudentSearch
+    || student.student_name.toLocaleLowerCase('ar').includes(normalizedStudentSearch)
+  )) || []
   const selectedCircleName = circles.find((circle) => circle.id === selectedCircle)?.name || ''
   const monthStartDay = circles.find((circle) => circle.id === selectedCircle)?.month_start_day ?? 1
   const periodLabel = periodMode === 'month'
@@ -222,6 +235,13 @@ export default function ReportsPage() {
           )}
         </div>
       )}
+      {selectedCircle && (
+        <label className="relative mb-6 block">
+          <span className="sr-only">بحث عن طالب</span>
+          <input value={studentSearch} onChange={event => setStudentSearch(event.target.value)} placeholder="ابحث باسم الطالب أو الشيخ..." className="surface-field w-full rounded-xl py-2.5 pr-4 pl-10 text-sm" />
+          {studentSearch && <button type="button" onClick={() => setStudentSearch('')} aria-label="مسح البحث" className="absolute left-3 top-1/2 -translate-y-1/2 text-deep-400">×</button>}
+        </label>
+      )}
 
       {reportLoading && <div className="glass-card rounded-2xl p-6 mb-6 text-center text-deep-500">جاري تحميل الإحصائيات...</div>}
 
@@ -268,7 +288,7 @@ export default function ReportsPage() {
                 معاينة وتصدير Excel
               </button>
             </div>
-            {studentStats.length === 0 ? (
+            {displayStudents.length === 0 ? (
               <div className="text-center text-deep-500 py-4">لا يوجد طلاب</div>
             ) : (<>
               <div className="md:hidden space-y-3">
@@ -279,13 +299,13 @@ export default function ReportsPage() {
                 >
                   ترتيب حسب النسبة {sortAsc ? 'من الأقل للأعلى ↑' : 'من الأعلى للأقل ↓'}
                 </button>
-                {sortedStudents.map((s) => (
+                {displayStudents.map((s) => (
                   <div key={s.student_id} className="rounded-xl border border-water-200/70 bg-white/60 dark:bg-slate-800/55 p-4">
                     <div className="flex items-center justify-between gap-3 mb-3">
                       <div className="flex items-center gap-3 min-w-0">
                         {studentAvatar(s.student_name, s.profile_pic)}
                         <div className="min-w-0">
-                          <p className="font-bold text-deep-800 truncate">{s.student_name}</p>
+                          <button type="button" onClick={() => router.push(`/students/${s.student_id}`)} className="block max-w-full truncate text-right font-bold text-deep-800 hover:text-cyan-700 hover:underline">{s.student_name}</button>
                           <p className="text-xs text-deep-500 truncate mt-0.5">{s.sheikh_name}</p>
                         </div>
                       </div>
@@ -325,12 +345,12 @@ export default function ReportsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {sortedStudents.map((s) => (
+                    {displayStudents.map((s) => (
                         <tr key={s.student_id} className="border-b border-water-200/20 hover:bg-water-100/20">
                           <td className="py-2 px-3 text-deep-800">
                             <div className="flex items-center gap-3 min-w-[160px]">
                               {studentAvatar(s.student_name, s.profile_pic)}
-                              <span className="truncate">{s.student_name}</span>
+                              <button type="button" onClick={() => router.push(`/students/${s.student_id}`)} className="truncate hover:text-cyan-700 hover:underline">{s.student_name}</button>
                             </div>
                           </td>
                           <td className="py-2 px-3 text-center text-deep-500">{s.sheikh_name}</td>
@@ -367,16 +387,16 @@ export default function ReportsPage() {
                   </div>
                 ))}
               </div>
-              {progressReport.students.length === 0 ? (
+              {displayProgressStudents.length === 0 ? (
                 <p className="py-6 text-center text-sm text-deep-500">لا توجد سجلات متابعة في هذه الفترة.</p>
               ) : (
                 <ScrollableTable>
                   <table className="mt-4 w-full text-sm">
                     <thead><tr className="border-b border-water-200/40 text-deep-600"><th className="px-3 py-2 text-right">الطالب</th><th className="px-3 py-2 text-center">آخر مقدار</th><th className="px-3 py-2 text-center">السجلات</th><th className="px-3 py-2 text-center">متوسط التقييم</th><th className="px-3 py-2 text-center">الأخطاء</th></tr></thead>
                     <tbody>
-                      {progressReport.students.map((student) => (
+                      {displayProgressStudents.map((student) => (
                         <tr key={student.student_id} className="border-b border-water-200/20">
-                          <td className="px-3 py-2 font-medium text-deep-800">{student.student_name}</td>
+                          <td className="px-3 py-2 font-medium text-deep-800"><button type="button" onClick={() => router.push(`/students/${student.student_id}`)} className="hover:text-cyan-700 hover:underline">{student.student_name}</button></td>
                           <td className="px-3 py-2 text-center text-xs text-cyan-800 dark:text-cyan-200">{student.latest_entry ? formatQuranRange(student.latest_entry) : '—'}</td>
                           <td className="px-3 py-2 text-center">{student.entries}</td>
                           <td className="px-3 py-2 text-center font-bold text-cyan-700">{student.average_quality}/5</td>

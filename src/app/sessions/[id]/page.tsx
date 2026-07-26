@@ -4,17 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { getArabicDay, mediaUrl } from '@/lib/format'
-import type { ProgressCategory, QuranProgressInput, Session, SessionAttendance, SheikhGroup } from '@/lib/types'
+import type { AttendanceThresholdAlert, ProgressCategory, QuranProgressInput, Session, SessionAttendance, SheikhGroup } from '@/lib/types'
 import InlineQuranProgress, { createRequiredProgressDraft, INLINE_PROGRESS_CATEGORIES, isSurahAyahRangeComplete, type ProgressDraftMap, progressDraftKey, progressEntryToInput } from '@/components/InlineQuranProgress'
+import AttendanceStatusControl, { attendanceStatusColorClass } from '@/components/AttendanceStatusControl'
 import { QUALITY_OPTIONS, SURAHS, surahInfo } from '@/lib/quran'
 import { configuredAttendanceStatuses, DEFAULT_ATTENDANCE_STATUSES } from '@/lib/attendance'
-
-const STATUS_STYLES: Record<string, string> = {
-  'غياب': 'status-badge bg-gray-100/50 text-gray-600 border-gray-200 dark:bg-gray-700/40 dark:text-gray-400 dark:border-gray-700',
-  'حاضر': 'status-badge bg-green-100/60 text-green-700 border-green-300 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700',
-  'غياب بعذر': 'status-badge bg-yellow-100/60 text-yellow-700 border-yellow-300 dark:bg-yellow-900/40 dark:text-yellow-300 dark:border-yellow-700',
-  'لا ينطبق': 'status-badge bg-blue-100/60 text-blue-700 border-blue-300 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700',
-}
 
 function isProgressDraftComplete(draft?: QuranProgressInput) {
   return isSurahAyahRangeComplete(draft)
@@ -37,6 +31,7 @@ function StudentRow({
   onNotesChange,
   onSheikhChange,
   onZoomPic,
+  onViewStudent,
   saving,
   disabled,
   progressEnabled,
@@ -48,6 +43,7 @@ function StudentRow({
   onProgressChange,
   onProgressSaveNext,
   attendanceStatuses,
+  attendanceStatusColors,
 }: {
   student: { id: number; name: string; status: string; notes?: string; sheikh_id: number | null; profile_pic?: string | null }
   circleSheikhs: { id: number; name: string }[]
@@ -55,6 +51,7 @@ function StudentRow({
   onNotesChange: (notes: string) => void
   onSheikhChange: (sheikhId: number) => void
   onZoomPic: (url: string) => void
+  onViewStudent: () => void
   saving: boolean
   disabled: boolean
   progressEnabled: boolean
@@ -66,6 +63,7 @@ function StudentRow({
   onProgressChange: (draft: QuranProgressInput) => void
   onProgressSaveNext: () => void
   attendanceStatuses: string[]
+  attendanceStatusColors: Record<string, string>
 }) {
   const [notes, setNotes] = useState(student.notes || '')
 
@@ -94,22 +92,22 @@ function StudentRow({
           </div>
         )}
         <div className="min-w-0 flex-1 md:contents">
-          <span className="block font-medium text-deep-800 truncate">{student.name}</span>
+          <button type="button" onClick={onViewStudent} className="block max-w-full truncate text-right font-medium text-deep-800 hover:text-cyan-700 hover:underline">
+            {student.name}
+          </button>
         </div>
       </div>
       <div className="grid grid-cols-1 gap-2 mt-3 md:contents">
         <label className="block md:contents">
           <span className="block md:hidden text-[11px] text-deep-500 mb-1">الحالة</span>
-      <select
-        value={student.status}
-        onChange={(e) => onStatusChange(e.target.value)}
-        disabled={disabled}
-            className={`w-full px-2 py-2 md:py-1.5 rounded-lg text-sm font-medium transition text-center ${STATUS_STYLES[student.status] || STATUS_STYLES['غياب']} ${saving ? 'opacity-60' : ''}`}
-      >
-        {(attendanceStatuses.includes(student.status) ? attendanceStatuses : [student.status, ...attendanceStatuses]).map((status) => (
-          <option key={status} value={status}>{status}</option>
-        ))}
-      </select>
+          <AttendanceStatusControl
+            value={student.status}
+            statuses={attendanceStatuses}
+            disabled={disabled}
+            saving={saving}
+            colorKey={attendanceStatusColors[student.status]}
+            onChange={onStatusChange}
+          />
         </label>
         <label className="block md:contents">
           <span className="block md:hidden text-[11px] text-deep-500 mb-1">الشيخ</span>
@@ -159,6 +157,7 @@ function SheikhAccordion({
   onUpdateNotes,
   onUpdateSheikh,
   onZoomPic,
+  onViewStudent,
   savingIds,
   expanded,
   onToggle,
@@ -172,6 +171,7 @@ function SheikhAccordion({
   onProgressChange,
   onProgressSaveNext,
   attendanceStatuses,
+  attendanceStatusColors,
 }: {
   group: SheikhGroup
   circleSheikhs: { id: number; name: string }[]
@@ -179,6 +179,7 @@ function SheikhAccordion({
   onUpdateNotes: (studentId: number, notes: string) => void
   onUpdateSheikh: (studentId: number, sheikhId: number) => void
   onZoomPic: (url: string) => void
+  onViewStudent: (studentId: number) => void
   savingIds: Set<number>
   expanded: boolean
   onToggle: () => void
@@ -192,6 +193,7 @@ function SheikhAccordion({
   onProgressChange: (draft: QuranProgressInput) => void
   onProgressSaveNext: (studentId: number) => void
   attendanceStatuses: string[]
+  attendanceStatusColors: Record<string, string>
 }) {
 
   return (
@@ -224,6 +226,7 @@ function SheikhAccordion({
               onNotesChange={(notes) => onUpdateNotes(student.id, notes)}
               onSheikhChange={(sheikhId) => onUpdateSheikh(student.id, sheikhId)}
               onZoomPic={onZoomPic}
+              onViewStudent={() => onViewStudent(student.id)}
               saving={savingIds.has(student.id)}
               disabled={disabled}
               progressEnabled={progressEnabled}
@@ -235,6 +238,7 @@ function SheikhAccordion({
               onProgressChange={onProgressChange}
               onProgressSaveNext={() => onProgressSaveNext(student.id)}
               attendanceStatuses={attendanceStatuses}
+              attendanceStatusColors={attendanceStatusColors}
             />
           ))}
         </div>
@@ -272,6 +276,9 @@ export default function SessionAttendancePage() {
   const [saveError, setSaveError] = useState('')
   const [progressEnabled, setProgressEnabled] = useState(false)
   const [attendanceStatuses, setAttendanceStatuses] = useState<string[]>(DEFAULT_ATTENDANCE_STATUSES)
+  const [attendanceStatusColors, setAttendanceStatusColors] = useState<Record<string, string>>({
+    'حاضر': 'green', 'غياب': 'slate', 'غياب بعذر': 'amber', 'لا ينطبق': 'sky',
+  })
   const [progressDrafts, setProgressDrafts] = useState<ProgressDraftMap>({})
   const [persistedProgressDrafts, setPersistedProgressDrafts] = useState<ProgressDraftMap>({})
   const [previousProgressDrafts, setPreviousProgressDrafts] = useState<ProgressDraftMap>({})
@@ -287,6 +294,21 @@ export default function SessionAttendancePage() {
   const [showReopen, setShowReopen] = useState(false)
   const [reopenReason, setReopenReason] = useState('')
   const [reopening, setReopening] = useState(false)
+  const [studentSearch, setStudentSearch] = useState('')
+  const [thresholdAlerts, setThresholdAlerts] = useState<AttendanceThresholdAlert[]>([])
+
+  const showThresholdAlerts = useCallback((alerts: AttendanceThresholdAlert[]) => {
+    if (!alerts.length) return
+    setThresholdAlerts(current => [
+      ...current,
+      ...alerts.filter(alert => !current.some(item => item.student_id === alert.student_id && item.streak === alert.streak)),
+    ])
+    alerts.forEach(alert => {
+      window.setTimeout(() => {
+        setThresholdAlerts(current => current.filter(item => !(item.student_id === alert.student_id && item.streak === alert.streak)))
+      }, 8000)
+    })
+  }, [])
 
   useEffect(() => {
     dataRef.current = data
@@ -321,6 +343,9 @@ export default function SessionAttendancePage() {
       const enabled = Boolean(currentUser.tahfiz?.progress_tracking_enabled)
       setProgressEnabled(enabled)
       setAttendanceStatuses(configuredAttendanceStatuses(currentUser.tahfiz?.attendance_statuses))
+      setAttendanceStatusColors(currentUser.tahfiz?.attendance_status_colors || {
+        'حاضر': 'green', 'غياب': 'slate', 'غياب بعذر': 'amber', 'لا ينطبق': 'sky',
+      })
       const drafts: ProgressDraftMap = Object.fromEntries((enabled ? progress.entries : []).map((entry) => [progressDraftKey(entry.student_id, entry.category), progressEntryToInput(entry)]))
       const previousDrafts: ProgressDraftMap = Object.fromEntries((progress.previous_entries || []).map((entry) => [progressDraftKey(entry.student_id, entry.category), progressEntryToInput(entry)]))
       const requiredKeys = new Set<string>()
@@ -394,6 +419,7 @@ export default function SessionAttendancePage() {
         }
       })
       const result = await api.batchAttendance(sessionData.session_id, payload, sessionData.version)
+      showThresholdAlerts(result.threshold_alerts || [])
       setData((current) => current ? { ...current, version: result.version } : current)
       if (dataRef.current) dataRef.current = { ...dataRef.current, version: result.version }
       setSaveState('saved')
@@ -419,7 +445,7 @@ export default function SessionAttendancePage() {
         flushTimer.current = setTimeout(() => flushUpdates(), 400)
       }
     }
-  }, [])
+  }, [showThresholdAlerts])
 
   const queueUpdate = useCallback((studentId: number, update: { status?: string; notes?: string; sheikh_id?: number }) => {
     const existing = pendingUpdates.current.get(studentId) || {}
@@ -701,22 +727,28 @@ export default function SessionAttendancePage() {
     0
   )
   const allStudents = data.sheikh_groups.flatMap((group) => group.students)
+  const normalizedStudentSearch = studentSearch.trim().toLocaleLowerCase('ar')
+  const visibleGroups = data.sheikh_groups
+    .map(group => ({
+      ...group,
+      students: group.students.filter(student => (
+        !normalizedStudentSearch
+        || student.name.toLocaleLowerCase('ar').includes(normalizedStudentSearch)
+        || student.phone?.toLocaleLowerCase('ar').includes(normalizedStudentSearch)
+        || group.sheikh.name.toLocaleLowerCase('ar').includes(normalizedStudentSearch)
+      )),
+    }))
+    .filter(group => group.students.length > 0)
   const totalCount = allStudents.length
   const visibleSummaryStatuses = Array.from(new Set([
     ...attendanceStatuses,
     ...allStudents.map((student) => student.status),
   ]))
-  const summaryStyles: Record<string, string> = {
-    'حاضر': 'border-emerald-200 bg-emerald-50/80 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/25 dark:text-emerald-300',
-    'غياب': 'border-slate-200 bg-slate-50/90 text-slate-700 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300',
-    'لا ينطبق': 'border-sky-200 bg-sky-50/80 text-sky-700 dark:border-sky-800 dark:bg-sky-900/25 dark:text-sky-300',
-    'غياب بعذر': 'border-amber-200 bg-amber-50/80 text-amber-700 dark:border-amber-800 dark:bg-amber-900/25 dark:text-amber-300',
-  }
   const summaryItems = visibleSummaryStatuses.map((status) => ({
     label: status,
     value: allStudents.filter((student) => student.status === status).length,
     suffix: status === 'حاضر' ? `/ ${totalCount}` : undefined,
-    className: summaryStyles[status] || 'border-cyan-200 bg-cyan-50/80 text-cyan-700 dark:border-cyan-800 dark:bg-cyan-900/25 dark:text-cyan-300',
+    className: attendanceStatusColorClass(attendanceStatusColors[status]),
   }))
 
   return (
@@ -873,8 +905,16 @@ export default function SessionAttendancePage() {
           {allExpanded ? 'طي الكل' : 'فتح الكل'}
         </button>
       </div>
+      <label className="relative mb-3 block">
+        <span className="sr-only">بحث عن طالب</span>
+        <svg className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-deep-400" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+          <circle cx="8.5" cy="8.5" r="5.5" /><path d="m12.5 12.5 4 4" strokeLinecap="round" />
+        </svg>
+        <input value={studentSearch} onChange={event => setStudentSearch(event.target.value)} placeholder="ابحث باسم الطالب أو الهاتف أو الشيخ..." className="surface-field w-full rounded-xl py-2.5 pr-10 pl-10 text-sm" />
+        {studentSearch && <button type="button" onClick={() => setStudentSearch('')} aria-label="مسح البحث" className="absolute left-3 top-1/2 -translate-y-1/2 text-deep-400 hover:text-deep-700">×</button>}
+      </label>
       <div className="space-y-3">
-        {data.sheikh_groups.map((group) => (
+        {visibleGroups.map((group) => (
           <SheikhAccordion
             key={group.sheikh.id}
             group={group}
@@ -883,6 +923,7 @@ export default function SessionAttendancePage() {
             onUpdateNotes={handleUpdateNotes}
             onUpdateSheikh={handleUpdateSheikh}
             onZoomPic={(url) => setPreviewPic(url)}
+            onViewStudent={(studentId) => router.push(`/students/${studentId}`)}
             savingIds={savingIds}
             expanded={expandedSheikhs.has(group.sheikh.id)}
             onToggle={() => toggleSheikh(group.sheikh.id)}
@@ -896,8 +937,12 @@ export default function SessionAttendancePage() {
             onProgressChange={handleProgressChange}
             onProgressSaveNext={saveProgressAndOpenNext}
             attendanceStatuses={attendanceStatuses}
+            attendanceStatusColors={attendanceStatusColors}
           />
         ))}
+        {visibleGroups.length === 0 && (
+          <div className="glass-card rounded-2xl p-8 text-center text-sm text-deep-500">لا يوجد طلاب مطابقون للبحث.</div>
+        )}
       </div>
 
       {data.is_confirmed && (
@@ -921,6 +966,22 @@ export default function SessionAttendancePage() {
       )}
 
       {previewPic && <ImagePreviewModal src={previewPic} onClose={() => setPreviewPic(null)} />}
+      <div className="fixed right-4 top-4 z-[80] grid w-[min(22rem,calc(100vw-2rem))] gap-2" aria-live="polite">
+        {thresholdAlerts.map(alert => (
+          <button
+            key={`${alert.student_id}:${alert.streak}`}
+            type="button"
+            onClick={() => router.push(`/students/${alert.student_id}`)}
+            className="glass-strong flex items-start gap-3 rounded-2xl border border-amber-300 p-4 text-right shadow-2xl dark:border-amber-700"
+          >
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-200">!</span>
+            <span className="min-w-0">
+              <span className="block font-bold text-deep-900">{alert.student_name}</span>
+              <span className="mt-1 block text-xs leading-5 text-deep-500">تجاوز حد الغياب بعذر المتتالي: {alert.streak} مرات (الحد {alert.limit}). اضغط لفتح ملف الطالب.</span>
+            </span>
+          </button>
+        ))}
+      </div>
     </div>
   )
 }

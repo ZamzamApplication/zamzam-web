@@ -16,6 +16,9 @@ export interface User {
     week_start_day?: number
     month_start_day?: number
     attendance_statuses?: string[]
+    attendance_status_colors?: Record<string, string>
+    excused_absence_streak_limit?: number
+    excused_absence_reset_statuses?: string[]
     progress_tracking_enabled?: boolean
   } | null
 }
@@ -79,6 +82,9 @@ export interface Circle {
   week_start_day?: number
   month_start_day?: number
   attendance_statuses?: string[]
+  attendance_status_colors?: Record<string, string>
+  excused_absence_streak_limit?: number
+  excused_absence_reset_statuses?: string[]
   contact_phone?: string
   whatsend_api_url?: string
   whatsend_groups_url?: string
@@ -189,6 +195,34 @@ export interface StudentInfo {
   sheikh?: { id: number; name: string }
   parent_phones?: ParentPhone[]
   excused_weekdays?: ExcusedWeekdayInfo[]
+}
+
+export interface AttendanceThresholdAlert {
+  student_id: number
+  student_name: string
+  streak: number
+  limit: number
+}
+
+export interface StudentProfile extends StudentInfo {
+  parent_phones: ParentPhone[]
+  excused_weekdays: ExcusedWeekdayInfo[]
+  attendance: {
+    total: number
+    present: number
+    absent: number
+    excused: number
+    not_applicable: number
+    excused_streak: number
+    excused_streak_limit: number
+  }
+  progress: {
+    enabled: boolean
+    entries: number
+    average_quality: number
+    active_goals: number
+  }
+  can_manage: boolean
 }
 
 export interface UserInfo {

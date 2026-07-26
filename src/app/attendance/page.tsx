@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { formatDateWithWeekday, mediaUrl } from '@/lib/format'
 import { currentMonthValue, formatMonthPeriod, monthRange } from '@/lib/month'
@@ -10,6 +11,7 @@ import ExcelPreviewModal, { type SpreadsheetSheet } from '@/components/ExcelPrev
 import MonthSwitcher from '@/components/MonthSwitcher'
 import ScrollableTable from '@/components/ScrollableTable'
 import ConfirmDialog from '@/components/ConfirmDialog'
+import { attendanceStatusColorClass } from '@/components/AttendanceStatusControl'
 
 interface SavedFilter {
   id: number
@@ -25,13 +27,6 @@ function parseSavedFilter(f: any): SavedFilter {
 
 function cloneFilterGroups(groups: FilterGroup[]): FilterGroup[] {
   return JSON.parse(JSON.stringify(groups))
-}
-
-const STATUS_COLORS: Record<string, string> = {
-  'حاضر': 'bg-green-200/60 text-green-800 dark:bg-green-900/40 dark:text-green-300',
-  'غياب': 'bg-gray-200/50 text-gray-600 dark:bg-gray-700/40 dark:text-gray-400',
-  'غياب بعذر': 'bg-yellow-200/60 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300',
-  'لا ينطبق': 'bg-blue-200/60 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
 }
 
 function StudentAvatar({
@@ -131,7 +126,9 @@ function filterByGroups(students: AttendanceGrid['students'], groups: FilterGrou
 }
 
 export default function AttendancePage() {
+  const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
+  const statusColorClass = (status: string) => attendanceStatusColorClass(user?.tahfiz?.attendance_status_colors?.[status])
   const [sheikhs, setSheikhs] = useState<SheikhInfo[]>([])
   const [selectedSheikh, setSelectedSheikh] = useState<number | ''>('')
   const [grid, setGrid] = useState<AttendanceGrid | null>(null)
@@ -635,7 +632,7 @@ export default function AttendancePage() {
                   <div className="flex items-center gap-3 min-w-0">
                     <StudentAvatar name={student.name} profilePic={student.profile_pic} className="w-9 h-9" onZoomPic={setPreviewPic} />
                     <div className="min-w-0">
-                      <h3 className="font-semibold text-deep-800 truncate">{student.name}</h3>
+                      <button type="button" onClick={() => router.push(`/students/${student.id}`)} className="block max-w-full truncate text-right font-semibold text-deep-800 hover:text-cyan-700 hover:underline">{student.name}</button>
                       <p className="text-xs text-deep-500 truncate">{student.sheikh_name || 'بدون شيخ'}</p>
                     </div>
                   </div>
@@ -657,7 +654,7 @@ export default function AttendancePage() {
                     return (
                       <div key={s.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
                         <span className="text-xs text-deep-600 truncate">{formatDateWithWeekday(s.date)}</span>
-                        <span className={`shrink-0 inline-block px-2 py-1 rounded-lg text-xs font-medium ${STATUS_COLORS[status] || STATUS_COLORS['غياب']}`}>
+                        <span className={`shrink-0 inline-block rounded-lg border px-2 py-1 text-xs font-medium ${statusColorClass(status)}`}>
                           {status}
                         </span>
                       </div>
@@ -686,7 +683,7 @@ export default function AttendancePage() {
                       <div className="flex items-center gap-3 min-w-0">
                         <StudentAvatar name={student.name} profilePic={student.profile_pic} onZoomPic={setPreviewPic} />
                         <span className="min-w-0">
-                          <span className="block truncate">{student.name}</span>
+                          <button type="button" onClick={() => router.push(`/students/${student.id}`)} className="block max-w-full truncate text-right hover:text-cyan-700 hover:underline">{student.name}</button>
                           <span className="block text-xs font-normal text-deep-500 truncate">{student.sheikh_name || 'بدون شيخ'}</span>
                         </span>
                       </div>
@@ -707,7 +704,7 @@ export default function AttendancePage() {
                     const status = student.records[String(s.id)] || 'لا ينطبق'
                     return (
                       <td key={s.id} className="text-center py-2 px-2">
-                        <span className={`inline-block px-2 py-1 rounded-lg text-xs font-medium ${STATUS_COLORS[status] || STATUS_COLORS['غياب']}`}>
+                        <span className={`inline-block rounded-lg border px-2 py-1 text-xs font-medium ${statusColorClass(status)}`}>
                           {status}
                         </span>
                       </td>
@@ -728,6 +725,7 @@ export default function AttendancePage() {
         <WarningModal
           student={warningStudent}
           sessions={displaySessions}
+          statusColors={user?.tahfiz?.attendance_status_colors || {}}
           onClose={() => setWarningStudent(null)}
           onSent={() => {
             setWarningStudent(null)
@@ -773,12 +771,14 @@ function ImagePreviewModal({ src, onClose }: { src: string; onClose: () => void 
 function WarningModal({
   student,
   sessions,
+  statusColors,
   onClose,
   onSent,
   onError,
 }: {
   student: AttendanceGridStudent
   sessions: AttendanceGridSession[]
+  statusColors: Record<string, string>
   onClose: () => void
   onSent: () => void
   onError: (message: string) => void
@@ -895,7 +895,7 @@ ${selectedLabels.map((label) => `* ${label}`).join('\n') || '* ...'}
                       />
                       <span className="text-sm text-deep-800">{formatDateWithWeekday(session.date)}</span>
                     </span>
-                    <span className={`px-2 py-1 rounded-lg text-xs font-medium ${STATUS_COLORS[status] || STATUS_COLORS['غياب']}`}>
+                    <span className={`rounded-lg border px-2 py-1 text-xs font-medium ${attendanceStatusColorClass(statusColors[status])}`}>
                       {status}
                     </span>
                   </label>

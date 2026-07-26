@@ -8,6 +8,14 @@ import type { Circle, SheikhInfo, TahfizInvitation } from '@/lib/types'
 import AsyncState from '@/components/AsyncState'
 
 const WEEKDAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
+const STATUS_COLOR_OPTIONS = [
+  { key: 'green', label: 'أخضر', className: 'bg-emerald-500' },
+  { key: 'slate', label: 'رمادي', className: 'bg-slate-500' },
+  { key: 'amber', label: 'ذهبي', className: 'bg-amber-500' },
+  { key: 'sky', label: 'أزرق', className: 'bg-sky-500' },
+  { key: 'violet', label: 'بنفسجي', className: 'bg-violet-500' },
+  { key: 'rose', label: 'وردي', className: 'bg-rose-500' },
+] as const
 
 export default function TahfizSettingsPage() {
   const router = useRouter()
@@ -20,6 +28,9 @@ export default function TahfizSettingsPage() {
   const [monthStartDay, setMonthStartDay] = useState(1)
   const [progressTrackingEnabled, setProgressTrackingEnabled] = useState(false)
   const [attendanceStatuses, setAttendanceStatuses] = useState<string[]>([])
+  const [attendanceStatusColors, setAttendanceStatusColors] = useState<Record<string, string>>({})
+  const [excusedStreakLimit, setExcusedStreakLimit] = useState(3)
+  const [excusedResetStatuses, setExcusedResetStatuses] = useState<string[]>(['حاضر'])
   const [newAttendanceStatus, setNewAttendanceStatus] = useState('')
   const [whatsendApiUrl, setWhatsendApiUrl] = useState('')
   const [whatsendGroupsUrl, setWhatsendGroupsUrl] = useState('')
@@ -53,6 +64,11 @@ export default function TahfizSettingsPage() {
         setMonthStartDay(data.month_start_day ?? 1)
         setProgressTrackingEnabled(Boolean(data.progress_tracking_enabled))
         setAttendanceStatuses(configuredAttendanceStatuses(data.attendance_statuses))
+        setAttendanceStatusColors(data.attendance_status_colors || {
+          'حاضر': 'green', 'غياب': 'slate', 'غياب بعذر': 'amber', 'لا ينطبق': 'sky',
+        })
+        setExcusedStreakLimit(data.excused_absence_streak_limit ?? 3)
+        setExcusedResetStatuses(data.excused_absence_reset_statuses ?? ['حاضر'])
         setWhatsendApiUrl(data.whatsend_api_url || '')
         setWhatsendGroupsUrl(data.whatsend_groups_url || '')
       })
@@ -123,7 +139,28 @@ export default function TahfizSettingsPage() {
     const status = newAttendanceStatus.trim()
     if (!status || attendanceStatuses.includes(status)) return
     setAttendanceStatuses(current => [...current, status])
+    setAttendanceStatusColors(current => ({ ...current, [status]: 'violet' }))
     setNewAttendanceStatus('')
+  }
+
+  const moveAttendanceStatus = (index: number, direction: -1 | 1) => {
+    setAttendanceStatuses(current => {
+      const target = index + direction
+      if (target < 0 || target >= current.length) return current
+      const next = [...current]
+      ;[next[index], next[target]] = [next[target], next[index]]
+      return next
+    })
+  }
+
+  const removeAttendanceStatus = (status: string) => {
+    setAttendanceStatuses(current => current.filter(item => item !== status))
+    setExcusedResetStatuses(current => current.filter(item => item !== status))
+    setAttendanceStatusColors(current => {
+      const next = { ...current }
+      delete next[status]
+      return next
+    })
   }
 
   const save = async (event: React.FormEvent) => {
@@ -141,6 +178,9 @@ export default function TahfizSettingsPage() {
         week_start_day: weekStartDay,
         month_start_day: monthStartDay,
         attendance_statuses: attendanceStatuses,
+        attendance_status_colors: attendanceStatusColors,
+        excused_absence_streak_limit: excusedStreakLimit,
+        excused_absence_reset_statuses: excusedResetStatuses,
         progress_tracking_enabled: progressTrackingEnabled,
         whatsend_api_url: whatsendApiUrl,
         whatsend_groups_url: whatsendGroupsUrl,
@@ -232,10 +272,26 @@ export default function TahfizSettingsPage() {
           <div className="mt-5">
             <h3 className="text-sm font-bold text-deep-800">خيارات حالة الحضور</h3>
             <div className="mt-2 grid gap-2 md:grid-cols-2">
-              {attendanceStatuses.map(status => (
-                <div key={status} className="flex items-center justify-between rounded-xl border border-water-200 bg-white/40 px-3 py-2">
-                  <span className="text-sm text-deep-800">{status}</span>
-                  <button type="button" disabled={attendanceStatuses.length === 1} onClick={() => setAttendanceStatuses(current => current.filter(item => item !== status))} className="text-xs font-semibold text-red-500 disabled:opacity-40">حذف</button>
+              {attendanceStatuses.map((status, index) => (
+                <div key={status} className="flex items-center gap-2 rounded-xl border border-water-200 bg-white/40 px-3 py-2">
+                  <span className="grid h-6 w-6 place-items-center rounded-lg bg-cyan-50 text-xs font-bold text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300">{index + 1}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm text-deep-800">{status}</span>
+                  <div className="flex items-center gap-1" aria-label={`لون ${status}`}>
+                    {STATUS_COLOR_OPTIONS.map(option => (
+                      <button
+                        key={option.key}
+                        type="button"
+                        onClick={() => setAttendanceStatusColors(current => ({ ...current, [status]: option.key }))}
+                        title={option.label}
+                        aria-label={`اختيار اللون ${option.label} لحالة ${status}`}
+                        aria-pressed={(attendanceStatusColors[status] || 'violet') === option.key}
+                        className={`h-5 w-5 rounded-full ${option.className} ${(attendanceStatusColors[status] || 'violet') === option.key ? 'ring-2 ring-cyan-600 ring-offset-2 dark:ring-offset-slate-900' : 'opacity-65 hover:opacity-100'}`}
+                      />
+                    ))}
+                  </div>
+                  <button type="button" disabled={index === 0} onClick={() => moveAttendanceStatus(index, -1)} aria-label={`تحريك ${status} لأعلى`} className="rounded-lg border border-water-200 px-2 py-1 text-xs disabled:opacity-30">↑</button>
+                  <button type="button" disabled={index === attendanceStatuses.length - 1} onClick={() => moveAttendanceStatus(index, 1)} aria-label={`تحريك ${status} لأسفل`} className="rounded-lg border border-water-200 px-2 py-1 text-xs disabled:opacity-30">↓</button>
+                  <button type="button" disabled={attendanceStatuses.length === 1} onClick={() => removeAttendanceStatus(status)} className="text-xs font-semibold text-red-500 disabled:opacity-40">حذف</button>
                 </div>
               ))}
             </div>
@@ -254,6 +310,28 @@ export default function TahfizSettingsPage() {
                 className="surface-field min-w-0 flex-1 rounded-xl px-4 py-2.5"
               />
               <button type="button" onClick={addAttendanceStatus} disabled={!newAttendanceStatus.trim()} className="water-btn-outline rounded-xl px-4 text-sm disabled:opacity-40">إضافة</button>
+            </div>
+            <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-800 dark:bg-amber-900/20">
+              <h3 className="text-sm font-bold text-deep-800">تنبيه الغياب بعذر المتتالي</h3>
+              <label className="mt-3 block text-xs font-semibold text-deep-600">
+                نبّه بعد تجاوز هذا العدد
+                <input type="number" min={1} max={1000} value={excusedStreakLimit} onChange={event => setExcusedStreakLimit(Math.max(1, Number(event.target.value) || 1))} className="surface-field mt-1.5 w-full rounded-xl px-4 py-2.5 text-sm font-normal" />
+              </label>
+              <fieldset className="mt-4">
+                <legend className="text-xs font-semibold text-deep-600">الحالات التي تعيد العداد إلى الصفر</legend>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {attendanceStatuses.filter(status => status !== 'غياب بعذر').map(status => {
+                    const checked = excusedResetStatuses.includes(status)
+                    return (
+                      <label key={status} className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-xs ${checked ? 'border-cyan-400 bg-cyan-50 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-200' : 'border-water-200 bg-white/50 text-deep-600 dark:bg-slate-800/50'}`}>
+                        <input type="checkbox" checked={checked} onChange={() => setExcusedResetStatuses(current => checked ? current.filter(item => item !== status) : [...current, status])} className="accent-cyan-600" />
+                        {status}
+                      </label>
+                    )
+                  })}
+                </div>
+              </fieldset>
+              <p className="mt-3 text-[11px] leading-5 text-deep-500">غياب بعذر يزيد العداد، والحالات المحددة تصفّره، وبقية الحالات لا تغيّره.</p>
             </div>
           </div>
         </section>

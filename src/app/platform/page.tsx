@@ -63,7 +63,7 @@ export default function PlatformPage() {
   const [exporting, setExporting] = useState(false)
   const [busyId, setBusyId] = useState<number | null>(null)
   const [query, setQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | TahfizStatus>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | TahfizStatus>('active')
   const [error, setError] = useState('')
   const [actionDialog, setActionDialog] = useState<{ item: PlatformTahfiz; action: PlatformAction } | null>(null)
   const [reason, setReason] = useState('')

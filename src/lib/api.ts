@@ -1,5 +1,5 @@
 import { getApiRuntime } from './api-runtime'
-import type { QuranProgressInput } from './types'
+import type { AttendanceThresholdAlert, QuranProgressInput, StudentProfile } from './types'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -117,7 +117,7 @@ export const api = {
         ? globalThis.crypto.randomUUID()
         : `${Date.now()}-${Math.random().toString(36).slice(2)}`
     )
-    return request<{ session_id: number; version: number; saved: number; replayed: boolean }>('/attendance/batch', {
+    return request<{ session_id: number; version: number; saved: number; replayed: boolean; threshold_alerts: AttendanceThresholdAlert[] }>('/attendance/batch', {
       method: 'POST',
       headers: { 'Idempotency-Key': key },
       body: JSON.stringify({
@@ -357,6 +357,10 @@ export const api = {
 
   getStudents() {
     return request('/students')
+  },
+
+  getStudentProfile(studentId: number) {
+    return request<StudentProfile>(`/students/${studentId}/profile`)
   },
 
   createStudent(name: string, sheikhId: number, phone?: string, birthday?: string, customStudentId?: string, status?: string, parentPhones?: { phone_number: string; parent_type: string }[], registrationDate?: string) {
