@@ -31,10 +31,13 @@ export default function TahfizSettingsPage() {
   const [attendanceStatusColors, setAttendanceStatusColors] = useState<Record<string, string>>({})
   const [excusedStreakLimit, setExcusedStreakLimit] = useState(3)
   const [excusedResetStatuses, setExcusedResetStatuses] = useState<string[]>(['حاضر'])
+  const [streakAlertEnabled, setStreakAlertEnabled] = useState(true)
+  const [streakStatus, setStreakStatus] = useState('غياب بعذر')
   const [newAttendanceStatus, setNewAttendanceStatus] = useState('')
   const [whatsendApiUrl, setWhatsendApiUrl] = useState('')
   const [whatsendGroupsUrl, setWhatsendGroupsUrl] = useState('')
   const [whatsendApiKey, setWhatsendApiKey] = useState('')
+  const [whatsendEnabled, setWhatsendEnabled] = useState(true)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -67,8 +70,11 @@ export default function TahfizSettingsPage() {
         setAttendanceStatusColors(data.attendance_status_colors || {
           'حاضر': 'green', 'غياب': 'slate', 'غياب بعذر': 'amber', 'لا ينطبق': 'sky',
         })
-        setExcusedStreakLimit(data.excused_absence_streak_limit ?? 3)
-        setExcusedResetStatuses(data.excused_absence_reset_statuses ?? ['حاضر'])
+        setStreakAlertEnabled(data.attendance_streak_alert_enabled ?? true)
+        setStreakStatus(data.attendance_streak_status || 'غياب بعذر')
+        setExcusedStreakLimit(data.attendance_streak_limit ?? data.excused_absence_streak_limit ?? 3)
+        setExcusedResetStatuses(data.attendance_streak_reset_statuses ?? data.excused_absence_reset_statuses ?? ['حاضر'])
+        setWhatsendEnabled(data.whatsend_enabled ?? true)
         setWhatsendApiUrl(data.whatsend_api_url || '')
         setWhatsendGroupsUrl(data.whatsend_groups_url || '')
       })
@@ -154,7 +160,11 @@ export default function TahfizSettingsPage() {
   }
 
   const removeAttendanceStatus = (status: string) => {
-    setAttendanceStatuses(current => current.filter(item => item !== status))
+    setAttendanceStatuses(current => {
+      const next = current.filter(item => item !== status)
+      if (status === streakStatus) setStreakStatus(next[0] || '')
+      return next
+    })
     setExcusedResetStatuses(current => current.filter(item => item !== status))
     setAttendanceStatusColors(current => {
       const next = { ...current }
@@ -179,9 +189,12 @@ export default function TahfizSettingsPage() {
         month_start_day: monthStartDay,
         attendance_statuses: attendanceStatuses,
         attendance_status_colors: attendanceStatusColors,
-        excused_absence_streak_limit: excusedStreakLimit,
-        excused_absence_reset_statuses: excusedResetStatuses,
+        attendance_streak_alert_enabled: streakAlertEnabled,
+        attendance_streak_status: streakStatus,
+        attendance_streak_limit: excusedStreakLimit,
+        attendance_streak_reset_statuses: excusedResetStatuses,
         progress_tracking_enabled: progressTrackingEnabled,
+        whatsend_enabled: whatsendEnabled,
         whatsend_api_url: whatsendApiUrl,
         whatsend_groups_url: whatsendGroupsUrl,
         ...(whatsendApiKey ? { whatsend_api_key: whatsendApiKey } : {}),
@@ -262,13 +275,12 @@ export default function TahfizSettingsPage() {
 
         <section className="glass-card rounded-2xl p-5">
           <h2 className="font-bold text-deep-900">الحضور ومتابعة القرآن</h2>
-          <label className="mt-4 flex items-start gap-3 rounded-xl border border-cyan-200/80 bg-cyan-50/60 p-4 dark:border-cyan-800 dark:bg-cyan-900/20">
-            <input type="checkbox" checked={progressTrackingEnabled} onChange={event => setProgressTrackingEnabled(event.target.checked)} className="mt-1 h-4 w-4 accent-cyan-600" />
-            <span>
-              <span className="block text-sm font-bold text-deep-800">تفعيل متابعة الحفظ والمراجعة</span>
-              <span className="mt-1 block text-xs text-deep-500">إيقافها يخفي الميزة دون حذف البيانات السابقة.</span>
-            </span>
-          </label>
+          <FeatureToggle
+            enabled={progressTrackingEnabled}
+            onChange={setProgressTrackingEnabled}
+            title="متابعة الحفظ والمراجعة"
+            description="إيقافها يخفي الميزة دون حذف البيانات السابقة."
+          />
           <div className="mt-5">
             <h3 className="text-sm font-bold text-deep-800">خيارات حالة الحضور</h3>
             <div className="mt-2 grid gap-2 md:grid-cols-2">
@@ -312,26 +324,43 @@ export default function TahfizSettingsPage() {
               <button type="button" onClick={addAttendanceStatus} disabled={!newAttendanceStatus.trim()} className="water-btn-outline rounded-xl px-4 text-sm disabled:opacity-40">إضافة</button>
             </div>
             <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-800 dark:bg-amber-900/20">
-              <h3 className="text-sm font-bold text-deep-800">تنبيه الغياب بعذر المتتالي</h3>
-              <label className="mt-3 block text-xs font-semibold text-deep-600">
-                نبّه بعد تجاوز هذا العدد
-                <input type="number" min={1} max={1000} value={excusedStreakLimit} onChange={event => setExcusedStreakLimit(Math.max(1, Number(event.target.value) || 1))} className="surface-field mt-1.5 w-full rounded-xl px-4 py-2.5 text-sm font-normal" />
-              </label>
-              <fieldset className="mt-4">
-                <legend className="text-xs font-semibold text-deep-600">الحالات التي تعيد العداد إلى الصفر</legend>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {attendanceStatuses.filter(status => status !== 'غياب بعذر').map(status => {
-                    const checked = excusedResetStatuses.includes(status)
-                    return (
-                      <label key={status} className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-xs ${checked ? 'border-cyan-400 bg-cyan-50 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-200' : 'border-water-200 bg-white/50 text-deep-600 dark:bg-slate-800/50'}`}>
-                        <input type="checkbox" checked={checked} onChange={() => setExcusedResetStatuses(current => checked ? current.filter(item => item !== status) : [...current, status])} className="accent-cyan-600" />
-                        {status}
-                      </label>
-                    )
-                  })}
-                </div>
-              </fieldset>
-              <p className="mt-3 text-[11px] leading-5 text-deep-500">غياب بعذر يزيد العداد، والحالات المحددة تصفّره، وبقية الحالات لا تغيّره.</p>
+              <FeatureToggle
+                enabled={streakAlertEnabled}
+                onChange={setStreakAlertEnabled}
+                title="تنبيه تكرار حالة حضور متتالية"
+                description="اختر أي حالة وحدّ التنبيه وطريقة تصفير العداد."
+              />
+              {streakAlertEnabled && <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <label className="block text-xs font-semibold text-deep-600">
+                  الحالة التي يتم عدّها
+                  <select value={streakStatus} onChange={event => {
+                    const next = event.target.value
+                    setStreakStatus(next)
+                    setExcusedResetStatuses(current => current.filter(status => status !== next))
+                  }} className="surface-field mt-1.5 w-full rounded-xl px-4 py-2.5 text-sm font-normal">
+                    {attendanceStatuses.map(status => <option key={status} value={status}>{status}</option>)}
+                  </select>
+                </label>
+                <label className="block text-xs font-semibold text-deep-600">
+                  نبّه بعد تجاوز هذا العدد
+                  <input type="number" min={1} max={1000} value={excusedStreakLimit} onChange={event => setExcusedStreakLimit(Math.max(1, Number(event.target.value) || 1))} className="surface-field mt-1.5 w-full rounded-xl px-4 py-2.5 text-sm font-normal" />
+                </label>
+                <fieldset className="md:col-span-2">
+                  <legend className="text-xs font-semibold text-deep-600">الحالات التي تعيد العداد إلى الصفر</legend>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {attendanceStatuses.filter(status => status !== streakStatus).map(status => {
+                      const checked = excusedResetStatuses.includes(status)
+                      return (
+                        <label key={status} className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-xs ${checked ? 'border-cyan-400 bg-cyan-50 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-200' : 'border-water-200 bg-white/50 text-deep-600 dark:bg-slate-800/50'}`}>
+                          <input type="checkbox" checked={checked} onChange={() => setExcusedResetStatuses(current => checked ? current.filter(item => item !== status) : [...current, status])} className="accent-cyan-600" />
+                          {status}
+                        </label>
+                      )
+                    })}
+                  </div>
+                </fieldset>
+                <p className="text-[11px] leading-5 text-deep-500 md:col-span-2">حالة «{streakStatus}» تزيد العداد، والحالات المحددة تصفّره، وبقية الحالات لا تغيّره.</p>
+              </div>}
             </div>
           </div>
         </section>
@@ -382,13 +411,12 @@ export default function TahfizSettingsPage() {
         </section>
 
         <section className="glass-card rounded-2xl p-5">
-          <h2 className="font-bold text-deep-900">تكامل WhatSend</h2>
-          <p className="mt-1 text-xs text-deep-500">اترك المفتاح فارغاً للاحتفاظ بالمفتاح المحفوظ حالياً.</p>
-          <div className="mt-4 grid gap-4">
+          <FeatureToggle enabled={whatsendEnabled} onChange={setWhatsendEnabled} title="تكامل WhatSend" description="إرسال الإنذارات وتحميل مجموعات واتساب. إيقافه يحتفظ بالإعدادات." />
+          {whatsendEnabled && <div className="mt-4 grid gap-4">
             <input value={whatsendApiUrl} onChange={event => setWhatsendApiUrl(event.target.value)} dir="ltr" placeholder="Send API URL" className="surface-field rounded-xl px-4 py-2.5" />
             <input value={whatsendGroupsUrl} onChange={event => setWhatsendGroupsUrl(event.target.value)} dir="ltr" placeholder="Groups API URL (اختياري)" className="surface-field rounded-xl px-4 py-2.5" />
             <input type="password" value={whatsendApiKey} onChange={event => setWhatsendApiKey(event.target.value)} dir="ltr" placeholder={settings.whatsend_api_key_configured ? 'المفتاح محفوظ — اكتب بديلاً لتغييره' : 'API key'} className="surface-field rounded-xl px-4 py-2.5" />
-          </div>
+          </div>}
         </section>
 
         <div className="sticky bottom-20 z-20 flex justify-end md:bottom-4">
@@ -397,6 +425,20 @@ export default function TahfizSettingsPage() {
           </button>
         </div>
       </form>
+    </div>
+  )
+}
+
+function FeatureToggle({ enabled, onChange, title, description }: { enabled: boolean; onChange(value: boolean): void; title: string; description: string }) {
+  return (
+    <div className={`flex items-center justify-between gap-4 rounded-xl border p-4 ${enabled ? 'border-cyan-300 bg-cyan-50/60 dark:border-cyan-700 dark:bg-cyan-900/20' : 'border-water-200 bg-white/35 dark:bg-slate-800/35'}`}>
+      <span>
+        <span className="block text-sm font-bold text-deep-800">{title}</span>
+        <span className="mt-1 block text-xs text-deep-500">{description}</span>
+      </span>
+      <button type="button" role="switch" aria-checked={enabled} onClick={() => onChange(!enabled)} className={`relative h-7 w-12 shrink-0 rounded-full transition ${enabled ? 'bg-cyan-600' : 'bg-slate-300 dark:bg-slate-600'}`}>
+        <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition ${enabled ? 'right-6' : 'right-1'}`} />
+      </button>
     </div>
   )
 }

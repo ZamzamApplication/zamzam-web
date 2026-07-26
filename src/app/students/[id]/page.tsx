@@ -75,10 +75,10 @@ export default function StudentProfilePage() {
           ))}
         </div>
 
-        <div className={`mt-4 rounded-xl border p-4 ${profile.attendance.excused_streak > profile.attendance.excused_streak_limit ? 'border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20' : 'border-water-200 bg-water-50/50 dark:bg-slate-800/40'}`}>
-          <p className="text-sm font-bold text-deep-800">سلسلة الغياب بعذر الحالية: {profile.attendance.excused_streak}</p>
-          <p className="mt-1 text-xs text-deep-500">حد التنبيه المضبوط: أكثر من {profile.attendance.excused_streak_limit}</p>
-        </div>
+        {profile.attendance.streak_alert_enabled && <div className={`mt-4 rounded-xl border p-4 ${profile.attendance.streak > profile.attendance.streak_limit ? 'border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20' : 'border-water-200 bg-water-50/50 dark:bg-slate-800/40'}`}>
+          <p className="text-sm font-bold text-deep-800">سلسلة «{profile.attendance.streak_status}» الحالية: {profile.attendance.streak}</p>
+          <p className="mt-1 text-xs text-deep-500">حد التنبيه المضبوط: أكثر من {profile.attendance.streak_limit}</p>
+        </div>}
       </section>
 
       <div className="grid gap-5 lg:grid-cols-2">

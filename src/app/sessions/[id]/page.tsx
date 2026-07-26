@@ -658,6 +658,12 @@ export default function SessionAttendancePage() {
     if (attendanceSaved && progressSaved && pendingUpdates.current.size === 0) router.push(href)
   }
 
+  const handleSaveAll = async () => {
+    if (flushTimer.current) clearTimeout(flushTimer.current)
+    const attendanceSaved = await flushUpdates()
+    if (attendanceSaved) await saveProgressDrafts()
+  }
+
   const handleConfirm = async () => {
     if (!data) return
     try {
@@ -796,6 +802,16 @@ export default function SessionAttendancePage() {
           </div>
         </div>
         <div className="flex gap-3 flex-wrap">
+          {!data.is_confirmed && (
+            <button
+              type="button"
+              onClick={handleSaveAll}
+              disabled={saveState === 'saving' || progressSaving}
+              className="water-btn px-4 py-2 rounded-xl text-sm font-semibold text-white flex-1 md:flex-none disabled:opacity-50"
+            >
+              {saveState === 'saving' || progressSaving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
+            </button>
+          )}
           <button
             onClick={() => navigateAfterSave('/sessions')}
             className="water-btn-outline px-4 py-2 rounded-xl text-sm flex-1 md:flex-none"
@@ -977,7 +993,7 @@ export default function SessionAttendancePage() {
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-200">!</span>
             <span className="min-w-0">
               <span className="block font-bold text-deep-900">{alert.student_name}</span>
-              <span className="mt-1 block text-xs leading-5 text-deep-500">تجاوز حد الغياب بعذر المتتالي: {alert.streak} مرات (الحد {alert.limit}). اضغط لفتح ملف الطالب.</span>
+              <span className="mt-1 block text-xs leading-5 text-deep-500">تجاوز حد «{alert.status}» المتتالي: {alert.streak} مرات (الحد {alert.limit}). اضغط لفتح ملف الطالب.</span>
             </span>
           </button>
         ))}

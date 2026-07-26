@@ -19,6 +19,11 @@ export interface User {
     attendance_status_colors?: Record<string, string>
     excused_absence_streak_limit?: number
     excused_absence_reset_statuses?: string[]
+    attendance_streak_alert_enabled?: boolean
+    attendance_streak_status?: string
+    attendance_streak_limit?: number
+    attendance_streak_reset_statuses?: string[]
+    whatsend_enabled?: boolean
     progress_tracking_enabled?: boolean
   } | null
 }
@@ -85,10 +90,15 @@ export interface Circle {
   attendance_status_colors?: Record<string, string>
   excused_absence_streak_limit?: number
   excused_absence_reset_statuses?: string[]
+  attendance_streak_alert_enabled?: boolean
+  attendance_streak_status?: string
+  attendance_streak_limit?: number
+  attendance_streak_reset_statuses?: string[]
   contact_phone?: string
   whatsend_api_url?: string
   whatsend_groups_url?: string
   whatsend_api_key_configured?: boolean
+  whatsend_enabled?: boolean
   progress_tracking_enabled?: boolean
 }
 
@@ -202,6 +212,7 @@ export interface AttendanceThresholdAlert {
   student_name: string
   streak: number
   limit: number
+  status: string
 }
 
 export interface StudentProfile extends StudentInfo {
@@ -213,8 +224,10 @@ export interface StudentProfile extends StudentInfo {
     absent: number
     excused: number
     not_applicable: number
-    excused_streak: number
-    excused_streak_limit: number
+    streak: number
+    streak_limit: number
+    streak_status: string
+    streak_alert_enabled: boolean
   }
   progress: {
     enabled: boolean
