@@ -44,6 +44,7 @@ function StudentRow({
   onProgressSaveNext,
   attendanceStatuses,
   attendanceStatusColors,
+  sheikhSelectionEnabled,
 }: {
   student: { id: number; name: string; status: string; notes?: string; sheikh_id: number | null; profile_pic?: string | null }
   circleSheikhs: { id: number; name: string }[]
@@ -64,6 +65,7 @@ function StudentRow({
   onProgressSaveNext: () => void
   attendanceStatuses: string[]
   attendanceStatusColors: Record<string, string>
+  sheikhSelectionEnabled: boolean
 }) {
   const [notes, setNotes] = useState(student.notes || '')
 
@@ -77,7 +79,7 @@ function StudentRow({
   }, [student.notes])
 
   return (
-    <div id={`student-row-${student.id}`} className="py-3 px-3 md:grid md:grid-cols-[36px_1fr_90px_minmax(145px,180px)_1fr] md:gap-2 md:items-center md:py-2.5 md:px-4 hover:bg-water-100/30 rounded-xl transition">
+    <div id={`student-row-${student.id}`} className={`py-3 px-3 md:grid ${sheikhSelectionEnabled ? 'md:grid-cols-[36px_1fr_90px_minmax(145px,180px)_1fr]' : 'md:grid-cols-[36px_1fr_110px_1fr]'} md:gap-2 md:items-center md:py-2.5 md:px-4 hover:bg-water-100/30 rounded-xl transition`}>
       <div className="flex items-center gap-3 md:contents">
         {student.profile_pic ? (
           <img
@@ -98,7 +100,7 @@ function StudentRow({
         </div>
       </div>
       <div className="grid grid-cols-1 gap-2 mt-3 md:contents">
-        <label className="block md:contents">
+        {sheikhSelectionEnabled && <label className="block md:contents">
           <span className="block md:hidden text-[11px] text-deep-500 mb-1">الحالة</span>
           <AttendanceStatusControl
             value={student.status}
@@ -108,7 +110,7 @@ function StudentRow({
             colorKey={attendanceStatusColors[student.status]}
             onChange={onStatusChange}
           />
-        </label>
+        </label>}
         <label className="block md:contents">
           <span className="block md:hidden text-[11px] text-deep-500 mb-1">الشيخ</span>
       <select
@@ -172,6 +174,7 @@ function SheikhAccordion({
   onProgressSaveNext,
   attendanceStatuses,
   attendanceStatusColors,
+  sheikhSelectionEnabled,
 }: {
   group: SheikhGroup
   circleSheikhs: { id: number; name: string }[]
@@ -194,6 +197,7 @@ function SheikhAccordion({
   onProgressSaveNext: (studentId: number) => void
   attendanceStatuses: string[]
   attendanceStatusColors: Record<string, string>
+  sheikhSelectionEnabled: boolean
 }) {
 
   return (
@@ -210,11 +214,11 @@ function SheikhAccordion({
 
       {expanded && (
         <div className="divide-y divide-water-200/30">
-          <div className="hidden md:grid grid-cols-[36px_1fr_90px_120px_1fr] gap-2 items-center py-2 px-4 text-xs font-medium text-deep-500 bg-water-100/20">
+          <div className={`hidden md:grid ${sheikhSelectionEnabled ? 'grid-cols-[36px_1fr_90px_120px_1fr]' : 'grid-cols-[36px_1fr_110px_1fr]'} gap-2 items-center py-2 px-4 text-xs font-medium text-deep-500 bg-water-100/20`}>
             <span></span>
             <span>الطالب</span>
             <span className="text-center">الحالة</span>
-            <span className="text-center">الشيخ</span>
+            {sheikhSelectionEnabled && <span className="text-center">الشيخ</span>}
             <span>ملاحظات</span>
           </div>
           {group.students.map((student) => (
@@ -239,6 +243,7 @@ function SheikhAccordion({
               onProgressSaveNext={() => onProgressSaveNext(student.id)}
               attendanceStatuses={attendanceStatuses}
               attendanceStatusColors={attendanceStatusColors}
+              sheikhSelectionEnabled={sheikhSelectionEnabled}
             />
           ))}
         </div>
@@ -279,6 +284,7 @@ export default function SessionAttendancePage() {
   const [attendanceStatusColors, setAttendanceStatusColors] = useState<Record<string, string>>({
     'حاضر': 'green', 'غياب': 'slate', 'غياب بعذر': 'amber', 'لا ينطبق': 'sky',
   })
+  const [sheikhSelectionEnabled, setSheikhSelectionEnabled] = useState(true)
   const [progressDrafts, setProgressDrafts] = useState<ProgressDraftMap>({})
   const [persistedProgressDrafts, setPersistedProgressDrafts] = useState<ProgressDraftMap>({})
   const [previousProgressDrafts, setPreviousProgressDrafts] = useState<ProgressDraftMap>({})
@@ -346,6 +352,7 @@ export default function SessionAttendancePage() {
       setAttendanceStatusColors(currentUser.tahfiz?.attendance_status_colors || {
         'حاضر': 'green', 'غياب': 'slate', 'غياب بعذر': 'amber', 'لا ينطبق': 'sky',
       })
+      setSheikhSelectionEnabled(currentUser.tahfiz?.attendance_sheikh_selection_enabled ?? true)
       const drafts: ProgressDraftMap = Object.fromEntries((enabled ? progress.entries : []).map((entry) => [progressDraftKey(entry.student_id, entry.category), progressEntryToInput(entry)]))
       const previousDrafts: ProgressDraftMap = Object.fromEntries((progress.previous_entries || []).map((entry) => [progressDraftKey(entry.student_id, entry.category), progressEntryToInput(entry)]))
       const requiredKeys = new Set<string>()
@@ -954,6 +961,7 @@ export default function SessionAttendancePage() {
             onProgressSaveNext={saveProgressAndOpenNext}
             attendanceStatuses={attendanceStatuses}
             attendanceStatusColors={attendanceStatusColors}
+            sheikhSelectionEnabled={sheikhSelectionEnabled}
           />
         ))}
         {visibleGroups.length === 0 && (

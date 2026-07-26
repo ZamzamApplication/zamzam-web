@@ -27,6 +27,7 @@ export default function TahfizSettingsPage() {
   const [weekStartDay, setWeekStartDay] = useState(6)
   const [monthStartDay, setMonthStartDay] = useState(1)
   const [progressTrackingEnabled, setProgressTrackingEnabled] = useState(false)
+  const [sheikhSelectionEnabled, setSheikhSelectionEnabled] = useState(true)
   const [attendanceStatuses, setAttendanceStatuses] = useState<string[]>([])
   const [attendanceStatusColors, setAttendanceStatusColors] = useState<Record<string, string>>({})
   const [excusedStreakLimit, setExcusedStreakLimit] = useState(3)
@@ -66,6 +67,7 @@ export default function TahfizSettingsPage() {
         setWeekStartDay(data.week_start_day ?? 6)
         setMonthStartDay(data.month_start_day ?? 1)
         setProgressTrackingEnabled(Boolean(data.progress_tracking_enabled))
+        setSheikhSelectionEnabled(data.attendance_sheikh_selection_enabled ?? true)
         setAttendanceStatuses(configuredAttendanceStatuses(data.attendance_statuses))
         setAttendanceStatusColors(data.attendance_status_colors || {
           'حاضر': 'green', 'غياب': 'slate', 'غياب بعذر': 'amber', 'لا ينطبق': 'sky',
@@ -194,6 +196,7 @@ export default function TahfizSettingsPage() {
         attendance_streak_limit: excusedStreakLimit,
         attendance_streak_reset_statuses: excusedResetStatuses,
         progress_tracking_enabled: progressTrackingEnabled,
+        attendance_sheikh_selection_enabled: sheikhSelectionEnabled,
         whatsend_enabled: whatsendEnabled,
         whatsend_api_url: whatsendApiUrl,
         whatsend_groups_url: whatsendGroupsUrl,
@@ -226,14 +229,19 @@ export default function TahfizSettingsPage() {
         </span>
         <h1 className="mt-3 text-2xl font-bold text-deep-900">إعدادات التحفيظ</h1>
         <p className="mt-2 text-sm text-deep-500">إدارة هوية التحفيظ، نظام الحضور، بداية الفترات والتكاملات.</p>
+        <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <SettingSummary label="متابعة القرآن" enabled={progressTrackingEnabled} />
+          <SettingSummary label="اختيار الشيخ في الحضور" enabled={sheikhSelectionEnabled} />
+          <SettingSummary label="تنبيهات التكرار" enabled={streakAlertEnabled} />
+          <SettingSummary label="تكامل WhatSend" enabled={whatsendEnabled} />
+        </div>
       </section>
 
       {error && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/25 dark:text-red-200">{error}</div>}
       {notice && <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/25 dark:text-emerald-200">{notice}</div>}
 
       <form onSubmit={save} className="space-y-5">
-        <section className="glass-card rounded-2xl p-5">
-          <h2 className="font-bold text-deep-900">بيانات التحفيظ</h2>
+        <SettingsSection title="بيانات التحفيظ" description="الاسم وبيانات التواصل الظاهرة للمستخدمين." defaultOpen>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <label className="text-sm font-semibold text-deep-700">
               اسم التحفيظ
@@ -248,10 +256,9 @@ export default function TahfizSettingsPage() {
               <input value={description} onChange={event => setDescription(event.target.value)} className="surface-field mt-1.5 w-full rounded-xl px-4 py-2.5 font-normal" />
             </label>
           </div>
-        </section>
+        </SettingsSection>
 
-        <section className="glass-card rounded-2xl p-5">
-          <h2 className="font-bold text-deep-900">الفترات والإنذارات</h2>
+        <SettingsSection title="الفترات والإنذارات" description="بداية نطاقات التقارير والحد العام للإنذارات.">
           <div className="mt-4 grid gap-4 md:grid-cols-3">
             <label className="text-sm font-semibold text-deep-700">
               بداية الأسبوع
@@ -271,16 +278,23 @@ export default function TahfizSettingsPage() {
             </label>
           </div>
           <p className="mt-3 text-xs text-deep-500">بداية الشهر تتحكم في نطاقات سجل الحضور والتقارير الشهرية.</p>
-        </section>
+        </SettingsSection>
 
-        <section className="glass-card rounded-2xl p-5">
-          <h2 className="font-bold text-deep-900">الحضور ومتابعة القرآن</h2>
+        <SettingsSection title="الحضور ومتابعة القرآن" description="الحالات وترتيبها والميزات التي تظهر أثناء تسجيل الحلقة." defaultOpen>
           <FeatureToggle
             enabled={progressTrackingEnabled}
             onChange={setProgressTrackingEnabled}
             title="متابعة الحفظ والمراجعة"
             description="إيقافها يخفي الميزة دون حذف البيانات السابقة."
           />
+          <div className="mt-3">
+            <FeatureToggle
+              enabled={sheikhSelectionEnabled}
+              onChange={setSheikhSelectionEnabled}
+              title="اختيار الشيخ أثناء تسجيل الحضور"
+              description="عند إيقافه يُخفى عمود الشيخ ويُستخدم الشيخ المرتبط بالطالب تلقائياً."
+            />
+          </div>
           <div className="mt-5">
             <h3 className="text-sm font-bold text-deep-800">خيارات حالة الحضور</h3>
             <div className="mt-2 grid gap-2">
@@ -363,10 +377,9 @@ export default function TahfizSettingsPage() {
               </div>}
             </div>
           </div>
-        </section>
+        </SettingsSection>
 
-        <section className="glass-card rounded-2xl p-5">
-          <h2 className="font-bold text-deep-900">دعوات الانضمام</h2>
+        <SettingsSection title="دعوات الانضمام" description="روابط مؤقتة لإضافة المديرين والشيوخ.">
           <p className="mt-1 text-xs text-deep-500">أنشئ روابط مؤقتة، وتابع المقبول والمنتهي، أو ألغِ وأعد إرسال الدعوات.</p>
           <div className="mt-4 grid gap-3 md:grid-cols-4">
             <select value={invitationRole} onChange={event => { setInvitationRole(event.target.value as 'admin' | 'sheikh'); setInvitationSheikhId(null) }} className="surface-field rounded-xl px-3 py-2.5 text-sm">
@@ -408,16 +421,16 @@ export default function TahfizSettingsPage() {
               </div>
             ))}
           </div>
-        </section>
+        </SettingsSection>
 
-        <section className="glass-card rounded-2xl p-5">
+        <SettingsSection title="التكاملات" description="خدمات خارجية اختيارية؛ تبقى إعداداتها محفوظة عند إيقافها.">
           <FeatureToggle enabled={whatsendEnabled} onChange={setWhatsendEnabled} title="تكامل WhatSend" description="إرسال الإنذارات وتحميل مجموعات واتساب. إيقافه يحتفظ بالإعدادات." />
           {whatsendEnabled && <div className="mt-4 grid gap-4">
             <input value={whatsendApiUrl} onChange={event => setWhatsendApiUrl(event.target.value)} dir="ltr" placeholder="Send API URL" className="surface-field rounded-xl px-4 py-2.5" />
             <input value={whatsendGroupsUrl} onChange={event => setWhatsendGroupsUrl(event.target.value)} dir="ltr" placeholder="Groups API URL (اختياري)" className="surface-field rounded-xl px-4 py-2.5" />
             <input type="password" value={whatsendApiKey} onChange={event => setWhatsendApiKey(event.target.value)} dir="ltr" placeholder={settings.whatsend_api_key_configured ? 'المفتاح محفوظ — اكتب بديلاً لتغييره' : 'API key'} className="surface-field rounded-xl px-4 py-2.5" />
           </div>}
-        </section>
+        </SettingsSection>
 
         <div className="sticky bottom-40 z-20 flex justify-start md:bottom-4">
           <button type="submit" disabled={saving || !name.trim() || attendanceStatuses.length === 0} className="water-btn rounded-xl px-7 py-3 font-semibold text-white shadow-lg disabled:opacity-50">
@@ -425,6 +438,33 @@ export default function TahfizSettingsPage() {
           </button>
         </div>
       </form>
+    </div>
+  )
+}
+
+function SettingsSection({ title, description, defaultOpen = false, children }: { title: string; description: string; defaultOpen?: boolean; children: React.ReactNode }) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <details open={open} onToggle={event => setOpen(event.currentTarget.open)} className="group glass-card rounded-2xl">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5">
+        <span>
+          <span className="block font-bold text-deep-900">{title}</span>
+          <span className="mt-1 block text-xs font-normal text-deep-500">{description}</span>
+        </span>
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-water-100 text-lg text-deep-600 transition group-open:rotate-180">⌄</span>
+      </summary>
+      <div className="border-t border-water-200/60 px-5 pb-5 pt-4">{children}</div>
+    </details>
+  )
+}
+
+function SettingSummary({ label, enabled }: { label: string; enabled: boolean }) {
+  return (
+    <div className="flex items-center justify-between rounded-xl border border-water-200 bg-white/45 px-3 py-2 text-xs dark:bg-slate-800/45">
+      <span className="font-semibold text-deep-700">{label}</span>
+      <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${enabled ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300'}`}>
+        {enabled ? 'مفعّل' : 'متوقف'}
+      </span>
     </div>
   )
 }
