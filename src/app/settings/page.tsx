@@ -283,7 +283,7 @@ export default function TahfizSettingsPage() {
           />
           <div className="mt-5">
             <h3 className="text-sm font-bold text-deep-800">خيارات حالة الحضور</h3>
-            <div className="mt-2 grid gap-2 md:grid-cols-2">
+            <div className="mt-2 grid gap-2">
               {attendanceStatuses.map((status, index) => (
                 <div key={status} className="flex items-center gap-2 rounded-xl border border-water-200 bg-white/40 px-3 py-2">
                   <span className="grid h-6 w-6 place-items-center rounded-lg bg-cyan-50 text-xs font-bold text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300">{index + 1}</span>
