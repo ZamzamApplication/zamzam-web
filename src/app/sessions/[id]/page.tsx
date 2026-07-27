@@ -100,7 +100,7 @@ function StudentRow({
         </div>
       </div>
       <div className="grid grid-cols-1 gap-2 mt-3 md:contents">
-        {sheikhSelectionEnabled && <label className="block md:contents">
+        <label className="block md:contents">
           <span className="block md:hidden text-[11px] text-deep-500 mb-1">الحالة</span>
           <AttendanceStatusControl
             value={student.status}
@@ -110,8 +110,8 @@ function StudentRow({
             colorKey={attendanceStatusColors[student.status]}
             onChange={onStatusChange}
           />
-        </label>}
-        <label className="block md:contents">
+        </label>
+        {sheikhSelectionEnabled && <label className="block md:contents">
           <span className="block md:hidden text-[11px] text-deep-500 mb-1">الشيخ</span>
       <select
         value={student.sheikh_id ?? ''}
@@ -123,7 +123,7 @@ function StudentRow({
           <option key={sh.id} value={sh.id}>{sh.name}</option>
         ))}
       </select>
-        </label>
+        </label>}
         <label className="block md:contents">
           <span className="block md:hidden text-[11px] text-deep-500 mb-1">ملاحظات</span>
       <input
