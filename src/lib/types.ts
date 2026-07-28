@@ -252,9 +252,12 @@ export interface UserInfo {
 export interface CircleAttendanceRate {
   circle_id: number
   total_attendance_records: number
+  total_applicable_records?: number
+  status_counts: Record<string, number>
   present: number
   absent: number
   excused: number
+  not_applicable?: number
   attendance_rate: number
 }
 
@@ -310,6 +313,8 @@ export interface StudentStatsItem {
   profile_pic?: string | null
   sheikh_name: string
   total_sessions: number
+  total_applicable_sessions?: number
+  status_counts: Record<string, number>
   present: number
   excused: number
   absent: number

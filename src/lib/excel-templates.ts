@@ -85,10 +85,7 @@ export const DEFAULT_EXCEL_EXPORT_TEMPLATES: ExcelExportTemplates = {
       standardColumn('student', 'الطالب', 24),
       standardColumn('sheikh', 'الشيخ', 20),
       standardColumn('sessions', 'إجمالي الحلقات', 16),
-      standardColumn('present', 'حاضر', 14),
-      standardColumn('excused', 'غياب بعذر', 16),
-      standardColumn('absent', 'غائب', 14),
-      standardColumn('notApplicable', 'لا ينطبق', 16),
+      standardColumn('statuses', 'حالات الحضور', 14),
       standardColumn('rate', 'نسبة الحضور', 16),
     ],
   },
@@ -108,7 +105,12 @@ export const DEFAULT_EXCEL_EXPORT_TEMPLATES: ExcelExportTemplates = {
 export function configuredExcelExportTemplates(value?: Partial<ExcelExportTemplates> | null): ExcelExportTemplates {
   return Object.fromEntries(
     (Object.keys(DEFAULT_EXCEL_EXPORT_TEMPLATES) as ExcelTemplateKey[]).map((key) => {
-      const configured = value?.[key]?.columns
+      const storedColumns = value?.[key]?.columns
+      const legacyStatisticsIds = new Set(['present', 'excused', 'absent', 'notApplicable'])
+      const configured = key === 'statistics'
+        && Array.isArray(storedColumns)
+        ? storedColumns.filter((column) => !legacyStatisticsIds.has(column.id))
+        : storedColumns
       const configuredIds = new Set(
         Array.isArray(configured) ? configured.map((column) => column.id) : []
       )
@@ -184,6 +186,16 @@ export function applyExcelTemplate(
             label: column.show_header
               ? formatAttendanceDate(sourceColumn.dateValue, template.attendance_date_format)
               : '',
+            width: column.width,
+            groupId: column.id,
+            groupLabel: column.label,
+          }))
+      }
+      if (column.id === 'statuses') {
+        return source.columns
+          .filter((sourceColumn) => sourceColumn.id.startsWith('status_'))
+          .map((sourceColumn) => ({
+            ...sourceColumn,
             width: column.width,
             groupId: column.id,
             groupLabel: column.label,

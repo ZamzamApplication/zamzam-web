@@ -9,6 +9,7 @@ import { formatQuranRange } from '@/lib/quran'
 import { applyExcelTemplate, configuredExcelExportTemplates } from '@/lib/excel-templates'
 import type { Circle, CircleAttendanceRate, QuranProgressEntry, StudentStatsItem } from '@/lib/types'
 import ExcelPreviewModal, { type SpreadsheetSheet } from '@/components/ExcelPreviewModal'
+import { attendanceStatusColorClass } from '@/components/AttendanceStatusControl'
 import MonthSwitcher from '@/components/MonthSwitcher'
 import ScrollableTable from '@/components/ScrollableTable'
 
@@ -146,16 +147,28 @@ export default function ReportsPage() {
       || student.student_name.toLocaleLowerCase('ar').includes(normalizedStudentSearch)
     ))
     .sort((a, b) => a.student_name.localeCompare(b.student_name, 'ar', { sensitivity: 'base' })) || []
-  const selectedCircleName = circles.find((circle) => circle.id === selectedCircle)?.name || ''
-  const monthStartDay = circles.find((circle) => circle.id === selectedCircle)?.month_start_day ?? 1
+  const selectedTahfiz = circles.find((circle) => circle.id === selectedCircle)
+  const selectedCircleName = selectedTahfiz?.name || ''
+  const monthStartDay = selectedTahfiz?.month_start_day ?? 1
+  const configuredStatuses = selectedTahfiz?.attendance_statuses || []
+  const observedStatuses = Object.keys(circleRate?.status_counts || {})
+  const attendanceStatuses = [
+    ...configuredStatuses,
+    ...observedStatuses.filter((status) => !configuredStatuses.includes(status)),
+  ]
+  const attendanceStatusColors = selectedTahfiz?.attendance_status_colors || {}
+  const statusClass = (status: string) => attendanceStatusColorClass(attendanceStatusColors[status])
   const periodLabel = periodMode === 'month'
     ? formatMonthPeriod(selectedMonth, monthStartDay)
     : 'كل الوقت'
 
   const openExcelPreview = () => {
     if (!circleRate) return
-    const selectedTahfiz = circles.find((circle) => circle.id === selectedCircle)
     const templates = configuredExcelExportTemplates(selectedTahfiz?.excel_export_templates)
+    const statusColumns = attendanceStatuses.map((status, index) => ({
+      id: `status_${index}`,
+      label: status,
+    }))
     const sheets: SpreadsheetSheet[] = [
       applyExcelTemplate({
         name: 'إحصائيات الطلاب',
@@ -163,22 +176,19 @@ export default function ReportsPage() {
           { id: 'student', label: 'الطالب' },
           { id: 'sheikh', label: 'الشيخ' },
           { id: 'sessions', label: 'إجمالي الحلقات' },
-          { id: 'present', label: 'حاضر' },
-          { id: 'excused', label: 'غياب بعذر' },
-          { id: 'absent', label: 'غائب' },
-          { id: 'notApplicable', label: 'لا ينطبق' },
+          ...statusColumns,
           { id: 'rate', label: 'نسبة الحضور' },
         ],
-        rows: sortedStudents.map((student) => ({
-          student: student.student_name,
-          sheikh: student.sheikh_name,
-          sessions: student.total_sessions,
-          present: student.present,
-          excused: student.excused,
-          absent: student.absent,
-          notApplicable: student.not_applicable,
-          rate: `${student.attendance_rate}%`,
-        })),
+        rows: sortedStudents.map((student) => Object.fromEntries([
+          ['student', student.student_name],
+          ['sheikh', student.sheikh_name],
+          ['sessions', student.total_sessions],
+          ...attendanceStatuses.map((status, index) => [
+            `status_${index}`,
+            student.status_counts?.[status] || 0,
+          ]),
+          ['rate', `${student.attendance_rate}%`],
+        ])),
       }, templates.statistics),
     ]
     if (progressReport.enabled) {
@@ -211,9 +221,23 @@ export default function ReportsPage() {
           <button type="button" onClick={() => void load()} className="mr-2 font-semibold underline">إعادة المحاولة</button>
         </div>
       )}
-      <h1 className="text-2xl font-bold text-deep-800 mb-6">التقارير</h1>
-
-      <p className="text-sm text-deep-500 mb-5">إحصائيات التحفيظ بالكامل{selectedCircleName ? ` — ${selectedCircleName}` : ''}</p>
+      <section className="mb-6 overflow-hidden rounded-3xl border border-cyan-200/70 bg-gradient-to-bl from-cyan-50/90 via-white/70 to-water-100/60 p-5 shadow-sm dark:border-cyan-900 dark:from-cyan-950/50 dark:via-slate-900/60 dark:to-slate-900/40 sm:p-7">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold tracking-wide text-cyan-700 dark:text-cyan-300">لوحة التحليل</p>
+            <h1 className="mt-1 text-2xl font-black text-deep-900 sm:text-3xl">التقارير</h1>
+            <p className="mt-2 text-sm text-deep-500">
+              {selectedCircleName ? `${selectedCircleName} — ` : ''}{periodLabel}
+            </p>
+          </div>
+          {circleRate && (
+            <div className="rounded-2xl border border-cyan-200 bg-white/80 px-5 py-3 text-center shadow-sm dark:border-cyan-800 dark:bg-slate-900/70">
+              <p className="text-3xl font-black text-cyan-700 dark:text-cyan-300">{circleRate.attendance_rate}%</p>
+              <p className="text-xs text-deep-500">نسبة الحضور</p>
+            </div>
+          )}
+        </div>
+      </section>
 
       {selectedCircle && (
         <div className="glass-card rounded-2xl p-5 mb-6">
@@ -256,29 +280,21 @@ export default function ReportsPage() {
               <h2 className="text-lg font-bold text-deep-800">إحصائيات الحضور</h2>
               <p className="text-xs text-deep-500 mt-1">{periodLabel}</p>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center p-3 bg-water-100/30 rounded-xl">
-                <div className="text-2xl font-bold text-cyan-700 dark:text-cyan-400">{circleRate.total_attendance_records}</div>
-                <div className="text-xs text-deep-500 mt-1">إجمالي السجلات</div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              <div className="rounded-2xl border border-cyan-200 bg-cyan-50/70 p-4 text-center text-cyan-800 dark:border-cyan-800 dark:bg-cyan-950/30 dark:text-cyan-200">
+                <div className="text-2xl font-black">{circleRate.total_attendance_records}</div>
+                <div className="mt-1 text-xs opacity-75">إجمالي السجلات</div>
               </div>
-              <div className="text-center p-3 bg-green-100/30 dark:bg-green-900/30 rounded-xl">
-                <div className="text-2xl font-bold text-green-700 dark:text-green-400">{circleRate.present}</div>
-                <div className="text-xs text-deep-500 mt-1">حاضر</div>
+              {attendanceStatuses.map((status) => (
+                <div key={status} className={`rounded-2xl border p-4 text-center ${statusClass(status)}`}>
+                  <div className="text-2xl font-black">{circleRate.status_counts?.[status] || 0}</div>
+                  <div className="mt-1 truncate text-xs font-semibold">{status}</div>
+                </div>
+              ))}
+              <div className="rounded-2xl border border-violet-200 bg-violet-50/70 p-4 text-center text-violet-800 dark:border-violet-800 dark:bg-violet-950/30 dark:text-violet-200">
+                <div className="text-2xl font-black">{circleRate.attendance_rate}%</div>
+                <div className="mt-1 text-xs opacity-75">نسبة الحضور</div>
               </div>
-              <div className="text-center p-3 bg-red-100/30 dark:bg-red-900/30 rounded-xl">
-                <div className="text-2xl font-bold text-red-600 dark:text-red-400">{circleRate.absent}</div>
-                <div className="text-xs text-deep-500 mt-1">غائب</div>
-              </div>
-              <div className="text-center p-3 bg-yellow-100/30 dark:bg-yellow-900/30 rounded-xl">
-                <div className="text-2xl font-bold text-yellow-700 dark:text-yellow-400">{circleRate.excused}</div>
-                <div className="text-xs text-deep-500 mt-1">غياب بعذر</div>
-              </div>
-            </div>
-            <div className="mt-4 text-center">
-              <div className="text-3xl font-bold text-cyan-700 dark:text-cyan-400">
-                {circleRate.attendance_rate}%
-              </div>
-              <div className="text-xs text-deep-500 mt-1">نسبة الحضور</div>
             </div>
           </div>
 
@@ -308,19 +324,13 @@ export default function ReportsPage() {
                       </div>
                       <span className="text-xl font-bold text-cyan-700 dark:text-cyan-400 shrink-0">{s.attendance_rate}%</span>
                     </div>
-                    <div className="grid grid-cols-3 gap-2 text-center">
-                      <div className="rounded-lg bg-green-50/80 dark:bg-green-900/25 p-2">
-                        <div className="font-bold text-green-700 dark:text-green-400">{s.present}</div>
-                        <div className="text-[11px] text-deep-500">حضر</div>
-                      </div>
-                      <div className="rounded-lg bg-yellow-50/80 dark:bg-yellow-900/25 p-2">
-                        <div className="font-bold text-yellow-700 dark:text-yellow-400">{s.excused}</div>
-                        <div className="text-[11px] text-deep-500">بعذر</div>
-                      </div>
-                      <div className="rounded-lg bg-red-50/80 dark:bg-red-900/25 p-2">
-                        <div className="font-bold text-red-600 dark:text-red-400">{s.absent}</div>
-                        <div className="text-[11px] text-deep-500">غاب</div>
-                      </div>
+                    <div className="grid grid-cols-2 gap-2 text-center">
+                      {attendanceStatuses.map((status) => (
+                        <div key={status} className={`rounded-lg border p-2 ${statusClass(status)}`}>
+                          <div className="font-bold">{s.status_counts?.[status] || 0}</div>
+                          <div className="truncate text-[11px] font-medium">{status}</div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))}
@@ -331,9 +341,9 @@ export default function ReportsPage() {
                     <tr className="border-b border-water-200/30 text-deep-600">
                       <th className="text-right py-2 px-3">الطالب</th>
                       <th className="text-center py-2 px-3">الشيخ</th>
-                      <th className="text-center py-2 px-3">حضر</th>
-                      <th className="text-center py-2 px-3">بعذر</th>
-                      <th className="text-center py-2 px-3">غاب</th>
+                      {attendanceStatuses.map((status) => (
+                        <th key={status} className="whitespace-nowrap px-3 py-2 text-center">{status}</th>
+                      ))}
                       <th className="text-center py-2 px-3">النسبة</th>
                     </tr>
                   </thead>
@@ -347,9 +357,13 @@ export default function ReportsPage() {
                             </div>
                           </td>
                           <td className="py-2 px-3 text-center text-deep-500">{s.sheikh_name}</td>
-                          <td className="py-2 px-3 text-center text-green-700 dark:text-green-400">{s.present}</td>
-                          <td className="py-2 px-3 text-center text-yellow-700 dark:text-yellow-400">{s.excused}</td>
-                          <td className="py-2 px-3 text-center text-red-600 dark:text-red-400">{s.absent}</td>
+                          {attendanceStatuses.map((status) => (
+                            <td key={status} className="px-3 py-2 text-center">
+                              <span className={`inline-flex min-w-8 justify-center rounded-lg border px-2 py-1 text-xs font-bold ${statusClass(status)}`}>
+                                {s.status_counts?.[status] || 0}
+                              </span>
+                            </td>
+                          ))}
                           <td className="py-2 px-3 text-center font-bold text-cyan-700 dark:text-cyan-400">
                             {s.attendance_rate}%
                           </td>
