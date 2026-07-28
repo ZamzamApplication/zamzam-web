@@ -26,6 +26,10 @@ export interface SpreadsheetSheet {
   cellFontSize?: number
   cellBold?: boolean
   cellFontColor?: string
+  dateFontFamily?: string
+  dateFontSize?: number
+  dateBold?: boolean
+  dateFontColor?: string
 }
 
 function safeSheetName(name: string, index: number): string {
@@ -59,6 +63,13 @@ export default function ExcelPreviewModal({
     fontFamily: activeSheet.cellFontFamily || 'Arial',
     fontSize: `${activeSheet.cellFontSize || 11}pt`,
     fontWeight: activeSheet.cellBold ? 700 : 400,
+  }
+  const dateStyle = {
+    ...headerStyle,
+    color: activeSheet.dateFontColor || '#000000',
+    fontFamily: activeSheet.dateFontFamily || 'Arial',
+    fontSize: `${activeSheet.dateFontSize || 12}pt`,
+    fontWeight: activeSheet.dateBold === false ? 400 : 700,
   }
 
   const exportWorkbook = async () => {
@@ -134,6 +145,17 @@ export default function ExcelPreviewModal({
               fgColor: { argb: `FF${(sheet.headerBackgroundColor || '#FFFFFF').slice(1).toUpperCase()}` },
             }
             cell.alignment = { horizontal: 'center', vertical: 'middle' }
+          })
+        }
+        if (hierarchical) {
+          sheet.columns.forEach((column, columnIndex) => {
+            if (!column.dateValue) return
+            worksheet.getCell(2, columnIndex + 1).font = {
+              name: sheet.dateFontFamily || 'Arial',
+              size: sheet.dateFontSize || 12,
+              bold: sheet.dateBold ?? true,
+              color: { argb: `FF${(sheet.dateFontColor || '#000000').slice(1).toUpperCase()}` },
+            }
           })
         }
         for (let rowNumber = 1; rowNumber <= worksheet.rowCount; rowNumber++) {
@@ -241,7 +263,7 @@ export default function ExcelPreviewModal({
               {hierarchical && (
                 <tr>
                   {activeSheet.columns.filter((column) => column.groupId).map((column) => (
-                    <th key={column.id} className="border border-slate-500 p-2" style={{ ...headerStyle, minWidth: `${(column.width ?? 18) * 8}px` }}>
+                    <th key={column.id} className="border border-slate-500 p-2" style={{ ...(column.dateValue ? dateStyle : headerStyle), minWidth: `${(column.width ?? 18) * 8}px` }}>
                       {column.label}
                     </th>
                   ))}

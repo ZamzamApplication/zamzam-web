@@ -38,6 +38,10 @@ export interface ExcelExportTemplate {
   cell_font_size: number
   cell_bold: boolean
   cell_font_color: string
+  date_font_family: string
+  date_font_size: number
+  date_bold: boolean
+  date_font_color: string
   attendance_date_format: AttendanceDateFormat
 }
 
@@ -57,6 +61,10 @@ const DEFAULT_TEMPLATE_STYLE = {
   cell_font_size: 11,
   cell_bold: false,
   cell_font_color: '#000000',
+  date_font_family: 'Arial',
+  date_font_size: 12,
+  date_bold: true,
+  date_font_color: '#000000',
   attendance_date_format: 'weekday_day_month_year' as AttendanceDateFormat,
 }
 
@@ -119,6 +127,10 @@ export function configuredExcelExportTemplates(value?: Partial<ExcelExportTempla
           cell_font_size: value?.[key]?.cell_font_size ?? DEFAULT_TEMPLATE_STYLE.cell_font_size,
           cell_bold: value?.[key]?.cell_bold ?? DEFAULT_TEMPLATE_STYLE.cell_bold,
           cell_font_color: value?.[key]?.cell_font_color || DEFAULT_TEMPLATE_STYLE.cell_font_color,
+          date_font_family: value?.[key]?.date_font_family?.trim() || DEFAULT_TEMPLATE_STYLE.date_font_family,
+          date_font_size: value?.[key]?.date_font_size ?? DEFAULT_TEMPLATE_STYLE.date_font_size,
+          date_bold: value?.[key]?.date_bold ?? DEFAULT_TEMPLATE_STYLE.date_bold,
+          date_font_color: value?.[key]?.date_font_color || DEFAULT_TEMPLATE_STYLE.date_font_color,
           attendance_date_format: value?.[key]?.attendance_date_format || DEFAULT_TEMPLATE_STYLE.attendance_date_format,
           columns: Array.isArray(configured) && configured.length > 0
             ? [
@@ -204,6 +216,10 @@ export function applyExcelTemplate(
     cellFontSize: template.cell_font_size,
     cellBold: template.cell_bold,
     cellFontColor: template.cell_font_color,
+    dateFontFamily: template.date_font_family,
+    dateFontSize: template.date_font_size,
+    dateBold: template.date_bold,
+    dateFontColor: template.date_font_color,
     columns,
     rows: source.rows.map((row, rowIndex) => Object.fromEntries(
       columns.map((column) => [column.id, column.id === 'serial' ? rowIndex + 1 : row[column.id] ?? ''])
