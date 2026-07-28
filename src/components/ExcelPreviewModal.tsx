@@ -88,6 +88,7 @@ export default function ExcelPreviewModal({
           views: [{ rightToLeft: true, state: 'frozen', ySplit: headerRows }],
           pageSetup: {
             orientation: 'landscape',
+            printTitlesRow: `1:${headerRows}`,
             margins: {
               left: 0.4 / 2.54,
               right: 0.4 / 2.54,
