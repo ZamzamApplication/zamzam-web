@@ -30,11 +30,15 @@ export default function TahfizSettingsPage() {
   const [sheikhSelectionEnabled, setSheikhSelectionEnabled] = useState(true)
   const [attendanceStatuses, setAttendanceStatuses] = useState<string[]>([])
   const [attendanceStatusColors, setAttendanceStatusColors] = useState<Record<string, string>>({})
+  const [attendanceStatusRenames, setAttendanceStatusRenames] = useState<Record<string, string>>({})
   const [excusedStreakLimit, setExcusedStreakLimit] = useState(3)
   const [excusedResetStatuses, setExcusedResetStatuses] = useState<string[]>(['حاضر'])
   const [streakAlertEnabled, setStreakAlertEnabled] = useState(true)
   const [streakStatus, setStreakStatus] = useState('غياب بعذر')
   const [newAttendanceStatus, setNewAttendanceStatus] = useState('')
+  const [editingAttendanceStatus, setEditingAttendanceStatus] = useState<string | null>(null)
+  const [editedAttendanceStatusName, setEditedAttendanceStatusName] = useState('')
+  const [attendanceStatusNameError, setAttendanceStatusNameError] = useState('')
   const [whatsendApiUrl, setWhatsendApiUrl] = useState('')
   const [whatsendGroupsUrl, setWhatsendGroupsUrl] = useState('')
   const [whatsendApiKey, setWhatsendApiKey] = useState('')
@@ -173,6 +177,56 @@ export default function TahfizSettingsPage() {
       delete next[status]
       return next
     })
+    setAttendanceStatusRenames(current => {
+      const next = { ...current }
+      const originalStatus = Object.entries(next).find(([, renamed]) => renamed === status)?.[0]
+      if (originalStatus) delete next[originalStatus]
+      delete next[status]
+      return next
+    })
+  }
+
+  const startEditingAttendanceStatus = (status: string) => {
+    setEditingAttendanceStatus(status)
+    setEditedAttendanceStatusName(status)
+    setAttendanceStatusNameError('')
+  }
+
+  const renameAttendanceStatus = () => {
+    if (!editingAttendanceStatus) return
+    const previousName = editingAttendanceStatus
+    const nextName = editedAttendanceStatusName.trim()
+    if (!nextName) {
+      setAttendanceStatusNameError('اسم الحالة مطلوب')
+      return
+    }
+    if (attendanceStatuses.some(status => status !== previousName && status === nextName)) {
+      setAttendanceStatusNameError('اسم الحالة مستخدم بالفعل')
+      return
+    }
+    if (nextName !== previousName) {
+      setAttendanceStatuses(current => current.map(status => status === previousName ? nextName : status))
+      setAttendanceStatusColors(current => {
+        const next = { ...current, [nextName]: current[previousName] || 'violet' }
+        delete next[previousName]
+        return next
+      })
+      setStreakStatus(current => current === previousName ? nextName : current)
+      setExcusedResetStatuses(current => current.map(status => status === previousName ? nextName : status))
+      setAttendanceStatusRenames(current => {
+        const next = { ...current }
+        const existingOriginalName = Object.entries(next).find(([, renamed]) => renamed === previousName)?.[0]
+        const wasPersisted = configuredAttendanceStatuses(settings?.attendance_statuses).includes(previousName)
+        const originalName = existingOriginalName || (wasPersisted ? previousName : null)
+        if (!originalName) return current
+        if (originalName === nextName) delete next[originalName]
+        else next[originalName] = nextName
+        return next
+      })
+    }
+    setEditingAttendanceStatus(null)
+    setEditedAttendanceStatusName('')
+    setAttendanceStatusNameError('')
   }
 
   const save = async (event: React.FormEvent) => {
@@ -190,6 +244,7 @@ export default function TahfizSettingsPage() {
         week_start_day: weekStartDay,
         month_start_day: monthStartDay,
         attendance_statuses: attendanceStatuses,
+        attendance_status_renames: attendanceStatusRenames,
         attendance_status_colors: attendanceStatusColors,
         attendance_streak_alert_enabled: streakAlertEnabled,
         attendance_streak_status: streakStatus,
@@ -203,6 +258,7 @@ export default function TahfizSettingsPage() {
         ...(whatsendApiKey ? { whatsend_api_key: whatsendApiKey } : {}),
       })
       setSettings(updated)
+      setAttendanceStatusRenames({})
       setWhatsendApiKey('')
       setNotice('تم حفظ إعدادات التحفيظ')
       const storedUser = JSON.parse(localStorage.getItem('user') || '{}')
@@ -301,7 +357,33 @@ export default function TahfizSettingsPage() {
               {attendanceStatuses.map((status, index) => (
                 <div key={status} className="flex items-center gap-2 rounded-xl border border-water-200 bg-white/40 px-3 py-2">
                   <span className="grid h-6 w-6 place-items-center rounded-lg bg-cyan-50 text-xs font-bold text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300">{index + 1}</span>
-                  <span className="min-w-0 flex-1 truncate text-sm text-deep-800">{status}</span>
+                  {editingAttendanceStatus === status ? (
+                    <div className="min-w-32 flex-1">
+                      <input
+                        autoFocus
+                        value={editedAttendanceStatusName}
+                        onChange={event => {
+                          setEditedAttendanceStatusName(event.target.value)
+                          setAttendanceStatusNameError('')
+                        }}
+                        onKeyDown={event => {
+                          if (event.key === 'Enter') {
+                            event.preventDefault()
+                            renameAttendanceStatus()
+                          } else if (event.key === 'Escape') {
+                            setEditingAttendanceStatus(null)
+                            setAttendanceStatusNameError('')
+                          }
+                        }}
+                        maxLength={50}
+                        aria-label={`تعديل اسم حالة ${status}`}
+                        className="surface-field w-full rounded-lg px-3 py-1.5 text-sm"
+                      />
+                      {attendanceStatusNameError && <p className="mt-1 text-[11px] text-red-600">{attendanceStatusNameError}</p>}
+                    </div>
+                  ) : (
+                    <span className="min-w-0 flex-1 truncate text-sm text-deep-800">{status}</span>
+                  )}
                   <div className="flex items-center gap-1" aria-label={`لون ${status}`}>
                     {STATUS_COLOR_OPTIONS.map(option => (
                       <button
@@ -315,6 +397,14 @@ export default function TahfizSettingsPage() {
                       />
                     ))}
                   </div>
+                  {editingAttendanceStatus === status ? (
+                    <>
+                      <button type="button" onClick={renameAttendanceStatus} className="text-xs font-semibold text-cyan-700 dark:text-cyan-300">حفظ الاسم</button>
+                      <button type="button" onClick={() => { setEditingAttendanceStatus(null); setAttendanceStatusNameError('') }} className="text-xs text-deep-500">إلغاء</button>
+                    </>
+                  ) : (
+                    <button type="button" onClick={() => startEditingAttendanceStatus(status)} className="text-xs font-semibold text-cyan-700 dark:text-cyan-300">تعديل الاسم</button>
+                  )}
                   <button type="button" disabled={index === 0} onClick={() => moveAttendanceStatus(index, -1)} aria-label={`تحريك ${status} لأعلى`} className="rounded-lg border border-water-200 px-2 py-1 text-xs disabled:opacity-30">↑</button>
                   <button type="button" disabled={index === attendanceStatuses.length - 1} onClick={() => moveAttendanceStatus(index, 1)} aria-label={`تحريك ${status} لأسفل`} className="rounded-lg border border-water-200 px-2 py-1 text-xs disabled:opacity-30">↓</button>
                   <button type="button" disabled={attendanceStatuses.length === 1} onClick={() => removeAttendanceStatus(status)} className="text-xs font-semibold text-red-500 disabled:opacity-40">حذف</button>
