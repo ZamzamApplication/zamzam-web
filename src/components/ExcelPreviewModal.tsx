@@ -1,26 +1,19 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 
 export type SpreadsheetValue = string | number | null
 
 export interface SpreadsheetColumn {
   id: string
   label: string
+  width?: number
 }
 
 export interface SpreadsheetSheet {
   name: string
   columns: SpreadsheetColumn[]
   rows: Record<string, SpreadsheetValue>[]
-}
-
-function cloneSheets(sheets: SpreadsheetSheet[]): SpreadsheetSheet[] {
-  return sheets.map((sheet) => ({
-    ...sheet,
-    columns: sheet.columns.map((column) => ({ ...column })),
-    rows: sheet.rows.map((row) => ({ ...row })),
-  }))
 }
 
 function safeSheetName(name: string, index: number): string {
@@ -37,53 +30,10 @@ export default function ExcelPreviewModal({
   filename: string
   onClose: () => void
 }) {
-  const initialSheets = useMemo(() => cloneSheets(sheets), [sheets])
-  const [editableSheets, setEditableSheets] = useState(initialSheets)
   const [activeIndex, setActiveIndex] = useState(0)
   const [exporting, setExporting] = useState(false)
   const [error, setError] = useState('')
-  const activeSheet = editableSheets[activeIndex]
-
-  const updateColumn = (columnId: string, label: string) => {
-    setEditableSheets((current) => current.map((sheet, index) => index === activeIndex
-      ? { ...sheet, columns: sheet.columns.map((column) => column.id === columnId ? { ...column, label } : column) }
-      : sheet))
-  }
-
-  const updateCell = (rowIndex: number, columnId: string, value: string) => {
-    setEditableSheets((current) => current.map((sheet, index) => index === activeIndex
-      ? {
-          ...sheet,
-          rows: sheet.rows.map((row, index) => index === rowIndex ? { ...row, [columnId]: value } : row),
-        }
-      : sheet))
-  }
-
-  const addColumn = () => {
-    const id = `custom_${Date.now()}`
-    setEditableSheets((current) => current.map((sheet, index) => index === activeIndex
-      ? {
-          ...sheet,
-          columns: [...sheet.columns, { id, label: 'عمود جديد' }],
-          rows: sheet.rows.map((row) => ({ ...row, [id]: '' })),
-        }
-      : sheet))
-  }
-
-  const deleteColumn = (columnId: string) => {
-    if (activeSheet.columns.length === 1) return
-    setEditableSheets((current) => current.map((sheet, index) => index === activeIndex
-      ? {
-          ...sheet,
-          columns: sheet.columns.filter((column) => column.id !== columnId),
-          rows: sheet.rows.map((row) => {
-            const next = { ...row }
-            delete next[columnId]
-            return next
-          }),
-        }
-      : sheet))
-  }
+  const activeSheet = sheets[activeIndex]
 
   const exportWorkbook = async () => {
     setExporting(true)
@@ -94,14 +44,14 @@ export default function ExcelPreviewModal({
       workbook.creator = 'زمزم'
       workbook.created = new Date()
 
-      editableSheets.forEach((sheet, sheetIndex) => {
+      sheets.forEach((sheet, sheetIndex) => {
         const worksheet = workbook.addWorksheet(safeSheetName(sheet.name, sheetIndex), {
           views: [{ rightToLeft: true, state: 'frozen', ySplit: 1 }],
         })
         worksheet.columns = sheet.columns.map((column) => ({
           header: column.label,
           key: column.id,
-          width: Math.min(40, Math.max(14, column.label.length + 4)),
+          width: column.width ?? Math.min(40, Math.max(14, column.label.length + 4)),
         }))
         sheet.rows.forEach((row) => {
           const values: Record<string, SpreadsheetValue> = {}
@@ -147,15 +97,17 @@ export default function ExcelPreviewModal({
       <div className="mobile-sheet glass-strong rounded-2xl p-4 sm:p-6 w-full max-w-6xl mx-3 max-h-[92vh] flex flex-col" onClick={(event) => event.stopPropagation()}>
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>
-            <h2 className="text-lg font-bold text-deep-800">معاينة Excel وتعديله</h2>
-            <p className="text-xs text-deep-500 mt-1">يمكنك تعديل الخلايا والعناوين وإضافة أو حذف الأعمدة قبل التنزيل.</p>
+            <h2 className="text-lg font-bold text-deep-800">معاينة Excel</h2>
+            <p className="text-xs text-deep-500 mt-1">
+              الأعمدة والعناوين محفوظة في <a href="/settings" className="font-semibold text-cyan-700 underline dark:text-cyan-300">إعدادات قوالب Excel</a>.
+            </p>
           </div>
           <button type="button" onClick={onClose} className="text-deep-400 hover:text-deep-700" aria-label="إغلاق">✕</button>
         </div>
 
-        {editableSheets.length > 1 && (
+        {sheets.length > 1 && (
           <div className="flex gap-2 mb-3 overflow-x-auto">
-            {editableSheets.map((sheet, index) => (
+            {sheets.map((sheet, index) => (
               <button
                 type="button"
                 key={`${sheet.name}-${index}`}
@@ -174,24 +126,12 @@ export default function ExcelPreviewModal({
               <tr>
                 <th className="bg-water-100 dark:bg-slate-800 border border-water-200 p-2 w-12">#</th>
                 {activeSheet.columns.map((column) => (
-                  <th key={column.id} className="bg-water-100 dark:bg-slate-800 border border-water-200 p-2 min-w-[150px]">
-                    <div className="flex gap-2">
-                      <input
-                        value={column.label}
-                        onChange={(event) => updateColumn(column.id, event.target.value)}
-                        className="surface-field min-w-0 flex-1 rounded-md px-2 py-1 font-semibold"
-                        aria-label="عنوان العمود"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => deleteColumn(column.id)}
-                        disabled={activeSheet.columns.length === 1}
-                        className="text-red-500 disabled:opacity-30"
-                        title="حذف العمود"
-                      >
-                        ✕
-                      </button>
-                    </div>
+                  <th
+                    key={column.id}
+                    className="bg-water-100 dark:bg-slate-800 border border-water-200 p-2"
+                    style={{ minWidth: `${(column.width ?? 18) * 8}px` }}
+                  >
+                    {column.label}
                   </th>
                 ))}
               </tr>
@@ -201,13 +141,12 @@ export default function ExcelPreviewModal({
                 <tr key={rowIndex}>
                   <td className="border border-water-200 p-2 text-center text-deep-500">{rowIndex + 1}</td>
                   {activeSheet.columns.map((column) => (
-                    <td key={column.id} className="border border-water-200 p-1">
-                      <input
-                        value={row[column.id] ?? ''}
-                        onChange={(event) => updateCell(rowIndex, column.id, event.target.value)}
-                        className="w-full min-w-[140px] bg-transparent px-2 py-1.5 outline-none focus:bg-cyan-50 dark:focus:bg-slate-800"
-                        aria-label={`${column.label}، الصف ${rowIndex + 1}`}
-                      />
+                    <td
+                      key={column.id}
+                      className="border border-water-200 px-3 py-2 text-deep-700"
+                      style={{ minWidth: `${(column.width ?? 18) * 8}px` }}
+                    >
+                      {row[column.id] ?? ''}
                     </td>
                   ))}
                 </tr>
@@ -217,10 +156,7 @@ export default function ExcelPreviewModal({
         </div>
 
         {error && <div className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</div>}
-        <div className="flex flex-wrap justify-between gap-3 mt-4">
-          <button type="button" onClick={addColumn} className="water-btn-outline rounded-lg px-4 py-2 text-sm font-medium">
-            + إضافة عمود
-          </button>
+        <div className="flex justify-end gap-3 mt-4">
           <div className="flex gap-2">
             <button type="button" onClick={onClose} className="water-btn-outline rounded-lg px-4 py-2 text-sm">إلغاء</button>
             <button type="button" onClick={exportWorkbook} disabled={exporting} className="water-btn text-white rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-50">

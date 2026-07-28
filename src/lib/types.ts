@@ -17,6 +17,7 @@ export interface User {
     month_start_day?: number
     attendance_statuses?: string[]
     attendance_status_colors?: Record<string, string>
+    excel_export_templates?: import('./excel-templates').ExcelExportTemplates
     excused_absence_streak_limit?: number
     excused_absence_reset_statuses?: string[]
     attendance_streak_alert_enabled?: boolean
@@ -89,6 +90,7 @@ export interface Circle {
   month_start_day?: number
   attendance_statuses?: string[]
   attendance_status_colors?: Record<string, string>
+  excel_export_templates?: import('./excel-templates').ExcelExportTemplates
   excused_absence_streak_limit?: number
   excused_absence_reset_statuses?: string[]
   attendance_streak_alert_enabled?: boolean

@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { configuredAttendanceStatuses } from '@/lib/attendance'
+import { configuredExcelExportTemplates, DEFAULT_EXCEL_EXPORT_TEMPLATES, type ExcelExportTemplates } from '@/lib/excel-templates'
 import type { Circle, SheikhInfo, TahfizInvitation } from '@/lib/types'
 import AsyncState from '@/components/AsyncState'
+import ExcelTemplateSettings from '@/components/ExcelTemplateSettings'
 
 const WEEKDAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
 const STATUS_COLOR_OPTIONS = [
@@ -31,6 +33,9 @@ export default function TahfizSettingsPage() {
   const [attendanceStatuses, setAttendanceStatuses] = useState<string[]>([])
   const [attendanceStatusColors, setAttendanceStatusColors] = useState<Record<string, string>>({})
   const [attendanceStatusRenames, setAttendanceStatusRenames] = useState<Record<string, string>>({})
+  const [excelExportTemplates, setExcelExportTemplates] = useState<ExcelExportTemplates>(
+    configuredExcelExportTemplates(DEFAULT_EXCEL_EXPORT_TEMPLATES)
+  )
   const [excusedStreakLimit, setExcusedStreakLimit] = useState(3)
   const [excusedResetStatuses, setExcusedResetStatuses] = useState<string[]>(['حاضر'])
   const [streakAlertEnabled, setStreakAlertEnabled] = useState(true)
@@ -76,6 +81,7 @@ export default function TahfizSettingsPage() {
         setAttendanceStatusColors(data.attendance_status_colors || {
           'حاضر': 'green', 'غياب': 'slate', 'غياب بعذر': 'amber', 'لا ينطبق': 'sky',
         })
+        setExcelExportTemplates(configuredExcelExportTemplates(data.excel_export_templates))
         setStreakAlertEnabled(data.attendance_streak_alert_enabled ?? true)
         setStreakStatus(data.attendance_streak_status || 'غياب بعذر')
         setExcusedStreakLimit(data.attendance_streak_limit ?? data.excused_absence_streak_limit ?? 3)
@@ -246,6 +252,7 @@ export default function TahfizSettingsPage() {
         attendance_statuses: attendanceStatuses,
         attendance_status_renames: attendanceStatusRenames,
         attendance_status_colors: attendanceStatusColors,
+        excel_export_templates: excelExportTemplates,
         attendance_streak_alert_enabled: streakAlertEnabled,
         attendance_streak_status: streakStatus,
         attendance_streak_limit: excusedStreakLimit,
@@ -467,6 +474,13 @@ export default function TahfizSettingsPage() {
               </div>}
             </div>
           </div>
+        </SettingsSection>
+
+        <SettingsSection title="قوالب Excel" description="اختر الأعمدة وعناوينها مرة واحدة لجميع ملفات الحضور والتقارير.">
+          <p className="text-xs leading-5 text-deep-500">
+            الأعمدة المخصصة تظهر فارغة في كل صف لتعبئتها بعد التنزيل. ستستخدم المعاينة والتصدير هذه الإعدادات تلقائياً.
+          </p>
+          <ExcelTemplateSettings value={excelExportTemplates} onChange={setExcelExportTemplates} />
         </SettingsSection>
 
         <SettingsSection title="دعوات الانضمام" description="روابط مؤقتة لإضافة المديرين والشيوخ.">

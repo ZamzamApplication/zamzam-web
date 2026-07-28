@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { formatDateWithWeekday, mediaUrl } from '@/lib/format'
 import { currentMonthValue, formatMonthPeriod, monthRange } from '@/lib/month'
+import { applyExcelTemplate, configuredExcelExportTemplates } from '@/lib/excel-templates'
 import type { User, SheikhInfo, AttendanceGrid, AttendanceGridSession, AttendanceGridStudent, FilterRule, FilterGroup } from '@/lib/types'
 import AttendanceFilter from '@/components/AttendanceFilter'
 import ExcelPreviewModal, { type SpreadsheetSheet } from '@/components/ExcelPreviewModal'
@@ -393,7 +394,7 @@ export default function AttendancePage() {
       id: `session_${session.id}`,
       label: formatDateWithWeekday(session.date),
     }))
-    setExcelSheets([{
+    const sourceSheet: SpreadsheetSheet = {
       name: 'سجل الحضور',
       columns: [
         { id: 'student', label: 'الطالب' },
@@ -410,7 +411,9 @@ export default function AttendancePage() {
         })
         return row
       }),
-    }])
+    }
+    const templates = configuredExcelExportTemplates(user?.tahfiz?.excel_export_templates)
+    setExcelSheets([applyExcelTemplate(sourceSheet, templates.attendance)])
   }
 
   return (

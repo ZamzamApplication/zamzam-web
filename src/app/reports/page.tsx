@@ -6,6 +6,7 @@ import { api } from '@/lib/api'
 import { mediaUrl } from '@/lib/format'
 import { currentMonthValue, formatMonthPeriod, monthRange } from '@/lib/month'
 import { formatQuranRange } from '@/lib/quran'
+import { applyExcelTemplate, configuredExcelExportTemplates } from '@/lib/excel-templates'
 import type { Circle, CircleAttendanceRate, QuranProgressEntry, StudentStatsItem } from '@/lib/types'
 import ExcelPreviewModal, { type SpreadsheetSheet } from '@/components/ExcelPreviewModal'
 import MonthSwitcher from '@/components/MonthSwitcher'
@@ -153,8 +154,10 @@ export default function ReportsPage() {
 
   const openExcelPreview = () => {
     if (!circleRate) return
+    const selectedTahfiz = circles.find((circle) => circle.id === selectedCircle)
+    const templates = configuredExcelExportTemplates(selectedTahfiz?.excel_export_templates)
     const sheets: SpreadsheetSheet[] = [
-      {
+      applyExcelTemplate({
         name: 'إحصائيات الطلاب',
         columns: [
           { id: 'student', label: 'الطالب' },
@@ -176,10 +179,10 @@ export default function ReportsPage() {
           notApplicable: student.not_applicable,
           rate: `${student.attendance_rate}%`,
         })),
-      },
+      }, templates.statistics),
     ]
     if (progressReport.enabled) {
-      sheets.push({
+      sheets.push(applyExcelTemplate({
         name: 'تقدم الحفظ والمراجعة',
         columns: [
           { id: 'student', label: 'الطالب' },
@@ -195,7 +198,7 @@ export default function ReportsPage() {
           mistakes: student.mistakes,
           latestRange: student.latest_entry ? formatQuranRange(student.latest_entry) : '',
         })),
-      })
+      }, templates.progress))
     }
     setExcelSheets(sheets)
   }
