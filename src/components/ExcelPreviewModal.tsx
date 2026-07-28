@@ -75,6 +75,17 @@ export default function ExcelPreviewModal({
         const headerRows = hierarchical ? 2 : 1
         const worksheet = workbook.addWorksheet(safeSheetName(sheet.name, sheetIndex), {
           views: [{ rightToLeft: true, state: 'frozen', ySplit: headerRows }],
+          pageSetup: {
+            orientation: 'landscape',
+            margins: {
+              left: 0.4 / 2.54,
+              right: 0.4 / 2.54,
+              top: 0.4 / 2.54,
+              bottom: 0.4 / 2.54,
+              header: 0.4 / 2.54,
+              footer: 0.4 / 2.54,
+            },
+          },
         })
         worksheet.columns = sheet.columns.map((column) => ({
           key: column.id,
