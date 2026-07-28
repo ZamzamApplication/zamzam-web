@@ -161,6 +161,58 @@ export default function ExcelTemplateSettings({
                 خط عريض
               </label>
             </div>
+            <div className="mt-3 grid gap-3 rounded-xl border border-water-200/70 bg-white/45 p-3 sm:grid-cols-2 lg:grid-cols-5 dark:bg-slate-900/30">
+              <label className="grid gap-1 text-xs text-deep-600 sm:col-span-2">
+                خط محتوى الخلايا
+                <input
+                  list={`excel-cell-fonts-${key}`}
+                  value={template.cell_font_family}
+                  onChange={(event) => updateTemplate(key, { cell_font_family: event.target.value })}
+                  maxLength={80}
+                  required
+                  placeholder="Arial"
+                  className="surface-field rounded-lg px-3 py-1.5 text-sm"
+                />
+                <datalist id={`excel-cell-fonts-${key}`}>
+                  <option value="Arial" />
+                  <option value="Calibri" />
+                  <option value="Tahoma" />
+                  <option value="Traditional Arabic" />
+                  <option value="Amiri" />
+                </datalist>
+              </label>
+              <label className="grid gap-1 text-xs text-deep-600">
+                حجم خط الخلايا
+                <input
+                  type="number"
+                  min={6}
+                  max={72}
+                  value={template.cell_font_size}
+                  onChange={(event) => updateTemplate(key, {
+                    cell_font_size: Math.min(72, Math.max(6, Number(event.target.value) || 6)),
+                  })}
+                  className="surface-field rounded-lg px-2 py-1.5 text-center text-sm"
+                />
+              </label>
+              <label className="grid gap-1 text-xs text-deep-600">
+                لون خط الخلايا
+                <input
+                  type="color"
+                  value={template.cell_font_color}
+                  onChange={(event) => updateTemplate(key, { cell_font_color: event.target.value.toUpperCase() })}
+                  className="surface-field h-9 w-full cursor-pointer rounded-lg p-1"
+                />
+              </label>
+              <label className="flex min-h-9 items-center gap-2 text-xs font-semibold text-deep-700">
+                <input
+                  type="checkbox"
+                  checked={template.cell_bold}
+                  onChange={(event) => updateTemplate(key, { cell_bold: event.target.checked })}
+                  className="h-4 w-4 accent-cyan-600"
+                />
+                خط الخلايا عريض
+              </label>
+            </div>
             <div className="mt-3 grid gap-2">
               {template.columns.map((column, index) => (
                 <div key={column.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-water-200/80 bg-white/55 px-3 py-2 dark:bg-slate-900/35">

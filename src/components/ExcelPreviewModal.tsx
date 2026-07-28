@@ -22,6 +22,10 @@ export interface SpreadsheetSheet {
   headerBold?: boolean
   headerBackgroundColor?: string
   headerFontColor?: string
+  cellFontFamily?: string
+  cellFontSize?: number
+  cellBold?: boolean
+  cellFontColor?: string
 }
 
 function safeSheetName(name: string, index: number): string {
@@ -49,6 +53,12 @@ export default function ExcelPreviewModal({
     fontFamily: activeSheet.headerFontFamily || 'Arial',
     fontSize: `${activeSheet.headerFontSize || 12}pt`,
     fontWeight: activeSheet.headerBold === false ? 400 : 700,
+  }
+  const cellStyle = {
+    color: activeSheet.cellFontColor || '#000000',
+    fontFamily: activeSheet.cellFontFamily || 'Arial',
+    fontSize: `${activeSheet.cellFontSize || 11}pt`,
+    fontWeight: activeSheet.cellBold ? 700 : 400,
   }
 
   const exportWorkbook = async () => {
@@ -126,7 +136,15 @@ export default function ExcelPreviewModal({
           }
         }
         for (let rowNumber = headerRows + 1; rowNumber <= worksheet.rowCount; rowNumber++) {
-          worksheet.getRow(rowNumber).alignment = { horizontal: 'right', vertical: 'middle' }
+          worksheet.getRow(rowNumber).eachCell({ includeEmpty: true }, (cell) => {
+            cell.font = {
+              name: sheet.cellFontFamily || 'Arial',
+              size: sheet.cellFontSize || 11,
+              bold: sheet.cellBold ?? false,
+              color: { argb: `FF${(sheet.cellFontColor || '#000000').slice(1).toUpperCase()}` },
+            }
+            cell.alignment = { horizontal: 'right', vertical: 'middle' }
+          })
         }
         if (!hierarchical) {
           worksheet.autoFilter = {
@@ -226,7 +244,7 @@ export default function ExcelPreviewModal({
                     <td
                       key={column.id}
                       className="border border-slate-500 px-3 py-2 text-deep-700"
-                      style={{ minWidth: `${(column.width ?? 18) * 8}px` }}
+                      style={{ ...cellStyle, minWidth: `${(column.width ?? 18) * 8}px` }}
                     >
                       {row[column.id] ?? ''}
                     </td>

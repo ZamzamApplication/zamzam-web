@@ -34,6 +34,10 @@ export interface ExcelExportTemplate {
   header_bold: boolean
   header_background_color: string
   header_font_color: string
+  cell_font_family: string
+  cell_font_size: number
+  cell_bold: boolean
+  cell_font_color: string
   attendance_date_format: AttendanceDateFormat
 }
 
@@ -49,6 +53,10 @@ const DEFAULT_TEMPLATE_STYLE = {
   header_bold: true,
   header_background_color: '#FFFFFF',
   header_font_color: '#000000',
+  cell_font_family: 'Arial',
+  cell_font_size: 11,
+  cell_bold: false,
+  cell_font_color: '#000000',
   attendance_date_format: 'weekday_day_month_year' as AttendanceDateFormat,
 }
 
@@ -107,6 +115,10 @@ export function configuredExcelExportTemplates(value?: Partial<ExcelExportTempla
           header_bold: value?.[key]?.header_bold ?? DEFAULT_TEMPLATE_STYLE.header_bold,
           header_background_color: value?.[key]?.header_background_color || DEFAULT_TEMPLATE_STYLE.header_background_color,
           header_font_color: value?.[key]?.header_font_color || DEFAULT_TEMPLATE_STYLE.header_font_color,
+          cell_font_family: value?.[key]?.cell_font_family?.trim() || DEFAULT_TEMPLATE_STYLE.cell_font_family,
+          cell_font_size: value?.[key]?.cell_font_size ?? DEFAULT_TEMPLATE_STYLE.cell_font_size,
+          cell_bold: value?.[key]?.cell_bold ?? DEFAULT_TEMPLATE_STYLE.cell_bold,
+          cell_font_color: value?.[key]?.cell_font_color || DEFAULT_TEMPLATE_STYLE.cell_font_color,
           attendance_date_format: value?.[key]?.attendance_date_format || DEFAULT_TEMPLATE_STYLE.attendance_date_format,
           columns: Array.isArray(configured) && configured.length > 0
             ? [
@@ -188,6 +200,10 @@ export function applyExcelTemplate(
     headerBold: template.header_bold,
     headerBackgroundColor: template.header_background_color,
     headerFontColor: template.header_font_color,
+    cellFontFamily: template.cell_font_family,
+    cellFontSize: template.cell_font_size,
+    cellBold: template.cell_bold,
+    cellFontColor: template.cell_font_color,
     columns,
     rows: source.rows.map((row, rowIndex) => Object.fromEntries(
       columns.map((column) => [column.id, column.id === 'serial' ? rowIndex + 1 : row[column.id] ?? ''])
