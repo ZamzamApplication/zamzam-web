@@ -121,11 +121,11 @@ export default function ExcelTemplateSettings({
                     العرض
                     <input
                       type="number"
-                      min={8}
+                      min={1}
                       max={60}
                       value={column.width}
                       onChange={(event) => updateColumn(key, column.id, {
-                        width: Math.min(60, Math.max(8, Number(event.target.value) || 8)),
+                        width: Math.min(60, Math.max(1, Number(event.target.value) || 1)),
                       })}
                       className="surface-field w-16 rounded-lg px-2 py-1.5 text-center text-xs"
                       aria-label={`عرض عمود ${column.label}`}
@@ -176,11 +176,11 @@ export default function ExcelTemplateSettings({
                             العرض
                             <input
                               type="number"
-                              min={8}
+                              min={1}
                               max={60}
                               value={child.width}
                               onChange={(event) => updateSubcolumn(key, column, child.id, {
-                                width: Math.min(60, Math.max(8, Number(event.target.value) || 8)),
+                                width: Math.min(60, Math.max(1, Number(event.target.value) || 1)),
                               })}
                               className="surface-field w-14 rounded-lg px-1 py-1.5 text-center text-xs"
                             />

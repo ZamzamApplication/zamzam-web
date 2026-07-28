@@ -88,10 +88,20 @@ export default function ExcelPreviewModal({
         })
         for (let rowNumber = 1; rowNumber <= headerRows; rowNumber++) {
           worksheet.getRow(rowNumber).eachCell({ includeEmpty: true }, (cell) => {
-            cell.font = { bold: true, color: { argb: 'FFFFFFFF' } }
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0891B2' } }
+            cell.font = { bold: true, color: { argb: 'FF000000' } }
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } }
             cell.alignment = { horizontal: 'center', vertical: 'middle' }
           })
+        }
+        for (let rowNumber = 1; rowNumber <= worksheet.rowCount; rowNumber++) {
+          for (let columnNumber = 1; columnNumber <= sheet.columns.length; columnNumber++) {
+            worksheet.getCell(rowNumber, columnNumber).border = {
+              top: { style: 'medium', color: { argb: 'FF000000' } },
+              left: { style: 'medium', color: { argb: 'FF000000' } },
+              bottom: { style: 'medium', color: { argb: 'FF000000' } },
+              right: { style: 'medium', color: { argb: 'FF000000' } },
+            }
+          }
         }
         for (let rowNumber = headerRows + 1; rowNumber <= worksheet.rowCount; rowNumber++) {
           worksheet.getRow(rowNumber).alignment = { horizontal: 'right', vertical: 'middle' }
@@ -156,18 +166,18 @@ export default function ExcelPreviewModal({
           <table className="w-full text-sm border-collapse">
             <thead className="sticky top-0 z-10">
               <tr>
-                <th rowSpan={hierarchical ? 2 : 1} className="bg-water-100 dark:bg-slate-800 border border-water-200 p-2 w-12">#</th>
+                <th rowSpan={hierarchical ? 2 : 1} className="border-2 border-slate-500 bg-white p-2 text-black w-12">#</th>
                 {activeSheet.columns.map((column, index) => {
                   if (!hierarchical) {
                     return (
-                      <th key={column.id} className="bg-water-100 dark:bg-slate-800 border border-water-200 p-2" style={{ minWidth: `${(column.width ?? 18) * 8}px` }}>
+                      <th key={column.id} className="border-2 border-slate-500 bg-white p-2 text-black" style={{ minWidth: `${(column.width ?? 18) * 8}px` }}>
                         {column.label}
                       </th>
                     )
                   }
                   if (!column.groupId) {
                     return (
-                      <th key={column.id} rowSpan={2} className="bg-water-100 dark:bg-slate-800 border border-water-200 p-2" style={{ minWidth: `${(column.width ?? 18) * 8}px` }}>
+                      <th key={column.id} rowSpan={2} className="border-2 border-slate-500 bg-white p-2 text-black" style={{ minWidth: `${(column.width ?? 18) * 8}px` }}>
                         {column.label}
                       </th>
                     )
@@ -175,13 +185,13 @@ export default function ExcelPreviewModal({
                   if (index > 0 && activeSheet.columns[index - 1].groupId === column.groupId) return null
                   let span = 1
                   while (index + span < activeSheet.columns.length && activeSheet.columns[index + span].groupId === column.groupId) span += 1
-                  return <th key={column.groupId} colSpan={span} className="border border-water-200 bg-cyan-700 p-2 text-white">{column.groupLabel}</th>
+                  return <th key={column.groupId} colSpan={span} className="border-2 border-slate-500 bg-white p-2 text-black">{column.groupLabel}</th>
                 })}
               </tr>
               {hierarchical && (
                 <tr>
                   {activeSheet.columns.filter((column) => column.groupId).map((column) => (
-                    <th key={column.id} className="bg-water-100 dark:bg-slate-800 border border-water-200 p-2" style={{ minWidth: `${(column.width ?? 18) * 8}px` }}>
+                    <th key={column.id} className="border-2 border-slate-500 bg-white p-2 text-black" style={{ minWidth: `${(column.width ?? 18) * 8}px` }}>
                       {column.label}
                     </th>
                   ))}
@@ -191,11 +201,11 @@ export default function ExcelPreviewModal({
             <tbody>
               {activeSheet.rows.map((row, rowIndex) => (
                 <tr key={rowIndex}>
-                  <td className="border border-water-200 p-2 text-center text-deep-500">{rowIndex + 1}</td>
+                  <td className="border-2 border-slate-500 p-2 text-center text-deep-500">{rowIndex + 1}</td>
                   {activeSheet.columns.map((column) => (
                     <td
                       key={column.id}
-                      className="border border-water-200 px-3 py-2 text-deep-700"
+                      className="border-2 border-slate-500 px-3 py-2 text-deep-700"
                       style={{ minWidth: `${(column.width ?? 18) * 8}px` }}
                     >
                       {row[column.id] ?? ''}
