@@ -143,7 +143,7 @@ export default function ExcelPreviewModal({
               bold: sheet.cellBold ?? false,
               color: { argb: `FF${(sheet.cellFontColor || '#000000').slice(1).toUpperCase()}` },
             }
-            cell.alignment = { horizontal: 'right', vertical: 'middle' }
+            cell.alignment = { horizontal: 'center', vertical: 'middle' }
           })
         }
         if (!hierarchical) {
@@ -243,7 +243,7 @@ export default function ExcelPreviewModal({
                   {activeSheet.columns.map((column) => (
                     <td
                       key={column.id}
-                      className="border border-slate-500 px-3 py-2 text-deep-700"
+                      className="border border-slate-500 px-3 py-2 text-center align-middle text-deep-700"
                       style={{ ...cellStyle, minWidth: `${(column.width ?? 18) * 8}px` }}
                     >
                       {row[column.id] ?? ''}
