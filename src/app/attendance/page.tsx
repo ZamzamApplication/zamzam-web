@@ -352,11 +352,7 @@ export default function AttendancePage() {
   }, [activeRange, filterGroups, grid, hasActiveFilter, periodMode, weekPage, weekRange])
 
   const displayStudents = useMemo(() => {
-    return [...searchedStudents].sort((a, b) => {
-      const sheikhCompare = (a.sheikh_name || '').localeCompare(b.sheikh_name || '', 'ar')
-      if (sheikhCompare !== 0) return sheikhCompare
-      return a.name.localeCompare(b.name, 'ar')
-    })
+    return [...searchedStudents].sort((a, b) => a.name.localeCompare(b.name, 'ar', { sensitivity: 'base' }))
   }, [searchedStudents])
   const canSendWarnings = user?.role === 'admin'
 

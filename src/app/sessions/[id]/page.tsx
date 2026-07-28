@@ -744,12 +744,14 @@ export default function SessionAttendancePage() {
   const visibleGroups = data.sheikh_groups
     .map(group => ({
       ...group,
-      students: group.students.filter(student => (
-        !normalizedStudentSearch
-        || student.name.toLocaleLowerCase('ar').includes(normalizedStudentSearch)
-        || student.phone?.toLocaleLowerCase('ar').includes(normalizedStudentSearch)
-        || group.sheikh.name.toLocaleLowerCase('ar').includes(normalizedStudentSearch)
-      )),
+      students: group.students
+        .filter(student => (
+          !normalizedStudentSearch
+          || student.name.toLocaleLowerCase('ar').includes(normalizedStudentSearch)
+          || student.phone?.toLocaleLowerCase('ar').includes(normalizedStudentSearch)
+          || group.sheikh.name.toLocaleLowerCase('ar').includes(normalizedStudentSearch)
+        ))
+        .sort((a, b) => a.name.localeCompare(b.name, 'ar', { sensitivity: 'base' })),
     }))
     .filter(group => group.students.length > 0)
   const totalCount = allStudents.length

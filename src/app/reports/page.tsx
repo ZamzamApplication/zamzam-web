@@ -18,7 +18,6 @@ export default function ReportsPage() {
   const [circleRate, setCircleRate] = useState<CircleAttendanceRate | null>(null)
   const [studentStats, setStudentStats] = useState<StudentStatsItem[]>([])
   const [loading, setLoading] = useState(true)
-  const [sortAsc, setSortAsc] = useState(false)
   const [periodMode, setPeriodMode] = useState<'month' | 'all'>('month')
   const [selectedMonth, setSelectedMonth] = useState(currentMonthValue)
   const [reportLoading, setReportLoading] = useState(false)
@@ -131,19 +130,21 @@ export default function ReportsPage() {
 
   if (loading) return <div className="page-loading" aria-label="جاري التحميل" />
 
-  const sortedStudents = [...studentStats].sort((a, b) => (
-    sortAsc ? a.attendance_rate - b.attendance_rate : b.attendance_rate - a.attendance_rate
-  ))
+  const sortedStudents = [...studentStats].sort((a, b) =>
+    a.student_name.localeCompare(b.student_name, 'ar', { sensitivity: 'base' })
+  )
   const normalizedStudentSearch = studentSearch.trim().toLocaleLowerCase('ar')
   const displayStudents = sortedStudents.filter(student => (
     !normalizedStudentSearch
     || student.student_name.toLocaleLowerCase('ar').includes(normalizedStudentSearch)
     || student.sheikh_name?.toLocaleLowerCase('ar').includes(normalizedStudentSearch)
   ))
-  const displayProgressStudents = progressReport?.students.filter(student => (
-    !normalizedStudentSearch
-    || student.student_name.toLocaleLowerCase('ar').includes(normalizedStudentSearch)
-  )) || []
+  const displayProgressStudents = progressReport?.students
+    .filter(student => (
+      !normalizedStudentSearch
+      || student.student_name.toLocaleLowerCase('ar').includes(normalizedStudentSearch)
+    ))
+    .sort((a, b) => a.student_name.localeCompare(b.student_name, 'ar', { sensitivity: 'base' })) || []
   const selectedCircleName = circles.find((circle) => circle.id === selectedCircle)?.name || ''
   const monthStartDay = circles.find((circle) => circle.id === selectedCircle)?.month_start_day ?? 1
   const periodLabel = periodMode === 'month'
@@ -292,13 +293,6 @@ export default function ReportsPage() {
               <div className="text-center text-deep-500 py-4">لا يوجد طلاب</div>
             ) : (<>
               <div className="md:hidden space-y-3">
-                <button
-                  type="button"
-                  onClick={() => setSortAsc(!sortAsc)}
-                  className="w-full water-btn-outline rounded-xl px-4 py-2 text-sm font-medium"
-                >
-                  ترتيب حسب النسبة {sortAsc ? 'من الأقل للأعلى ↑' : 'من الأعلى للأقل ↓'}
-                </button>
                 {displayStudents.map((s) => (
                   <div key={s.student_id} className="rounded-xl border border-water-200/70 bg-white/60 dark:bg-slate-800/55 p-4">
                     <div className="flex items-center justify-between gap-3 mb-3">
@@ -337,11 +331,7 @@ export default function ReportsPage() {
                       <th className="text-center py-2 px-3">حضر</th>
                       <th className="text-center py-2 px-3">بعذر</th>
                       <th className="text-center py-2 px-3">غاب</th>
-                      <th className="text-center py-2 px-3">
-                        <button onClick={() => setSortAsc(!sortAsc)} className="hover:text-cyan-700 transition cursor-pointer">
-                          النسبة {sortAsc ? '↑' : '↓'}
-                        </button>
-                      </th>
+                      <th className="text-center py-2 px-3">النسبة</th>
                     </tr>
                   </thead>
                   <tbody>

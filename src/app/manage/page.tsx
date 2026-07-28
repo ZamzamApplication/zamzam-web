@@ -1712,7 +1712,7 @@ export default function ManagePage() {
       const withStudents = sheikhsData.map((s: SheikhInfo) => ({
         ...s,
         students: (studentsBySheikh.get(s.id) || []).sort(
-          (a, b) => (a.sort_order || 0) - (b.sort_order || 0) || a.name.localeCompare(b.name, 'ar')
+          (a, b) => a.name.localeCompare(b.name, 'ar', { sensitivity: 'base' })
         ),
       }))
       setSheikhs(withStudents)
