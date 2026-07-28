@@ -25,7 +25,11 @@ export default function ExcelTemplateSettings({
   onChange(value: ExcelExportTemplates): void
 }) {
   const updateColumns = (key: ExcelTemplateKey, columns: ExcelTemplateColumn[]) => {
-    onChange({ ...value, [key]: { columns } })
+    onChange({ ...value, [key]: { ...value[key], columns } })
+  }
+
+  const updateTemplate = (key: ExcelTemplateKey, patch: Partial<ExcelExportTemplates[ExcelTemplateKey]>) => {
+    onChange({ ...value, [key]: { ...value[key], ...patch } })
   }
 
   const updateColumn = (key: ExcelTemplateKey, id: string, patch: Partial<ExcelTemplateColumn>) => {
@@ -96,6 +100,67 @@ export default function ExcelTemplateSettings({
               <h3 className="text-sm font-bold text-deep-800">{TEMPLATE_LABELS[key].title}</h3>
               <p className="mt-1 text-xs text-deep-500">{TEMPLATE_LABELS[key].description}</p>
             </div>
+            <div className="mt-3 grid gap-3 rounded-xl border border-water-200/70 bg-white/45 p-3 sm:grid-cols-2 lg:grid-cols-5 dark:bg-slate-900/30">
+              <label className="grid gap-1 text-xs text-deep-600 sm:col-span-2">
+                خط العناوين
+                <input
+                  list={`excel-fonts-${key}`}
+                  value={template.header_font_family}
+                  onChange={(event) => updateTemplate(key, { header_font_family: event.target.value })}
+                  maxLength={80}
+                  required
+                  placeholder="Arial"
+                  className="surface-field rounded-lg px-3 py-1.5 text-sm"
+                />
+                <datalist id={`excel-fonts-${key}`}>
+                  <option value="Arial" />
+                  <option value="Calibri" />
+                  <option value="Tahoma" />
+                  <option value="Traditional Arabic" />
+                  <option value="Amiri" />
+                </datalist>
+              </label>
+              <label className="grid gap-1 text-xs text-deep-600">
+                حجم الخط
+                <input
+                  type="number"
+                  min={6}
+                  max={72}
+                  value={template.header_font_size}
+                  onChange={(event) => updateTemplate(key, {
+                    header_font_size: Math.min(72, Math.max(6, Number(event.target.value) || 6)),
+                  })}
+                  className="surface-field rounded-lg px-2 py-1.5 text-center text-sm"
+                />
+              </label>
+              <label className="grid gap-1 text-xs text-deep-600">
+                لون الخلفية
+                <input
+                  type="color"
+                  value={template.header_background_color}
+                  onChange={(event) => updateTemplate(key, { header_background_color: event.target.value.toUpperCase() })}
+                  className="surface-field h-9 w-full cursor-pointer rounded-lg p-1"
+                />
+              </label>
+              <label className="grid gap-1 text-xs text-deep-600">
+                لون الخط
+                <input
+                  type="color"
+                  value={template.header_font_color}
+                  onChange={(event) => updateTemplate(key, { header_font_color: event.target.value.toUpperCase() })}
+                  className="surface-field h-9 w-full cursor-pointer rounded-lg p-1"
+                />
+              </label>
+              <label className="flex min-h-9 items-center gap-2 text-xs font-semibold text-deep-700">
+                <input
+                  type="checkbox"
+                  checked={template.header_bold}
+                  onChange={(event) => updateTemplate(key, { header_bold: event.target.checked })}
+                  className="h-4 w-4 accent-cyan-600"
+                />
+                خط عريض
+              </label>
+            </div>
             <div className="mt-3 grid gap-2">
               {template.columns.map((column, index) => (
                 <div key={column.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-water-200/80 bg-white/55 px-3 py-2 dark:bg-slate-900/35">
@@ -150,15 +215,37 @@ export default function ExcelTemplateSettings({
                     </>
                   )}
                   {column.id === 'attendance' && (
-                    <label className="flex w-full items-center gap-2 border-t border-water-200/60 pt-2 text-xs text-deep-600">
-                      <input
-                        type="checkbox"
-                        checked={column.show_header}
-                        onChange={(event) => updateColumn(key, column.id, { show_header: event.target.checked })}
-                        className="h-4 w-4 accent-cyan-600"
-                      />
-                      إظهار تاريخ كل حلقة في رأس العمود
-                    </label>
+                    <div className="flex w-full flex-wrap items-center gap-3 border-t border-water-200/60 pt-2">
+                      <label className="flex items-center gap-2 text-xs text-deep-600">
+                        <input
+                          type="checkbox"
+                          checked={column.show_header}
+                          onChange={(event) => updateColumn(key, column.id, { show_header: event.target.checked })}
+                          className="h-4 w-4 accent-cyan-600"
+                        />
+                        إظهار تاريخ كل حلقة في رأس العمود
+                      </label>
+                      {column.show_header && (
+                        <label className="flex items-center gap-2 text-xs text-deep-600">
+                          تنسيق التاريخ
+                          <select
+                            value={template.attendance_date_format}
+                            onChange={(event) => updateTemplate(key, {
+                              attendance_date_format: event.target.value as ExcelExportTemplates[ExcelTemplateKey]['attendance_date_format'],
+                            })}
+                            className="surface-field rounded-lg px-2 py-1.5 text-xs"
+                          >
+                            <option value="day">رقم اليوم فقط — 28</option>
+                            <option value="day_month">اليوم والشهر — 28/07</option>
+                            <option value="day_month_year">اليوم والشهر والسنة — 28/07/2026</option>
+                            <option value="weekday">اسم اليوم فقط — الثلاثاء</option>
+                            <option value="weekday_day">اسم اليوم ورقمه — الثلاثاء 28</option>
+                            <option value="weekday_day_month">اسم اليوم واليوم والشهر — الثلاثاء 28/07</option>
+                            <option value="weekday_day_month_year">اسم اليوم والتاريخ الكامل — الثلاثاء 28/07/2026</option>
+                          </select>
+                        </label>
+                      )}
+                    </div>
                   )}
                   {column.subcolumns.length >= 2 && (
                     <div className="grid w-full gap-2 border-t border-water-200/60 pt-2 sm:grid-cols-2">

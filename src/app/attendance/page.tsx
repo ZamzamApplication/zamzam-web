@@ -393,6 +393,7 @@ export default function AttendancePage() {
     const sessionColumns = displaySessions.map((session) => ({
       id: `session_${session.id}`,
       label: formatDateWithWeekday(session.date),
+      dateValue: session.date,
     }))
     const sourceSheet: SpreadsheetSheet = {
       name: 'سجل الحضور',

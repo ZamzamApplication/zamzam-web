@@ -1,6 +1,15 @@
 import type { SpreadsheetSheet } from '@/components/ExcelPreviewModal'
+import { getArabicDay } from '@/lib/format'
 
 export type ExcelTemplateKey = 'attendance' | 'statistics' | 'progress'
+export type AttendanceDateFormat =
+  | 'day'
+  | 'day_month'
+  | 'day_month_year'
+  | 'weekday'
+  | 'weekday_day'
+  | 'weekday_day_month'
+  | 'weekday_day_month_year'
 
 export interface ExcelTemplateColumn {
   id: string
@@ -20,24 +29,43 @@ export interface ExcelTemplateSubcolumn {
 
 export interface ExcelExportTemplate {
   columns: ExcelTemplateColumn[]
+  header_font_family: string
+  header_font_size: number
+  header_bold: boolean
+  header_background_color: string
+  header_font_color: string
+  attendance_date_format: AttendanceDateFormat
 }
 
 export type ExcelExportTemplates = Record<ExcelTemplateKey, ExcelExportTemplate>
 
-function standardColumn(id: string, label: string, width: number): ExcelTemplateColumn {
-  return { id, label, enabled: true, custom: false, width, show_header: true, subcolumns: [] }
+function standardColumn(id: string, label: string, width: number, enabled = true): ExcelTemplateColumn {
+  return { id, label, enabled, custom: false, width, show_header: true, subcolumns: [] }
+}
+
+const DEFAULT_TEMPLATE_STYLE = {
+  header_font_family: 'Arial',
+  header_font_size: 12,
+  header_bold: true,
+  header_background_color: '#FFFFFF',
+  header_font_color: '#000000',
+  attendance_date_format: 'weekday_day_month_year' as AttendanceDateFormat,
 }
 
 export const DEFAULT_EXCEL_EXPORT_TEMPLATES: ExcelExportTemplates = {
   attendance: {
+    ...DEFAULT_TEMPLATE_STYLE,
     columns: [
+      standardColumn('serial', 'م', 6, false),
       standardColumn('student', 'الطالب', 24),
       standardColumn('sheikh', 'الشيخ', 20),
       standardColumn('attendance', 'الحضور', 18),
     ],
   },
   statistics: {
+    ...DEFAULT_TEMPLATE_STYLE,
     columns: [
+      standardColumn('serial', 'م', 6, false),
       standardColumn('student', 'الطالب', 24),
       standardColumn('sheikh', 'الشيخ', 20),
       standardColumn('sessions', 'إجمالي الحلقات', 16),
@@ -49,7 +77,9 @@ export const DEFAULT_EXCEL_EXPORT_TEMPLATES: ExcelExportTemplates = {
     ],
   },
   progress: {
+    ...DEFAULT_TEMPLATE_STYLE,
     columns: [
+      standardColumn('serial', 'م', 6, false),
       standardColumn('student', 'الطالب', 24),
       standardColumn('entries', 'عدد سجلات المتابعة', 20),
       standardColumn('quality', 'متوسط التقييم', 18),
@@ -63,18 +93,33 @@ export function configuredExcelExportTemplates(value?: Partial<ExcelExportTempla
   return Object.fromEntries(
     (Object.keys(DEFAULT_EXCEL_EXPORT_TEMPLATES) as ExcelTemplateKey[]).map((key) => {
       const configured = value?.[key]?.columns
+      const configuredIds = new Set(
+        Array.isArray(configured) ? configured.map((column) => column.id) : []
+      )
+      const missingColumns = DEFAULT_EXCEL_EXPORT_TEMPLATES[key].columns
+        .filter((column) => !configuredIds.has(column.id))
+        .map((column) => ({ ...column, subcolumns: [] }))
       return [
         key,
         {
+          header_font_family: value?.[key]?.header_font_family?.trim() || DEFAULT_TEMPLATE_STYLE.header_font_family,
+          header_font_size: value?.[key]?.header_font_size ?? DEFAULT_TEMPLATE_STYLE.header_font_size,
+          header_bold: value?.[key]?.header_bold ?? DEFAULT_TEMPLATE_STYLE.header_bold,
+          header_background_color: value?.[key]?.header_background_color || DEFAULT_TEMPLATE_STYLE.header_background_color,
+          header_font_color: value?.[key]?.header_font_color || DEFAULT_TEMPLATE_STYLE.header_font_color,
+          attendance_date_format: value?.[key]?.attendance_date_format || DEFAULT_TEMPLATE_STYLE.attendance_date_format,
           columns: Array.isArray(configured) && configured.length > 0
-            ? configured.map((column) => ({
-                ...column,
-                width: column.width ?? 18,
-                show_header: column.show_header ?? true,
-                subcolumns: Array.isArray(column.subcolumns)
-                  ? column.subcolumns.map((subcolumn) => ({ ...subcolumn, width: subcolumn.width ?? 18 }))
-                  : [],
-              }))
+            ? [
+                ...missingColumns,
+                ...configured.map((column) => ({
+                  ...column,
+                  width: column.width ?? 18,
+                  show_header: column.show_header ?? true,
+                  subcolumns: Array.isArray(column.subcolumns)
+                    ? column.subcolumns.map((subcolumn) => ({ ...subcolumn, width: subcolumn.width ?? 18 }))
+                    : [],
+                })),
+              ]
             : DEFAULT_EXCEL_EXPORT_TEMPLATES[key].columns.map((column) => ({
                 ...column,
                 show_header: true,
@@ -84,6 +129,19 @@ export function configuredExcelExportTemplates(value?: Partial<ExcelExportTempla
       ]
     })
   ) as ExcelExportTemplates
+}
+
+function formatAttendanceDate(dateValue: string | undefined, format: AttendanceDateFormat): string {
+  if (!dateValue) return ''
+  const [year, month, day] = dateValue.split('-')
+  const weekday = getArabicDay(dateValue)
+  if (format === 'day') return day
+  if (format === 'day_month') return `${day}/${month}`
+  if (format === 'day_month_year') return `${day}/${month}/${year}`
+  if (format === 'weekday') return weekday
+  if (format === 'weekday_day') return `${weekday} ${day}`
+  if (format === 'weekday_day_month') return `${weekday} ${day}/${month}`
+  return `${weekday} ${day}/${month}/${year}`
 }
 
 export function applyExcelTemplate(
@@ -99,7 +157,9 @@ export function applyExcelTemplate(
           .filter((sourceColumn) => sourceColumn.id.startsWith('session_'))
           .map((sourceColumn) => ({
             ...sourceColumn,
-            label: column.show_header ? sourceColumn.label : '',
+            label: column.show_header
+              ? formatAttendanceDate(sourceColumn.dateValue, template.attendance_date_format)
+              : '',
             width: column.width,
             groupId: column.id,
             groupLabel: column.label,
@@ -123,9 +183,14 @@ export function applyExcelTemplate(
     })
   return {
     ...source,
+    headerFontFamily: template.header_font_family,
+    headerFontSize: template.header_font_size,
+    headerBold: template.header_bold,
+    headerBackgroundColor: template.header_background_color,
+    headerFontColor: template.header_font_color,
     columns,
-    rows: source.rows.map((row) => Object.fromEntries(
-      columns.map((column) => [column.id, row[column.id] ?? ''])
+    rows: source.rows.map((row, rowIndex) => Object.fromEntries(
+      columns.map((column) => [column.id, column.id === 'serial' ? rowIndex + 1 : row[column.id] ?? ''])
     )),
   }
 }

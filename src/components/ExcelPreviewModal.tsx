@@ -10,12 +10,18 @@ export interface SpreadsheetColumn {
   width?: number
   groupId?: string
   groupLabel?: string
+  dateValue?: string
 }
 
 export interface SpreadsheetSheet {
   name: string
   columns: SpreadsheetColumn[]
   rows: Record<string, SpreadsheetValue>[]
+  headerFontFamily?: string
+  headerFontSize?: number
+  headerBold?: boolean
+  headerBackgroundColor?: string
+  headerFontColor?: string
 }
 
 function safeSheetName(name: string, index: number): string {
@@ -37,6 +43,13 @@ export default function ExcelPreviewModal({
   const [error, setError] = useState('')
   const activeSheet = sheets[activeIndex]
   const hierarchical = activeSheet.columns.some((column) => column.groupId)
+  const headerStyle = {
+    backgroundColor: activeSheet.headerBackgroundColor || '#FFFFFF',
+    color: activeSheet.headerFontColor || '#000000',
+    fontFamily: activeSheet.headerFontFamily || 'Arial',
+    fontSize: `${activeSheet.headerFontSize || 12}pt`,
+    fontWeight: activeSheet.headerBold === false ? 400 : 700,
+  }
 
   const exportWorkbook = async () => {
     setExporting(true)
@@ -88,18 +101,27 @@ export default function ExcelPreviewModal({
         })
         for (let rowNumber = 1; rowNumber <= headerRows; rowNumber++) {
           worksheet.getRow(rowNumber).eachCell({ includeEmpty: true }, (cell) => {
-            cell.font = { bold: true, color: { argb: 'FF000000' } }
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } }
+            cell.font = {
+              name: sheet.headerFontFamily || 'Arial',
+              size: sheet.headerFontSize || 12,
+              bold: sheet.headerBold ?? true,
+              color: { argb: `FF${(sheet.headerFontColor || '#000000').slice(1).toUpperCase()}` },
+            }
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: `FF${(sheet.headerBackgroundColor || '#FFFFFF').slice(1).toUpperCase()}` },
+            }
             cell.alignment = { horizontal: 'center', vertical: 'middle' }
           })
         }
         for (let rowNumber = 1; rowNumber <= worksheet.rowCount; rowNumber++) {
           for (let columnNumber = 1; columnNumber <= sheet.columns.length; columnNumber++) {
             worksheet.getCell(rowNumber, columnNumber).border = {
-              top: { style: 'medium', color: { argb: 'FF000000' } },
-              left: { style: 'medium', color: { argb: 'FF000000' } },
-              bottom: { style: 'medium', color: { argb: 'FF000000' } },
-              right: { style: 'medium', color: { argb: 'FF000000' } },
+              top: { style: 'thin', color: { argb: 'FF000000' } },
+              left: { style: 'thin', color: { argb: 'FF000000' } },
+              bottom: { style: 'thin', color: { argb: 'FF000000' } },
+              right: { style: 'thin', color: { argb: 'FF000000' } },
             }
           }
         }
@@ -166,18 +188,17 @@ export default function ExcelPreviewModal({
           <table className="w-full text-sm border-collapse">
             <thead className="sticky top-0 z-10">
               <tr>
-                <th rowSpan={hierarchical ? 2 : 1} className="border-2 border-slate-500 bg-white p-2 text-black w-12">#</th>
                 {activeSheet.columns.map((column, index) => {
                   if (!hierarchical) {
                     return (
-                      <th key={column.id} className="border-2 border-slate-500 bg-white p-2 text-black" style={{ minWidth: `${(column.width ?? 18) * 8}px` }}>
+                      <th key={column.id} className="border border-slate-500 p-2" style={{ ...headerStyle, minWidth: `${(column.width ?? 18) * 8}px` }}>
                         {column.label}
                       </th>
                     )
                   }
                   if (!column.groupId) {
                     return (
-                      <th key={column.id} rowSpan={2} className="border-2 border-slate-500 bg-white p-2 text-black" style={{ minWidth: `${(column.width ?? 18) * 8}px` }}>
+                      <th key={column.id} rowSpan={2} className="border border-slate-500 p-2" style={{ ...headerStyle, minWidth: `${(column.width ?? 18) * 8}px` }}>
                         {column.label}
                       </th>
                     )
@@ -185,13 +206,13 @@ export default function ExcelPreviewModal({
                   if (index > 0 && activeSheet.columns[index - 1].groupId === column.groupId) return null
                   let span = 1
                   while (index + span < activeSheet.columns.length && activeSheet.columns[index + span].groupId === column.groupId) span += 1
-                  return <th key={column.groupId} colSpan={span} className="border-2 border-slate-500 bg-white p-2 text-black">{column.groupLabel}</th>
+                  return <th key={column.groupId} colSpan={span} className="border border-slate-500 p-2" style={headerStyle}>{column.groupLabel}</th>
                 })}
               </tr>
               {hierarchical && (
                 <tr>
                   {activeSheet.columns.filter((column) => column.groupId).map((column) => (
-                    <th key={column.id} className="border-2 border-slate-500 bg-white p-2 text-black" style={{ minWidth: `${(column.width ?? 18) * 8}px` }}>
+                    <th key={column.id} className="border border-slate-500 p-2" style={{ ...headerStyle, minWidth: `${(column.width ?? 18) * 8}px` }}>
                       {column.label}
                     </th>
                   ))}
@@ -201,11 +222,10 @@ export default function ExcelPreviewModal({
             <tbody>
               {activeSheet.rows.map((row, rowIndex) => (
                 <tr key={rowIndex}>
-                  <td className="border-2 border-slate-500 p-2 text-center text-deep-500">{rowIndex + 1}</td>
                   {activeSheet.columns.map((column) => (
                     <td
                       key={column.id}
-                      className="border-2 border-slate-500 px-3 py-2 text-deep-700"
+                      className="border border-slate-500 px-3 py-2 text-deep-700"
                       style={{ minWidth: `${(column.width ?? 18) * 8}px` }}
                     >
                       {row[column.id] ?? ''}
