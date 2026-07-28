@@ -8,6 +8,14 @@ export interface ExcelTemplateColumn {
   enabled: boolean
   custom: boolean
   width: number
+  show_header: boolean
+  subcolumns: ExcelTemplateSubcolumn[]
+}
+
+export interface ExcelTemplateSubcolumn {
+  id: string
+  label: string
+  width: number
 }
 
 export interface ExcelExportTemplate {
@@ -16,33 +24,37 @@ export interface ExcelExportTemplate {
 
 export type ExcelExportTemplates = Record<ExcelTemplateKey, ExcelExportTemplate>
 
+function standardColumn(id: string, label: string, width: number): ExcelTemplateColumn {
+  return { id, label, enabled: true, custom: false, width, show_header: true, subcolumns: [] }
+}
+
 export const DEFAULT_EXCEL_EXPORT_TEMPLATES: ExcelExportTemplates = {
   attendance: {
     columns: [
-      { id: 'student', label: 'الطالب', enabled: true, custom: false, width: 24 },
-      { id: 'sheikh', label: 'الشيخ', enabled: true, custom: false, width: 20 },
-      { id: 'attendance', label: 'الحضور', enabled: true, custom: false, width: 18 },
+      standardColumn('student', 'الطالب', 24),
+      standardColumn('sheikh', 'الشيخ', 20),
+      standardColumn('attendance', 'الحضور', 18),
     ],
   },
   statistics: {
     columns: [
-      { id: 'student', label: 'الطالب', enabled: true, custom: false, width: 24 },
-      { id: 'sheikh', label: 'الشيخ', enabled: true, custom: false, width: 20 },
-      { id: 'sessions', label: 'إجمالي الحلقات', enabled: true, custom: false, width: 16 },
-      { id: 'present', label: 'حاضر', enabled: true, custom: false, width: 14 },
-      { id: 'excused', label: 'غياب بعذر', enabled: true, custom: false, width: 16 },
-      { id: 'absent', label: 'غائب', enabled: true, custom: false, width: 14 },
-      { id: 'notApplicable', label: 'لا ينطبق', enabled: true, custom: false, width: 16 },
-      { id: 'rate', label: 'نسبة الحضور', enabled: true, custom: false, width: 16 },
+      standardColumn('student', 'الطالب', 24),
+      standardColumn('sheikh', 'الشيخ', 20),
+      standardColumn('sessions', 'إجمالي الحلقات', 16),
+      standardColumn('present', 'حاضر', 14),
+      standardColumn('excused', 'غياب بعذر', 16),
+      standardColumn('absent', 'غائب', 14),
+      standardColumn('notApplicable', 'لا ينطبق', 16),
+      standardColumn('rate', 'نسبة الحضور', 16),
     ],
   },
   progress: {
     columns: [
-      { id: 'student', label: 'الطالب', enabled: true, custom: false, width: 24 },
-      { id: 'entries', label: 'عدد سجلات المتابعة', enabled: true, custom: false, width: 20 },
-      { id: 'quality', label: 'متوسط التقييم', enabled: true, custom: false, width: 18 },
-      { id: 'mistakes', label: 'إجمالي الأخطاء', enabled: true, custom: false, width: 18 },
-      { id: 'latestRange', label: 'آخر مقدار', enabled: true, custom: false, width: 28 },
+      standardColumn('student', 'الطالب', 24),
+      standardColumn('entries', 'عدد سجلات المتابعة', 20),
+      standardColumn('quality', 'متوسط التقييم', 18),
+      standardColumn('mistakes', 'إجمالي الأخطاء', 18),
+      standardColumn('latestRange', 'آخر مقدار', 28),
     ],
   },
 }
@@ -55,8 +67,19 @@ export function configuredExcelExportTemplates(value?: Partial<ExcelExportTempla
         key,
         {
           columns: Array.isArray(configured) && configured.length > 0
-            ? configured.map((column) => ({ ...column }))
-            : DEFAULT_EXCEL_EXPORT_TEMPLATES[key].columns.map((column) => ({ ...column })),
+            ? configured.map((column) => ({
+                ...column,
+                width: column.width ?? 18,
+                show_header: column.show_header ?? true,
+                subcolumns: Array.isArray(column.subcolumns)
+                  ? column.subcolumns.map((subcolumn) => ({ ...subcolumn, width: subcolumn.width ?? 18 }))
+                  : [],
+              }))
+            : DEFAULT_EXCEL_EXPORT_TEMPLATES[key].columns.map((column) => ({
+                ...column,
+                show_header: true,
+                subcolumns: [],
+              })),
         },
       ]
     })
@@ -74,7 +97,22 @@ export function applyExcelTemplate(
       if (column.id === 'attendance') {
         return source.columns
           .filter((sourceColumn) => sourceColumn.id.startsWith('session_'))
-          .map((sourceColumn) => ({ ...sourceColumn, width: column.width }))
+          .map((sourceColumn) => ({
+            ...sourceColumn,
+            label: column.show_header ? sourceColumn.label : '',
+            width: column.width,
+            groupId: column.id,
+            groupLabel: column.label,
+          }))
+      }
+      if (column.subcolumns.length >= 2) {
+        return column.subcolumns.map((subcolumn) => ({
+          id: `${column.id}__${subcolumn.id}`,
+          label: subcolumn.label,
+          width: subcolumn.width,
+          groupId: column.id,
+          groupLabel: column.label,
+        }))
       }
       const sourceColumn = sourceColumns.get(column.id)
       return [{

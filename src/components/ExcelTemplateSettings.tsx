@@ -1,6 +1,6 @@
 'use client'
 
-import type { ExcelExportTemplates, ExcelTemplateColumn, ExcelTemplateKey } from '@/lib/excel-templates'
+import type { ExcelExportTemplates, ExcelTemplateColumn, ExcelTemplateKey, ExcelTemplateSubcolumn } from '@/lib/excel-templates'
 
 const TEMPLATE_LABELS: Record<ExcelTemplateKey, { title: string; description: string }> = {
   attendance: {
@@ -44,12 +44,45 @@ export default function ExcelTemplateSettings({
     const uniquePart = globalThis.crypto?.randomUUID?.().replaceAll('-', '') || `${Date.now()}`
     updateColumns(key, [
       ...value[key].columns,
-      { id: `custom_${uniquePart}`, label: 'عمود مخصص', enabled: true, custom: true, width: 18 },
+      {
+        id: `custom_${uniquePart}`,
+        label: 'عمود مخصص',
+        enabled: true,
+        custom: true,
+        width: 18,
+        show_header: true,
+        subcolumns: [],
+      },
     ])
   }
 
   const removeCustomColumn = (key: ExcelTemplateKey, id: string) => {
     updateColumns(key, value[key].columns.filter((column) => column.id !== id))
+  }
+
+  const subcolumn = (label: string): ExcelTemplateSubcolumn => ({
+    id: `sub_${globalThis.crypto?.randomUUID?.().replaceAll('-', '') || Date.now()}`,
+    label,
+    width: 18,
+  })
+
+  const addSubcolumns = (key: ExcelTemplateKey, column: ExcelTemplateColumn) => {
+    updateColumn(key, column.id, {
+      subcolumns: column.subcolumns.length >= 2
+        ? [...column.subcolumns, subcolumn(`فرع ${column.subcolumns.length + 1}`)]
+        : [subcolumn('الفرع الأول'), subcolumn('الفرع الثاني')],
+    })
+  }
+
+  const updateSubcolumn = (
+    key: ExcelTemplateKey,
+    column: ExcelTemplateColumn,
+    subcolumnId: string,
+    patch: Partial<ExcelTemplateSubcolumn>,
+  ) => {
+    updateColumn(key, column.id, {
+      subcolumns: column.subcolumns.map((item) => item.id === subcolumnId ? { ...item, ...patch } : item),
+    })
   }
 
   return (
@@ -102,9 +135,71 @@ export default function ExcelTemplateSettings({
                   <button type="button" disabled={index === 0} onClick={() => moveColumn(key, index, -1)} aria-label={`تحريك ${column.label} لأعلى`} className="rounded-lg border border-water-200 px-2 py-1 text-xs disabled:opacity-30">↑</button>
                   <button type="button" disabled={index === template.columns.length - 1} onClick={() => moveColumn(key, index, 1)} aria-label={`تحريك ${column.label} لأسفل`} className="rounded-lg border border-water-200 px-2 py-1 text-xs disabled:opacity-30">↓</button>
                   {column.custom && (
-                    <button type="button" onClick={() => removeCustomColumn(key, column.id)} className="text-xs font-semibold text-red-500">
-                      حذف
-                    </button>
+                    <>
+                      <button type="button" onClick={() => addSubcolumns(key, column)} disabled={column.subcolumns.length >= 10} className="text-xs font-semibold text-cyan-700 disabled:opacity-40 dark:text-cyan-300">
+                        {column.subcolumns.length >= 2 ? '+ فرع' : 'تقسيم لفرعين'}
+                      </button>
+                      {column.subcolumns.length >= 2 && (
+                        <button type="button" onClick={() => updateColumn(key, column.id, { subcolumns: [] })} className="text-xs text-deep-500">
+                          إلغاء التقسيم
+                        </button>
+                      )}
+                      <button type="button" onClick={() => removeCustomColumn(key, column.id)} className="text-xs font-semibold text-red-500">
+                        حذف
+                      </button>
+                    </>
+                  )}
+                  {column.id === 'attendance' && (
+                    <label className="flex w-full items-center gap-2 border-t border-water-200/60 pt-2 text-xs text-deep-600">
+                      <input
+                        type="checkbox"
+                        checked={column.show_header}
+                        onChange={(event) => updateColumn(key, column.id, { show_header: event.target.checked })}
+                        className="h-4 w-4 accent-cyan-600"
+                      />
+                      إظهار تاريخ كل حلقة في رأس العمود
+                    </label>
+                  )}
+                  {column.subcolumns.length >= 2 && (
+                    <div className="grid w-full gap-2 border-t border-water-200/60 pt-2 sm:grid-cols-2">
+                      {column.subcolumns.map((child) => (
+                        <div key={child.id} className="flex items-center gap-2 rounded-lg bg-water-50/60 p-2 dark:bg-slate-800/60">
+                          <input
+                            value={child.label}
+                            onChange={(event) => updateSubcolumn(key, column, child.id, { label: event.target.value })}
+                            required
+                            maxLength={80}
+                            className="surface-field min-w-0 flex-1 rounded-lg px-2 py-1.5 text-xs"
+                            aria-label={`اسم الفرع ${child.label}`}
+                          />
+                          <label className="flex items-center gap-1 text-[10px] text-deep-500">
+                            العرض
+                            <input
+                              type="number"
+                              min={8}
+                              max={60}
+                              value={child.width}
+                              onChange={(event) => updateSubcolumn(key, column, child.id, {
+                                width: Math.min(60, Math.max(8, Number(event.target.value) || 8)),
+                              })}
+                              className="surface-field w-14 rounded-lg px-1 py-1.5 text-center text-xs"
+                            />
+                          </label>
+                          {column.subcolumns.length > 2 && (
+                            <button
+                              type="button"
+                              onClick={() => updateColumn(key, column.id, {
+                                subcolumns: column.subcolumns.filter((item) => item.id !== child.id),
+                              })}
+                              className="text-xs text-red-500"
+                              aria-label={`حذف الفرع ${child.label}`}
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               ))}
