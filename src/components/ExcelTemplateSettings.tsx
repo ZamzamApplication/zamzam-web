@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import type { ExcelExportTemplates, ExcelTemplateColumn, ExcelTemplateKey, ExcelTemplateSubcolumn } from '@/lib/excel-templates'
 
 const TEMPLATE_LABELS: Record<ExcelTemplateKey, { title: string; description: string }> = {
@@ -15,6 +16,54 @@ const TEMPLATE_LABELS: Record<ExcelTemplateKey, { title: string; description: st
     title: 'الحفظ والمراجعة',
     description: 'الأعمدة المستخدمة في ورقة تقدم القرآن عند تفعيل المتابعة.',
   },
+}
+
+function NumberSettingInput({
+  value,
+  min,
+  max,
+  onChange,
+  className,
+  ariaLabel,
+}: {
+  value: number
+  min: number
+  max: number
+  onChange(value: number): void
+  className: string
+  ariaLabel?: string
+}) {
+  const [draft, setDraft] = useState(String(value))
+
+  useEffect(() => {
+    setDraft(String(value))
+  }, [value])
+
+  const commit = () => {
+    const parsed = Number(draft)
+    const nextValue = Number.isFinite(parsed)
+      ? Math.min(max, Math.max(min, parsed))
+      : value
+    setDraft(String(nextValue))
+    if (nextValue !== value) onChange(nextValue)
+  }
+
+  return (
+    <input
+      type="number"
+      inputMode="numeric"
+      min={min}
+      max={max}
+      value={draft}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={commit}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') event.currentTarget.blur()
+      }}
+      className={className}
+      aria-label={ariaLabel}
+    />
+  )
 }
 
 export default function ExcelTemplateSettings({
@@ -122,14 +171,11 @@ export default function ExcelTemplateSettings({
               </label>
               <label className="grid gap-1 text-xs text-deep-600">
                 حجم الخط
-                <input
-                  type="number"
+                <NumberSettingInput
                   min={6}
                   max={72}
                   value={template.header_font_size}
-                  onChange={(event) => updateTemplate(key, {
-                    header_font_size: Math.min(72, Math.max(6, Number(event.target.value) || 6)),
-                  })}
+                  onChange={(header_font_size) => updateTemplate(key, { header_font_size })}
                   className="surface-field rounded-lg px-2 py-1.5 text-center text-sm"
                 />
               </label>
@@ -183,14 +229,11 @@ export default function ExcelTemplateSettings({
               </label>
               <label className="grid gap-1 text-xs text-deep-600">
                 حجم خط الخلايا
-                <input
-                  type="number"
+                <NumberSettingInput
                   min={6}
                   max={72}
                   value={template.cell_font_size}
-                  onChange={(event) => updateTemplate(key, {
-                    cell_font_size: Math.min(72, Math.max(6, Number(event.target.value) || 6)),
-                  })}
+                  onChange={(cell_font_size) => updateTemplate(key, { cell_font_size })}
                   className="surface-field rounded-lg px-2 py-1.5 text-center text-sm"
                 />
               </label>
@@ -236,14 +279,11 @@ export default function ExcelTemplateSettings({
                 </label>
                 <label className="grid gap-1 text-xs text-deep-600">
                   حجم خط التاريخ
-                  <input
-                    type="number"
+                  <NumberSettingInput
                     min={6}
                     max={72}
                     value={template.date_font_size}
-                    onChange={(event) => updateTemplate(key, {
-                      date_font_size: Math.min(72, Math.max(6, Number(event.target.value) || 6)),
-                    })}
+                    onChange={(date_font_size) => updateTemplate(key, { date_font_size })}
                     className="surface-field rounded-lg px-2 py-1.5 text-center text-sm"
                   />
                 </label>
