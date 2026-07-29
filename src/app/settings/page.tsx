@@ -286,19 +286,10 @@ export default function TahfizSettingsPage() {
 
   return (
     <div className="space-y-5">
-      <section className="glass-card rounded-2xl p-5 md:p-7">
-        <span className="inline-flex rounded-full bg-cyan-100/80 px-3 py-1 text-xs font-bold text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-200">
-          إعدادات عامة
-        </span>
-        <h1 className="mt-3 text-2xl font-bold text-deep-900">إعدادات التحفيظ</h1>
-        <p className="mt-2 text-sm text-deep-500">إدارة هوية التحفيظ، نظام الحضور، بداية الفترات والتكاملات.</p>
-        <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          <SettingSummary label="متابعة القرآن" enabled={progressTrackingEnabled} />
-          <SettingSummary label="اختيار الشيخ في الحضور" enabled={sheikhSelectionEnabled} />
-          <SettingSummary label="تنبيهات التكرار" enabled={streakAlertEnabled} />
-          <SettingSummary label="تكامل WhatSend" enabled={whatsendEnabled} />
-        </div>
-      </section>
+      <header className="px-1">
+        <h1 className="text-2xl font-bold text-deep-900">إعدادات التحفيظ</h1>
+        <p className="mt-1 text-sm text-deep-500">إدارة بيانات التحفيظ والحضور والتقارير والتكاملات.</p>
+      </header>
 
       {error && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/25 dark:text-red-200">{error}</div>}
       {notice && <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/25 dark:text-emerald-200">{notice}</div>}
@@ -536,7 +527,7 @@ export default function TahfizSettingsPage() {
           </div>}
         </SettingsSection>
 
-        <div className="sticky bottom-40 z-20 flex justify-start md:bottom-4">
+        <div className="settings-save-bar sticky z-20 flex justify-start">
           <button type="submit" disabled={saving || !name.trim() || attendanceStatuses.length === 0} className="water-btn rounded-xl px-7 py-3 font-semibold text-white shadow-lg disabled:opacity-50">
             {saving ? 'جاري الحفظ...' : 'حفظ الإعدادات'}
           </button>
@@ -559,17 +550,6 @@ function SettingsSection({ title, description, children }: { title: string; desc
       </summary>
       <div className="border-t border-water-200/60 px-5 pb-5 pt-4">{children}</div>
     </details>
-  )
-}
-
-function SettingSummary({ label, enabled }: { label: string; enabled: boolean }) {
-  return (
-    <div className="flex items-center justify-between rounded-xl border border-water-200 bg-white/45 px-3 py-2 text-xs dark:bg-slate-800/45">
-      <span className="font-semibold text-deep-700">{label}</span>
-      <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${enabled ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300'}`}>
-        {enabled ? 'مفعّل' : 'متوقف'}
-      </span>
-    </div>
   )
 }
 

@@ -1,7 +1,31 @@
 import { getApiRuntime } from './api-runtime'
-import type { AttendanceThresholdAlert, QuranProgressInput, StudentProfile } from './types'
+import type {
+  AttendanceThresholdAlert,
+  Circle,
+  QuranProgressInput,
+  Session,
+  SessionAttendance,
+  SheikhInfo,
+  StudentProfile,
+  User,
+  WhatsAppGroup,
+} from './types'
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+interface TokenResponse {
+  access_token: string
+  token_type: string
+  refresh_token?: string | null
+  expires_in?: number
+}
+
+const API_BASE = '/api'
+
+function cookieValue(name: string): string | null {
+  if (typeof document === 'undefined') return null
+  const prefix = `${encodeURIComponent(name)}=`
+  const entry = document.cookie.split('; ').find((item) => item.startsWith(prefix))
+  return entry ? decodeURIComponent(entry.slice(prefix.length)) : null
+}
 
 async function request<T = any>(path: string, options?: RequestInit): Promise<T> {
   const runtime = getApiRuntime()
@@ -14,6 +38,11 @@ async function request<T = any>(path: string, options?: RequestInit): Promise<T>
     ...(activeTahfizId ? { 'X-Tahfiz-ID': activeTahfizId } : {}),
     ...(options?.headers as Record<string, string> || {}),
   }
+  const method = (options?.method || 'GET').toUpperCase()
+  const csrfToken = cookieValue('zamzam_csrf')
+  if (csrfToken && !['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+    headers['X-CSRF-Token'] = csrfToken
+  }
 
   if (!(options?.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json'
@@ -25,7 +54,12 @@ async function request<T = any>(path: string, options?: RequestInit): Promise<T>
   options?.signal?.addEventListener('abort', () => controller.abort(), { once: true })
   let res: Response
   try {
-    res = await fetch(`${API_BASE}${path}`, { ...options, headers, signal: controller.signal })
+    res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers,
+      signal: controller.signal,
+      credentials: 'include',
+    })
   } catch (error: any) {
     if (error?.name === 'AbortError') {
       throw new Error('انتهت مهلة الاتصال. تحقق من الشبكة وحاول مرة أخرى.')
@@ -45,19 +79,24 @@ async function request<T = any>(path: string, options?: RequestInit): Promise<T>
       : err.detail
     throw new Error(detail || 'Request failed')
   }
+  if (res.status === 204) return undefined as T
   return res.json()
 }
 
 export const api = {
   login(username: string, password: string) {
-    return request('/auth/login', {
+    return request<TokenResponse>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     })
   },
 
+  logout() {
+    return request<void>('/auth/logout', { method: 'POST' })
+  },
+
   signup(tahfizName: string, username: string, password: string, contactPhone?: string) {
-    return request('/auth/signup', {
+    return request<{ message: string; tahfiz_id: number; status: 'pending' }>('/auth/signup', {
       method: 'POST',
       body: JSON.stringify({
         tahfiz_name: tahfizName,
@@ -69,7 +108,7 @@ export const api = {
   },
 
   getMe() {
-    return request('/auth/me')
+    return request<User>('/auth/me')
   },
 
   setDefaultTahfiz(tahfizId: number) {
@@ -84,19 +123,19 @@ export const api = {
   },
 
   getUpcomingSessions() {
-    return request('/sessions/upcoming')
+    return request<Session[]>('/sessions/upcoming')
   },
 
   getAllSessions() {
-    return request('/sessions/all')
+    return request<Session[]>('/sessions/all')
   },
 
   getPastSessions() {
-    return request('/sessions/past')
+    return request<Session[]>('/sessions/past')
   },
 
   getSessionAttendance(sessionId: number) {
-    return request(`/sessions/${sessionId}/attendance`)
+    return request<SessionAttendance>(`/sessions/${sessionId}/attendance`)
   },
 
   upsertAttendance(sessionId: number, studentId: number, status: string, notes?: string, sheikhId?: number | null) {
@@ -161,19 +200,19 @@ export const api = {
   },
 
   getSheikhs() {
-    return request('/sheikhs')
+    return request<SheikhInfo[]>('/sheikhs')
   },
 
   getWhatsAppGroups() {
-    return request('/whatsend/groups')
+    return request<{ groups: WhatsAppGroup[] }>('/whatsend/groups')
   },
 
   getTahfizSettings() {
-    return request('/tahfiz/settings')
+    return request<Circle>('/tahfiz/settings')
   },
 
   updateTahfizSettings(data: Record<string, unknown>) {
-    return request('/tahfiz/settings', {
+    return request<Circle>('/tahfiz/settings', {
       method: 'PUT',
       body: JSON.stringify(data),
     })
@@ -272,7 +311,7 @@ export const api = {
   },
 
   registerWithInvitation(token: string, username: string, password: string) {
-    return request<{ access_token: string; token_type: string }>(`/invitations/register/${encodeURIComponent(token)}`, {
+    return request<TokenResponse>(`/invitations/register/${encodeURIComponent(token)}`, {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     })
@@ -538,6 +577,7 @@ export const api = {
       ? localStorage.getItem('support_tahfiz_id') || localStorage.getItem('active_tahfiz_id')
       : null
     const res = await fetch(`${API_BASE}/tahfiz/export-db`, {
+      credentials: 'include',
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(supportTahfizId ? { 'X-Tahfiz-ID': supportTahfizId } : {}),
@@ -550,6 +590,7 @@ export const api = {
   async exportFullDb() {
     const token = await getApiRuntime().getAccessToken()
     const res = await fetch(`${API_BASE}/export-db`, {
+      credentials: 'include',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
     if (!res.ok) throw new Error('فشل تصدير قاعدة البيانات الكاملة')

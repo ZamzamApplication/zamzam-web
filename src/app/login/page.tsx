@@ -16,8 +16,7 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
     try {
-      const res = await api.login(username, password)
-      localStorage.setItem('token', res.access_token)
+      await api.login(username, password)
       const user = await api.getMe()
       localStorage.setItem('user', JSON.stringify(user))
       if (user.tahfiz_id) {

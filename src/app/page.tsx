@@ -15,6 +15,7 @@ export default function LandingPage() {
   const [user, setUser] = useState<User | null>(null)
   const [videoLoaded, setVideoLoaded] = useState(false)
   const [muted, setMuted] = useState(true)
+  const [shouldPlayVideo, setShouldPlayVideo] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
 
   const toggleMute = () => {
@@ -25,11 +26,15 @@ export default function LandingPage() {
   }
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (token) {
-      api.getMe().then(setUser).catch(() => localStorage.removeItem('token'))
-    }
+    api.getMe().then(setUser).catch(() => setUser(null))
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection
+    setShouldPlayVideo(!reducedMotion && !connection?.saveData)
   }, [])
+
+  useEffect(() => {
+    if (shouldPlayVideo) void videoRef.current?.play().catch(() => undefined)
+  }, [shouldPlayVideo])
 
   return (
     <div>
@@ -37,10 +42,12 @@ export default function LandingPage() {
       <section className="relative h-screen flex items-center justify-center overflow-hidden">
         <video
           ref={videoRef}
-          autoPlay
+          autoPlay={shouldPlayVideo}
           muted
           loop
           playsInline
+          preload={shouldPlayVideo ? 'metadata' : 'none'}
+          poster="/hero-poster.webp"
           onLoadedData={() => setVideoLoaded(true)}
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${videoLoaded ? 'opacity-100' : 'opacity-0'}`}
         >
@@ -82,7 +89,7 @@ export default function LandingPage() {
           </svg>
         </div>
 
-        <button
+        {shouldPlayVideo && <button
           onClick={toggleMute}
           className="absolute bottom-8 right-8 z-20 bg-black/40 hover:bg-black/60 backdrop-blur-sm text-white p-3 rounded-full transition-all border border-white/20"
           title={muted ? 'تشغيل الصوت' : 'كتم الصوت'}
@@ -98,7 +105,7 @@ export default function LandingPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728" />
             </svg>
           )}
-        </button>
+        </button>}
       </section>
 
       {/* Features */}

@@ -5,17 +5,17 @@ export interface ApiRuntime {
 
 const browserRuntime: ApiRuntime = {
   getAccessToken() {
-    return typeof window === 'undefined' ? null : window.localStorage.getItem('token')
+    return null
   },
   handleUnauthorized() {
     if (typeof window === 'undefined') return
+    // Remove bearer tokens left by versions released before cookie sessions.
     window.localStorage.removeItem('token')
     window.localStorage.removeItem('user')
     window.localStorage.removeItem('active_tahfiz_id')
     window.localStorage.removeItem('active_tahfiz_name')
     window.localStorage.removeItem('support_tahfiz_id')
     window.localStorage.removeItem('support_tahfiz_name')
-    window.location.assign('/login')
   },
 }
 

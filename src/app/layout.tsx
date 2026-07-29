@@ -183,7 +183,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const [supportName, setSupportName] = useState('')
   const [switchingTahfizId, setSwitchingTahfizId] = useState<number | null>(null)
   const [switchError, setSwitchError] = useState('')
-  const verifiedToken = useRef<string | null>(null)
   const router = useRouter()
   const pathname = usePathname()
 
@@ -196,7 +195,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const isDedicatedPlatform = pathname === '/platform'
   const isActive = (href: string) => pathname === href || (href !== '/dashboard' && pathname.startsWith(`${href}/`))
   const navLinkClass = (href: string) => `nav-link ${isActive(href) ? 'nav-link-active' : ''}`
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await api.logout()
+    } catch {
+      // Clear local presentation state even if the session already expired.
+    }
     localStorage.removeItem('token')
     localStorage.removeItem('user')
     localStorage.removeItem('active_tahfiz_id')
@@ -235,47 +239,35 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     setSupportName(localStorage.getItem('support_tahfiz_name') || '')
-    const token = localStorage.getItem('token')
-    if (!token && !isPublicAuthPage && !isLandingPage) {
-      setUser(null)
+    if (isPublicAuthPage || isLandingPage) {
       setLoading(false)
-      const nextPath = pathname.startsWith('/invite/') ? `?next=${encodeURIComponent(pathname)}` : ''
-      router.push(`/login${nextPath}`)
       return
     }
-    if (token) {
-      if (verifiedToken.current === token) {
-        setLoading(false)
-        return
-      }
-      setLoading(true)
-      api.getMe()
-        .then((u) => {
-          verifiedToken.current = token
-          setUser(u)
-          localStorage.setItem('user', JSON.stringify(u))
-          if (u.role !== 'super_admin' && u.tahfiz_id) {
-            localStorage.setItem('active_tahfiz_id', String(u.tahfiz_id))
-            if (u.tahfiz?.name) localStorage.setItem('active_tahfiz_name', u.tahfiz.name)
-          }
-          if (u.role === 'super_admin') {
-            if (!localStorage.getItem('support_tahfiz_id') && pathname !== '/platform') router.replace('/platform')
-          } else if (u.tahfiz?.status !== 'active' && pathname !== '/pending') {
-            router.replace('/pending')
-          } else if (u.tahfiz?.status === 'active' && (isLoginPage || isPendingPage)) {
-            router.replace('/dashboard')
-          }
-        })
-        .catch(() => {
-          verifiedToken.current = null
-          localStorage.removeItem('token')
-          localStorage.removeItem('user')
-          if (!isLandingPage) router.push('/login')
-        })
-        .finally(() => setLoading(false))
-    } else {
-      setLoading(false)
-    }
+    setLoading(true)
+    api.getMe()
+      .then((u) => {
+        setUser(u)
+        localStorage.setItem('user', JSON.stringify(u))
+        if (u.role !== 'super_admin' && u.tahfiz_id) {
+          localStorage.setItem('active_tahfiz_id', String(u.tahfiz_id))
+          if (u.tahfiz?.name) localStorage.setItem('active_tahfiz_name', u.tahfiz.name)
+        }
+        if (u.role === 'super_admin') {
+          if (!localStorage.getItem('support_tahfiz_id') && pathname !== '/platform') router.replace('/platform')
+        } else if (u.tahfiz?.status !== 'active' && pathname !== '/pending') {
+          router.replace('/pending')
+        } else if (u.tahfiz?.status === 'active' && isPendingPage) {
+          router.replace('/dashboard')
+        }
+      })
+      .catch(() => {
+        setUser(null)
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        const nextPath = pathname.startsWith('/invite/') ? `?next=${encodeURIComponent(pathname)}` : ''
+        router.push(`/login${nextPath}`)
+      })
+      .finally(() => setLoading(false))
   }, [pathname, router, isPublicAuthPage, isLandingPage, isLoginPage, isPendingPage])
 
   if (isPublicAuthPage) {

@@ -27,8 +27,7 @@ export default function SignupPage() {
     setError('')
     try {
       if (inviteToken) {
-        const result = await api.registerWithInvitation(inviteToken, username, password)
-        localStorage.setItem('token', result.access_token)
+        await api.registerWithInvitation(inviteToken, username, password)
         const user = await api.getMe()
         localStorage.setItem('user', JSON.stringify(user))
         if (user.tahfiz_id) localStorage.setItem('active_tahfiz_id', String(user.tahfiz_id))

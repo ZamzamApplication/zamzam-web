@@ -26,7 +26,7 @@ export default function InvitationPage() {
 
   useEffect(() => {
     if (!token) return
-    setSignedIn(Boolean(localStorage.getItem('token')))
+    api.getMe().then(() => setSignedIn(true)).catch(() => setSignedIn(false))
     api.getInvitationPreview(token)
       .then(setInvitation)
       .catch((err: any) => setError(err.message || 'تعذر تحميل الدعوة'))
