@@ -304,7 +304,7 @@ export default function TahfizSettingsPage() {
       {notice && <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/25 dark:text-emerald-200">{notice}</div>}
 
       <form onSubmit={save} className="space-y-5">
-        <SettingsSection title="بيانات التحفيظ" description="الاسم وبيانات التواصل الظاهرة للمستخدمين." defaultOpen>
+        <SettingsSection title="بيانات التحفيظ" description="الاسم وبيانات التواصل الظاهرة للمستخدمين.">
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <label className="text-sm font-semibold text-deep-700">
               اسم التحفيظ
@@ -343,7 +343,7 @@ export default function TahfizSettingsPage() {
           <p className="mt-3 text-xs text-deep-500">بداية الشهر تتحكم في نطاقات سجل الحضور والتقارير الشهرية.</p>
         </SettingsSection>
 
-        <SettingsSection title="الحضور ومتابعة القرآن" description="الحالات وترتيبها والميزات التي تظهر أثناء تسجيل الحلقة." defaultOpen>
+        <SettingsSection title="الحضور ومتابعة القرآن" description="الحالات وترتيبها والميزات التي تظهر أثناء تسجيل الحلقة.">
           <FeatureToggle
             enabled={progressTrackingEnabled}
             onChange={setProgressTrackingEnabled}
@@ -546,8 +546,8 @@ export default function TahfizSettingsPage() {
   )
 }
 
-function SettingsSection({ title, description, defaultOpen = false, children }: { title: string; description: string; defaultOpen?: boolean; children: React.ReactNode }) {
-  const [open, setOpen] = useState(defaultOpen)
+function SettingsSection({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false)
   return (
     <details open={open} onToggle={event => setOpen(event.currentTarget.open)} className="group glass-card rounded-2xl">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5">
