@@ -11,7 +11,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://zamzam-api.fly.dev",
       "media-src 'self'",
-      "connect-src 'self'",
+      "connect-src 'self' https://zamzam-api.fly.dev",
       "font-src 'self' data:",
       "object-src 'none'",
       "base-uri 'self'",

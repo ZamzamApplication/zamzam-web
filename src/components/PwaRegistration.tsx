@@ -7,9 +7,11 @@ export default function PwaRegistration() {
     if (process.env.NODE_ENV !== 'production' || !('serviceWorker' in navigator)) return
 
     const register = () => {
-      navigator.serviceWorker.register('/sw.js').catch((error) => {
-        console.error('Service worker registration failed', error)
-      })
+      navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+        .then((registration) => registration.update())
+        .catch((error) => {
+          console.error('Service worker registration failed', error)
+        })
     }
 
     if (document.readyState === 'complete') register()
