@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'zamzam-shell-v2'
+const CACHE_VERSION = 'zamzam-shell-v3'
 const OFFLINE_URL = '/offline.html'
 const PRECACHE_URLS = [
   OFFLINE_URL,
@@ -23,6 +23,10 @@ self.addEventListener('activate', (event) => {
         keys.filter((key) => key !== CACHE_VERSION).map((key) => caches.delete(key))
       ))
       .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ type: 'window' }))
+      .then((clients) => Promise.all(
+        clients.map((client) => client.navigate(client.url))
+      ))
   )
 })
 
