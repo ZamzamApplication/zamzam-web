@@ -11,7 +11,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://zamzam-api.fly.dev",
       "media-src 'self'",
-      "connect-src 'self' https://zamzam-api.fly.dev",
+      "connect-src 'self'",
       "font-src 'self' data:",
       "object-src 'none'",
       "base-uri 'self'",
@@ -30,8 +30,15 @@ const securityHeaders = [
 const nextConfig = {
   output: 'standalone',
   outputFileTracingRoot: __dirname,
+  // FastAPI uses trailing slashes for collection routes. Letting Next remove
+  // them causes FastAPI to redirect the browser to its public origin, which
+  // bypasses the same-origin session proxy and drops the web session cookie.
+  skipTrailingSlashRedirect: true,
   async rewrites() {
-    return [{ source: '/api/:path*', destination: `${apiOrigin}/:path*` }]
+    return [
+      { source: '/api/:path*/', destination: `${apiOrigin}/:path*/` },
+      { source: '/api/:path*', destination: `${apiOrigin}/:path*` },
+    ]
   },
   async headers() {
     return [
