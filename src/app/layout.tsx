@@ -221,7 +221,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       localStorage.setItem('active_tahfiz_name', membership.tahfiz_name)
       localStorage.removeItem('support_tahfiz_id')
       localStorage.removeItem('support_tahfiz_name')
-      window.location.assign('/dashboard')
+      window.location.reload()
     } catch (error: any) {
       setSwitchError(error.message || 'تعذر تبديل التحفيظ')
       setSwitchingTahfizId(null)
