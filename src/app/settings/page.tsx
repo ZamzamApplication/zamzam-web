@@ -260,9 +260,11 @@ export default function TahfizSettingsPage() {
         progress_tracking_enabled: progressTrackingEnabled,
         attendance_sheikh_selection_enabled: sheikhSelectionEnabled,
         whatsend_enabled: whatsendEnabled,
-        whatsend_api_url: whatsendApiUrl,
-        whatsend_groups_url: whatsendGroupsUrl,
-        ...(whatsendApiKey ? { whatsend_api_key: whatsendApiKey } : {}),
+        ...(whatsendEnabled ? {
+          whatsend_api_url: whatsendApiUrl,
+          whatsend_groups_url: whatsendGroupsUrl,
+          ...(whatsendApiKey ? { whatsend_api_key: whatsendApiKey } : {}),
+        } : {}),
       })
       setSettings(updated)
       setAttendanceStatusRenames({})
