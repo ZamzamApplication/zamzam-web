@@ -88,33 +88,39 @@ function FeeForm({ record, currency, busy, onCancel, onSubmit }: {
   currency: string
   busy: boolean
   onCancel: () => void
-  onSubmit: (currentMinor: number, futureMinor: number | null | undefined) => Promise<void>
+  onSubmit: (scope: 'current' | 'future', feeMinor: number | null) => Promise<void>
 }) {
+  const [scope, setScope] = useState<'current' | 'future' | ''>(record.is_paid ? 'future' : '')
   const [currentFee, setCurrentFee] = useState(minorToInput(record.fee_minor))
-  const [updateFuture, setUpdateFuture] = useState(false)
   const [futureFee, setFutureFee] = useState(record.student_fee_override_minor == null ? '' : minorToInput(record.student_fee_override_minor))
   const [error, setError] = useState('')
   return <form className="space-y-4" onSubmit={event => {
     event.preventDefault()
+    if (!scope) {
+      setError('اختر هل تريد تطبيق التعديل على هذا الشهر فقط أم على الأشهر القادمة فقط.')
+      return
+    }
     const currentMinor = majorToMinor(currentFee)
-    const futureMinor = updateFuture && futureFee.trim() ? majorToMinor(futureFee) : updateFuture ? null : undefined
-    if (currentMinor === null || (futureFee.trim() && futureMinor === null)) {
+    const futureMinor = futureFee.trim() ? majorToMinor(futureFee) : null
+    if ((scope === 'current' && currentMinor === null) || (scope === 'future' && futureFee.trim() && futureMinor === null)) {
       setError('أدخل مبلغًا صحيحًا بحد أقصى منزلتين عشريتين.')
       return
     }
-    void onSubmit(currentMinor, futureMinor)
+    void onSubmit(scope, scope === 'current' ? currentMinor : futureMinor)
   }}>
-    <p className="text-sm text-deep-600">تعديل سجل الشهر متاح قبل تسجيل الدفع فقط.</p>
-    <label className="block text-sm font-medium text-deep-700">مبلغ هذا الشهر ({currency})
+    <fieldset className="space-y-2">
+      <legend className="text-sm font-bold text-deep-800">متى تريد تطبيق الرسوم الجديدة؟</legend>
+      {!record.is_paid && <label className={`flex cursor-pointer gap-3 rounded-xl border p-3 ${scope === 'current' ? 'border-cyan-400 bg-cyan-50/60 dark:bg-cyan-900/20' : 'border-water-200'}`}><input type="radio" name="fee-scope" value="current" checked={scope === 'current'} onChange={() => { setScope('current'); setError('') }} /><span><strong className="block text-sm text-deep-800">هذا الشهر فقط</strong><span className="text-xs text-deep-500">يُعدّل السجل الحالي ولا يغيّر رسوم الأشهر القادمة.</span></span></label>}
+      {record.student_id !== null && <label className={`flex cursor-pointer gap-3 rounded-xl border p-3 ${scope === 'future' ? 'border-cyan-400 bg-cyan-50/60 dark:bg-cyan-900/20' : 'border-water-200'}`}><input type="radio" name="fee-scope" value="future" checked={scope === 'future'} onChange={() => { setScope('future'); setError('') }} /><span><strong className="block text-sm text-deep-800">الأشهر القادمة فقط</strong><span className="text-xs text-deep-500">يبدأ من الدورة القادمة ولا يغيّر مبلغ هذا الشهر.</span></span></label>}
+    </fieldset>
+    {scope === 'current' && <label className="block text-sm font-medium text-deep-700">مبلغ هذا الشهر ({currency})
       <input inputMode="decimal" required value={currentFee} onChange={event => setCurrentFee(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-4 py-2.5" />
-    </label>
-    {record.student_id !== null && <div className="rounded-xl border border-water-200 p-3">
-      <label className="flex items-center gap-2 text-sm font-medium text-deep-700"><input type="checkbox" checked={updateFuture} onChange={event => setUpdateFuture(event.target.checked)} /> تحديث رسوم الأشهر القادمة أيضًا</label>
-      {updateFuture && <label className="mt-3 block text-sm font-medium text-deep-700">رسوم الأشهر القادمة ({currency})
-        <input inputMode="decimal" value={futureFee} onChange={event => setFutureFee(event.target.value)} placeholder="فارغ = استخدام السعر الافتراضي" className="surface-field mt-1 w-full rounded-xl px-4 py-2.5" />
-        <span className="mt-1 block text-xs text-deep-500">اتركه فارغًا لمسح السعر الخاص، أو أدخل 0 لإعفاء الطالب.</span>
-      </label>}
-    </div>}
+    </label>}
+    {scope === 'future' && <label className="block text-sm font-medium text-deep-700">رسوم الأشهر القادمة ({currency})
+      <input inputMode="decimal" value={futureFee} onChange={event => setFutureFee(event.target.value)} placeholder="فارغ = استخدام السعر الافتراضي" className="surface-field mt-1 w-full rounded-xl px-4 py-2.5" />
+      <span className="mt-1 block text-xs text-deep-500">اتركه فارغًا لاستخدام السعر الافتراضي، أو أدخل 0 لإعفاء الطالب.</span>
+    </label>}
+    {record.is_paid && <p className="rounded-xl border border-amber-200 bg-amber-50/60 p-3 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">هذا الشهر مدفوع ومغلق؛ يمكن تعديل رسوم الأشهر القادمة فقط.</p>}
     {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
     <div className="flex gap-3">
       <button type="button" onClick={onCancel} className="water-btn-outline flex-1 rounded-xl px-4 py-2.5">إلغاء</button>
@@ -283,15 +289,22 @@ export default function SubscriptionsPage() {
     }
   }
 
-  async function saveFee(currentMinor: number, futureMinor: number | null | undefined) {
+  async function saveFee(scope: 'current' | 'future', feeMinor: number | null) {
     if (!editingRecord) return
-    if (!window.confirm(`تأكيد تعديل رسوم ${editingRecord.student_name}؟ سيُسجّل التغيير في سجل التدقيق.`)) return
+    const scopeLabel = scope === 'current' ? 'هذا الشهر فقط' : 'الأشهر القادمة فقط'
+    if (!window.confirm(`تأكيد تعديل رسوم ${editingRecord.student_name} لـ ${scopeLabel}؟ سيُسجّل التغيير في سجل التدقيق.`)) return
     setBusy(true)
     setError('')
     try {
-      await api.updateSubscriptionMonth(editingRecord.id, currentMinor, futureMinor)
+      if (scope === 'current') {
+        if (feeMinor === null) throw new Error('أدخل مبلغ هذا الشهر.')
+        await api.updateSubscriptionMonth(editingRecord.id, feeMinor)
+      } else {
+        if (editingRecord.student_id === null) throw new Error('لا يمكن تعديل الرسوم القادمة لطالب محذوف.')
+        await api.updateStudentSubscriptionFee(editingRecord.student_id, feeMinor)
+      }
       setEditingRecord(null)
-      setNotice('تم تحديث الرسوم.')
+      setNotice(scope === 'current' ? 'تم تحديث رسوم هذا الشهر فقط.' : 'تم تحديث رسوم الأشهر القادمة فقط دون تغيير الشهر الحالي.')
       await loadRecords()
     } catch (reason: any) {
       setError(reason.message || 'تعذر تحديث الرسوم')
@@ -462,7 +475,7 @@ export default function SubscriptionsPage() {
           <div><p className="text-xs text-deep-500">الرسوم</p><p className="font-bold text-deep-900">{formatSubscriptionMoney(record.fee_minor, currency)}</p></div>
           <div className="text-sm"><p className="text-xs text-deep-500">{record.is_paid ? 'بيانات الدفع' : 'الفترة'}</p><p className="text-deep-700">{record.is_paid ? `${record.payment_date} · ${paymentMethodLabel(record.payment_method)}` : `${record.period_start} — ${record.period_end}`}</p></div>
           <div className="flex flex-wrap gap-2 md:justify-end">
-            {record.is_paid ? <><button type="button" disabled={busy} onClick={() => void showReceipt(record)} className="water-btn-outline rounded-lg px-3 py-1.5 text-xs">الإيصال</button><button type="button" disabled={busy} onClick={() => void makeUnpaid(record)} className="rounded-lg border border-red-200 px-3 py-1.5 text-xs text-red-600 dark:border-red-800 dark:text-red-300">إلغاء السداد</button></> : <><button type="button" onClick={() => setEditingRecord(record)} className="water-btn-outline rounded-lg px-3 py-1.5 text-xs">تعديل الرسوم</button>{record.fee_minor > 0 && <button type="button" onClick={() => setPayingRecord(record)} className="water-btn rounded-lg px-3 py-1.5 text-xs font-bold text-white">سداد</button>}</>}
+            {record.is_paid ? <><button type="button" disabled={busy} onClick={() => void showReceipt(record)} className="water-btn-outline rounded-lg px-3 py-1.5 text-xs">الإيصال</button>{record.student_id !== null && <button type="button" disabled={busy} onClick={() => setEditingRecord(record)} className="water-btn-outline rounded-lg px-3 py-1.5 text-xs">رسوم الأشهر القادمة</button>}<button type="button" disabled={busy} onClick={() => void makeUnpaid(record)} className="rounded-lg border border-red-200 px-3 py-1.5 text-xs text-red-600 dark:border-red-800 dark:text-red-300">إلغاء السداد</button></> : <><button type="button" onClick={() => setEditingRecord(record)} className="water-btn-outline rounded-lg px-3 py-1.5 text-xs">تعديل الرسوم</button>{record.fee_minor > 0 && <button type="button" onClick={() => setPayingRecord(record)} className="water-btn rounded-lg px-3 py-1.5 text-xs font-bold text-white">سداد</button>}</>}
             {record.student_id !== null && <Link href={`/students/${record.student_id}`} className="rounded-lg px-2 py-1.5 text-xs font-semibold text-cyan-700 dark:text-cyan-300">ملف الطالب</Link>}
           </div>
         </article>)}
