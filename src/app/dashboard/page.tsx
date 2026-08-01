@@ -110,6 +110,7 @@ export default function DashboardPage() {
   const actionCards = [
     { title: 'تسجيل الحضور', desc: 'راجع سجل الحضور والتصفيات المحفوظة', href: '/attendance' },
     ...(canManage ? [{ title: 'إدارة الطلاب', desc: 'الشيوخ والطلاب والمستخدمون', href: '/manage' }] : []),
+    ...(canManage ? [{ title: 'الاشتراكات', desc: 'متابعة الرسوم الشهرية وتسجيل السداد', href: '/subscriptions' }] : []),
     { title: 'التقارير', desc: 'نسب الحضور وأداء الطلاب في التحفيظ', href: '/reports' },
   ]
 

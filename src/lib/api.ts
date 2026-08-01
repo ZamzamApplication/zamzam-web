@@ -8,6 +8,12 @@ import type {
   SheikhInfo,
   MoveStudentResult,
   StudentProfile,
+  SubscriptionMonthRecord,
+  SubscriptionMonthsResponse,
+  SubscriptionPaymentMethod,
+  SubscriptionReceipt,
+  SubscriptionSettings,
+  StudentCurrentSubscription,
   User,
   WhatsAppGroup,
 } from './types'
@@ -124,6 +130,83 @@ export const api = {
 
   getDashboardSummary() {
     return request('/reports/dashboard-summary')
+  },
+
+  getSubscriptionSettings() {
+    return request<SubscriptionSettings>('/subscriptions/settings')
+  },
+
+  updateSubscriptionSettings(data: { enabled: boolean; default_monthly_fee_minor: number; currency: string }) {
+    return request<SubscriptionSettings>('/subscriptions/settings', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  },
+
+  getSubscriptionMonths(filters: { period?: string; paid?: boolean; sheikh_id?: number; student_id?: number; search?: string; page?: number; page_size?: number }) {
+    const params = new URLSearchParams()
+    if (filters.period) params.set('period', filters.period)
+    if (filters.paid !== undefined) params.set('paid', String(filters.paid))
+    if (filters.sheikh_id) params.set('sheikh_id', String(filters.sheikh_id))
+    if (filters.student_id) params.set('student_id', String(filters.student_id))
+    if (filters.search) params.set('search', filters.search)
+    if (filters.page) params.set('page', String(filters.page))
+    if (filters.page_size) params.set('page_size', String(filters.page_size))
+    return request<SubscriptionMonthsResponse>(`/subscriptions/months?${params.toString()}`)
+  },
+
+  updateStudentSubscriptionFee(studentId: number, feeMinor: number | null) {
+    return request(`/subscriptions/students/${studentId}/fee`, {
+      method: 'PUT',
+      body: JSON.stringify({ monthly_fee_minor: feeMinor }),
+    })
+  },
+
+  getStudentCurrentSubscription(studentId: number) {
+    return request<StudentCurrentSubscription>(`/subscriptions/students/${studentId}/current`)
+  },
+
+  updateSubscriptionMonth(recordId: number, feeMinor: number, futureMonthlyFeeMinor?: number | null) {
+    return request(`/subscriptions/months/${recordId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        fee_minor: feeMinor,
+        update_future: futureMonthlyFeeMinor !== undefined,
+        future_monthly_fee_minor: futureMonthlyFeeMinor,
+      }),
+    })
+  },
+
+  markSubscriptionPaid(recordId: number, data: { payment_date: string; payment_method: SubscriptionPaymentMethod; payment_note?: string | null }) {
+    return request(`/subscriptions/months/${recordId}/mark-paid`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+
+  bulkMarkSubscriptionsPaid(recordIds: number[], data: { payment_date: string; payment_method: SubscriptionPaymentMethod; payment_note?: string | null }) {
+    return request('/subscriptions/months/bulk-mark-paid', {
+      method: 'POST',
+      body: JSON.stringify({ record_ids: recordIds, ...data }),
+    })
+  },
+
+  markSubscriptionUnpaid(recordId: number) {
+    return request(`/subscriptions/months/${recordId}/mark-unpaid`, { method: 'POST' })
+  },
+
+  getSubscriptionReceipt(recordId: number) {
+    return request<SubscriptionReceipt>(`/subscriptions/months/${recordId}/receipt`)
+  },
+
+  exportSubscriptions(filters: { period?: string; paid?: boolean; sheikh_id?: number; student_id?: number; search?: string }) {
+    const params = new URLSearchParams()
+    if (filters.period) params.set('period', filters.period)
+    if (filters.paid !== undefined) params.set('paid', String(filters.paid))
+    if (filters.sheikh_id) params.set('sheikh_id', String(filters.sheikh_id))
+    if (filters.student_id) params.set('student_id', String(filters.student_id))
+    if (filters.search) params.set('search', filters.search)
+    return request<SubscriptionMonthRecord[]>(`/subscriptions/export?${params.toString()}`)
   },
 
   getUpcomingSessions() {

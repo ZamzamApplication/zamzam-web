@@ -39,6 +39,25 @@
   --muted-text: 71 85 105;
 }
 
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  .print-receipt,
+  .print-receipt * {
+    visibility: visible !important;
+  }
+
+  .print-receipt {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+}
+
 .dark {
   --deep-50: 15 23 42;
   --deep-100: 30 41 59;

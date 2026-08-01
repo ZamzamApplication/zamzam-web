@@ -106,6 +106,9 @@ export interface Circle {
   whatsend_api_key_configured?: boolean
   whatsend_enabled?: boolean
   progress_tracking_enabled?: boolean
+  subscriptions_enabled?: boolean
+  subscription_default_fee_minor?: number
+  subscription_currency?: string
 }
 
 export interface Session {
@@ -183,6 +186,65 @@ export interface MoveStudentResult {
   student_id: number
   from_sheikh_id: number | null
   destination_sheikh: { id: number; name: string }
+}
+
+export type SubscriptionPaymentMethod = 'cash' | 'bank_transfer' | 'mobile_wallet' | 'other'
+
+export interface SubscriptionSettings {
+  enabled: boolean
+  default_monthly_fee_minor: number
+  currency: string
+  month_start_day?: number
+  current_period_start?: string
+  current_period_end?: string
+}
+
+export interface SubscriptionMonthRecord {
+  id: number
+  student_id: number | null
+  student_name: string
+  student_code: string | null
+  student_phone?: string | null
+  sheikh_id: number | null
+  sheikh_name: string | null
+  period_start: string
+  period_end: string
+  fee_minor: number
+  student_fee_override_minor?: number | null
+  is_paid: boolean
+  payment_date: string | null
+  payment_method: SubscriptionPaymentMethod | null
+  payment_note: string | null
+  receipt_number: string | null
+}
+
+export interface SubscriptionMonthSummary {
+  expected_minor: number
+  collected_minor: number
+  unpaid_minor: number
+  paid_count: number
+  unpaid_count: number
+}
+
+export interface SubscriptionMonthsResponse {
+  items: SubscriptionMonthRecord[]
+  total: number
+  page: number
+  page_size: number
+  summary: SubscriptionMonthSummary
+}
+
+export interface SubscriptionReceipt extends SubscriptionMonthRecord {
+  tahfiz_name: string
+  currency?: string
+  recorded_by_username?: string | null
+}
+
+export interface StudentCurrentSubscription {
+  enabled: boolean
+  effective_fee_minor: number
+  currency?: string
+  record: SubscriptionMonthRecord | null
 }
 
 export interface WhatsAppGroup {

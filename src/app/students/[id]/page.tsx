@@ -6,7 +6,8 @@ import { useParams, useRouter } from 'next/navigation'
 import AsyncState from '@/components/AsyncState'
 import { api } from '@/lib/api'
 import { mediaUrl } from '@/lib/format'
-import type { ExcusedPeriodInfo, StudentProfile } from '@/lib/types'
+import { formatSubscriptionMoney } from '@/lib/subscriptions'
+import type { ExcusedPeriodInfo, StudentCurrentSubscription, StudentProfile } from '@/lib/types'
 
 const WEEKDAYS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
 
@@ -21,12 +22,17 @@ export default function StudentProfilePage() {
   const [editingPeriodId, setEditingPeriodId] = useState<number | null>(null)
   const [periodBusy, setPeriodBusy] = useState(false)
   const [periodError, setPeriodError] = useState('')
+  const [subscription, setSubscription] = useState<StudentCurrentSubscription | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
-      setProfile(await api.getStudentProfile(studentId))
+      const nextProfile = await api.getStudentProfile(studentId)
+      setProfile(nextProfile)
+      if (nextProfile.can_manage) {
+        api.getStudentCurrentSubscription(studentId).then(setSubscription).catch(() => setSubscription(null))
+      }
     } catch (reason: any) {
       setError(reason.message || 'تعذر تحميل ملف الطالب')
     } finally {
@@ -102,7 +108,7 @@ export default function StudentProfilePage() {
     <div className="mx-auto max-w-5xl space-y-5">
       <div className="flex items-center justify-between gap-3">
         <button type="button" onClick={() => router.back()} className="water-btn-outline rounded-xl px-4 py-2 text-sm">رجوع</button>
-        {profile.can_manage && <button type="button" onClick={() => router.push('/manage')} className="water-btn rounded-xl px-4 py-2 text-sm font-semibold text-white">إدارة الطالب</button>}
+        {profile.can_manage && <div className="flex flex-wrap gap-2"><button type="button" onClick={() => router.push(`/subscriptions?student_id=${profile.id}`)} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">الاشتراكات</button><button type="button" onClick={() => router.push('/manage')} className="water-btn rounded-xl px-4 py-2 text-sm font-semibold text-white">إدارة الطالب</button></div>}
       </div>
 
       <section className="glass-card rounded-2xl p-5 md:p-7">
@@ -134,6 +140,11 @@ export default function StudentProfilePage() {
         {profile.attendance.streak_alert_enabled && <div className={`mt-4 rounded-xl border p-4 ${profile.attendance.streak > profile.attendance.streak_limit ? 'border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20' : 'border-water-200 bg-water-50/50 dark:bg-slate-800/40'}`}>
           <p className="text-sm font-bold text-deep-800">سلسلة «{profile.attendance.streak_status}» الحالية: {profile.attendance.streak}</p>
           <p className="mt-1 text-xs text-deep-500">حد التنبيه المضبوط: أكثر من {profile.attendance.streak_limit}</p>
+        </div>}
+
+        {profile.can_manage && subscription?.enabled && <div className="mt-4 flex flex-col gap-2 rounded-xl border border-water-200 bg-white/45 p-4 sm:flex-row sm:items-center sm:justify-between dark:bg-slate-800/40">
+          <div><p className="text-xs text-deep-500">اشتراك الدورة الحالية</p><p className="mt-1 font-bold text-deep-900">{(subscription.record?.fee_minor ?? subscription.effective_fee_minor) === 0 ? 'معفى' : subscription.record?.is_paid ? 'مدفوع' : 'غير مدفوع'}{(subscription.record?.fee_minor ?? subscription.effective_fee_minor) > 0 ? ` · ${formatSubscriptionMoney(subscription.record?.fee_minor ?? subscription.effective_fee_minor, subscription.currency || 'EGP')}` : ''}</p></div>
+          <button type="button" onClick={() => router.push(`/subscriptions?student_id=${profile.id}`)} className="text-sm font-bold text-cyan-700 dark:text-cyan-300">فتح سجل الاشتراك</button>
         </div>}
       </section>
 

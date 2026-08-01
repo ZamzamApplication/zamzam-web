@@ -8,6 +8,7 @@ import { configuredExcelExportTemplates, DEFAULT_EXCEL_EXPORT_TEMPLATES, type Ex
 import type { Circle, SheikhInfo, TahfizInvitation } from '@/lib/types'
 import AsyncState from '@/components/AsyncState'
 import ExcelTemplateSettings from '@/components/ExcelTemplateSettings'
+import { majorToMinor, minorToInput } from '@/lib/subscriptions'
 
 const WEEKDAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
 const STATUS_COLOR_OPTIONS = [
@@ -29,6 +30,9 @@ export default function TahfizSettingsPage() {
   const [weekStartDay, setWeekStartDay] = useState(6)
   const [monthStartDay, setMonthStartDay] = useState(1)
   const [progressTrackingEnabled, setProgressTrackingEnabled] = useState(false)
+  const [subscriptionsEnabled, setSubscriptionsEnabled] = useState(false)
+  const [subscriptionDefaultFee, setSubscriptionDefaultFee] = useState('')
+  const [subscriptionCurrency, setSubscriptionCurrency] = useState('EGP')
   const [sheikhSelectionEnabled, setSheikhSelectionEnabled] = useState(true)
   const [restrictSheikhStudentAccess, setRestrictSheikhStudentAccess] = useState(true)
   const [attendanceStatuses, setAttendanceStatuses] = useState<string[]>([])
@@ -77,6 +81,9 @@ export default function TahfizSettingsPage() {
         setWeekStartDay(data.week_start_day ?? 6)
         setMonthStartDay(data.month_start_day ?? 1)
         setProgressTrackingEnabled(Boolean(data.progress_tracking_enabled))
+        setSubscriptionsEnabled(Boolean(data.subscriptions_enabled))
+        setSubscriptionDefaultFee(minorToInput(data.subscription_default_fee_minor ?? 0))
+        setSubscriptionCurrency(data.subscription_currency || 'EGP')
         setSheikhSelectionEnabled(data.attendance_sheikh_selection_enabled ?? true)
         setRestrictSheikhStudentAccess(data.restrict_sheikh_student_access ?? true)
         setAttendanceStatuses(configuredAttendanceStatuses(data.attendance_statuses))
@@ -240,6 +247,11 @@ export default function TahfizSettingsPage() {
   const save = async (event: React.FormEvent) => {
     event.preventDefault()
     if (!name.trim() || attendanceStatuses.length === 0) return
+    const subscriptionFeeMinor = majorToMinor(subscriptionDefaultFee)
+    if (subscriptionFeeMinor === null || (subscriptionsEnabled && subscriptionFeeMinor <= 0)) {
+      setError('أدخل رسماً شهرياً صحيحاً أكبر من صفر قبل تفعيل الاشتراكات')
+      return
+    }
     setSaving(true)
     setError('')
     setNotice('')
@@ -260,6 +272,9 @@ export default function TahfizSettingsPage() {
         attendance_streak_limit: excusedStreakLimit,
         attendance_streak_reset_statuses: excusedResetStatuses,
         progress_tracking_enabled: progressTrackingEnabled,
+        subscriptions_enabled: subscriptionsEnabled,
+        subscription_default_fee_minor: subscriptionFeeMinor,
+        subscription_currency: subscriptionCurrency,
         attendance_sheikh_selection_enabled: sheikhSelectionEnabled,
         restrict_sheikh_student_access: restrictSheikhStudentAccess,
         whatsend_enabled: whatsendEnabled,
@@ -361,6 +376,32 @@ export default function TahfizSettingsPage() {
             title="متابعة الحفظ والمراجعة"
             description="إيقافها يخفي الميزة دون حذف البيانات السابقة."
           />
+          </div>
+          <div className="mt-3">
+            <FeatureToggle
+              enabled={subscriptionsEnabled}
+              onChange={(enabled) => {
+                if (!enabled && !window.confirm('سيؤدي إيقاف الاشتراكات إلى منع إنشاء سجلات جديدة مع الاحتفاظ بجميع السجلات والمدفوعات السابقة. هل تريد المتابعة؟')) return
+                setSubscriptionsEnabled(enabled)
+              }}
+              title="الاشتراكات الشهرية"
+              description="ميزة اختيارية لمتابعة رسوم الطلاب. إيقافها يخفي التشغيل اليومي ويحفظ السجلات السابقة."
+            />
+            {subscriptionsEnabled && <div className="mt-3 grid gap-3 rounded-xl border border-water-200 bg-white/35 p-4 md:grid-cols-2 dark:bg-slate-800/35">
+              <label className="text-sm font-semibold text-deep-700">
+                الرسم الشهري الافتراضي
+                <input inputMode="decimal" value={subscriptionDefaultFee} onChange={event => setSubscriptionDefaultFee(event.target.value)} required className="surface-field mt-1.5 w-full rounded-xl px-4 py-2.5 font-normal" />
+              </label>
+              <label className="text-sm font-semibold text-deep-700">
+                العملة
+                <select value={subscriptionCurrency} onChange={event => setSubscriptionCurrency(event.target.value)} className="surface-field mt-1.5 w-full rounded-xl px-4 py-2.5 font-normal">
+                  <option value="EGP">جنيه مصري (EGP)</option>
+                  <option value="SAR">ريال سعودي (SAR)</option>
+                  <option value="USD">دولار أمريكي (USD)</option>
+                </select>
+              </label>
+              <p className="text-xs text-deep-500 md:col-span-2">يمكن تعديل رسوم طالب بعينه من صفحة الاشتراكات. لا يمكن تغيير العملة بعد إنشاء أول سجل.</p>
+            </div>}
           </div>
           <div className="mt-3">
             <FeatureToggle
