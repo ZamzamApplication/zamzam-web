@@ -9,6 +9,7 @@ import type { Session } from '@/lib/types'
 import CreateSessionModal from '@/components/CreateSessionModal'
 import AsyncState from '@/components/AsyncState'
 import ConfirmDialog from '@/components/ConfirmDialog'
+import { canPermanentlyDeleteSession, sessionDeletionConfirmation } from '@/lib/session-lifecycle'
 
 export default function SessionsPage() {
   const [allSessions, setAllSessions] = useState<Session[]>([])
@@ -134,15 +135,17 @@ export default function SessionsPage() {
                   {s.circle_name && <p className="text-xs text-deep-500 mt-0.5">{s.circle_name}</p>}
                 </div>
                 <div className="flex flex-col-reverse sm:flex-row items-end sm:items-center gap-2 shrink-0">
-                  {canManage && <button
-                    onClick={async (e) => {
-                      e.preventDefault()
-                      setDeleteTarget(s)
-                    }}
-                    className="min-h-[2rem] px-2 text-xs text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition"
-                  >
-                    حذف
-                  </button>}
+                  {canManage && (canPermanentlyDeleteSession(s) ? <button
+                      onClick={(event) => {
+                        event.preventDefault()
+                        setDeleteTarget(s)
+                      }}
+                      className="min-h-[2rem] px-2 text-xs text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition"
+                    >
+                      حذف نهائي
+                    </button> : <span className="max-w-32 text-left text-[11px] leading-4 text-deep-500">
+                      افتح الحلقة وأعد فتحها قبل الحذف
+                    </span>)}
                   <span className={`status-badge px-3 py-1 rounded-full text-xs ${
                     s.is_confirmed ? 'bg-green-100/60 text-green-700 border-green-300 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700' : 'bg-yellow-100/60 text-yellow-700 border-yellow-300 dark:bg-yellow-900/40 dark:text-yellow-300 dark:border-yellow-700'
                   }`}>
@@ -164,8 +167,8 @@ export default function SessionsPage() {
       <ConfirmDialog
         open={Boolean(deleteTarget)}
         title="حذف الحلقة"
-        message="سيتم حذف الحلقة وجميع سجلات الحضور المرتبطة بها. لا يمكن التراجع عن هذا الإجراء."
-        confirmLabel="حذف الحلقة"
+        message={deleteTarget ? sessionDeletionConfirmation(deleteTarget) : ''}
+        confirmLabel="حذف نهائي"
         busy={deleting}
         onConfirm={handleDelete}
         onClose={() => setDeleteTarget(null)}

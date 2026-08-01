@@ -82,6 +82,30 @@ export interface FeedbackReport {
   updated_at: string
 }
 
+export interface AuditLogActor {
+  id: number
+  username: string
+}
+
+export interface AuditLogItem {
+  id: number
+  actor_user_id: number
+  actor_username: string
+  action: string
+  details: string | null
+  created_at: string
+}
+
+export interface AuditLogPage {
+  items: AuditLogItem[]
+  total: number
+  page: number
+  page_size: number
+  pages: number
+  actions: string[]
+  actors: AuditLogActor[]
+}
+
 export interface Circle {
   id: number
   name: string

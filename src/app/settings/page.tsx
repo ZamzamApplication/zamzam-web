@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { api } from '@/lib/api'
 import { configuredAttendanceStatuses } from '@/lib/attendance'
 import { configuredExcelExportTemplates, DEFAULT_EXCEL_EXPORT_TEMPLATES, type ExcelExportTemplates } from '@/lib/excel-templates'
@@ -306,9 +307,9 @@ export default function TahfizSettingsPage() {
 
   return (
     <div className="space-y-5">
-      <header className="px-1">
-        <h1 className="text-2xl font-bold text-deep-900">إعدادات التحفيظ</h1>
-        <p className="mt-1 text-sm text-deep-500">إدارة بيانات التحفيظ والحضور والتقارير والتكاملات.</p>
+      <header className="flex flex-wrap items-start justify-between gap-3 px-1">
+        <div><h1 className="text-2xl font-bold text-deep-900">إعدادات التحفيظ</h1><p className="mt-1 text-sm text-deep-500">إدارة بيانات التحفيظ والحضور والتقارير والتكاملات.</p></div>
+        <Link href="/audit-log" className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">📋 سجل التدقيق</Link>
       </header>
 
       {error && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/25 dark:text-red-200">{error}</div>}

@@ -365,6 +365,26 @@ export const api = {
     return request(`/platform/users${query ? `?query=${encodeURIComponent(query)}` : ''}`)
   },
 
+  getAuditLogs(filters: {
+    page?: number
+    pageSize?: number
+    action?: string
+    actorUserId?: number
+    dateFrom?: string
+    dateTo?: string
+    query?: string
+  } = {}) {
+    const params = new URLSearchParams()
+    params.set('page', String(filters.page || 1))
+    params.set('page_size', String(filters.pageSize || 50))
+    if (filters.action) params.set('action', filters.action)
+    if (filters.actorUserId) params.set('actor_user_id', String(filters.actorUserId))
+    if (filters.dateFrom) params.set('date_from', filters.dateFrom)
+    if (filters.dateTo) params.set('date_to', filters.dateTo)
+    if (filters.query) params.set('query', filters.query)
+    return request<import('./types').AuditLogPage>(`/audit-logs?${params.toString()}`)
+  },
+
   grantPlatformMembership(userId: number, tahfizId: number, role: 'admin' | 'sheikh' = 'admin', sheikhId?: number | null) {
     return request(`/platform/users/${userId}/memberships`, {
       method: 'POST',
