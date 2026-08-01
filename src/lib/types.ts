@@ -178,6 +178,13 @@ export interface SheikhStudentDeletionResolution {
   sheikh_id?: number | null
 }
 
+export interface MoveStudentResult {
+  message: string
+  student_id: number
+  from_sheikh_id: number | null
+  destination_sheikh: { id: number; name: string }
+}
+
 export interface WhatsAppGroup {
   id: string
   name: string

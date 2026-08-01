@@ -8,6 +8,7 @@ import { mediaUrl } from '@/lib/format'
 import { compressProfileImage } from '@/lib/image'
 import { configuredAttendanceStatuses } from '@/lib/attendance'
 import { formatQuranRange } from '@/lib/quran'
+import { filterDestinationSheikhs, filterMoveStudents } from '@/lib/move-student'
 import type { Circle, ExcusedWeekdayInfo, QuranProgressEntry, QuranProgressRevision, QuranProgressTrendPoint, QuranRangeType, SheikhDeletionPreview, SheikhInfo, SheikhStudentDeletionResolution, StudentGoal, StudentInfo, TahfizInvitation, UserInfo, WarningInfo, WarningRow, WhatsAppGroup } from '@/lib/types'
 import AsyncState from '@/components/AsyncState'
 
@@ -21,10 +22,10 @@ function normalizeExcusedWeekdays(days: (ExcusedWeekdayInfo | number)[] | undefi
 
 // ─── Modal Wrapper ─────────────────────────────────────────────────────────
 
-function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+function Modal({ title, onClose, children, wide = false }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean }) {
   return (
     <div className="mobile-sheet-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={onClose}>
-      <div className="mobile-sheet glass-strong rounded-2xl p-6 w-full max-w-sm mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className={`mobile-sheet glass-strong rounded-2xl p-6 w-full ${wide ? 'max-w-5xl' : 'max-w-sm'} mx-4 max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
         <h2 className="text-xl font-bold text-deep-800 mb-4">{title}</h2>
         {children}
       </div>
@@ -1227,48 +1228,108 @@ function DeleteSheikhModal({ sheikh, onClose, onDeleted }: {
 
 // ─── Move Sheikh Modal ───────────────────────────────────────────────────────
 
-function MoveSheikhModal({ student, currentSheikhName, sheikhs, onClose, onMoved }: {
-  student: StudentInfo
-  currentSheikhName: string
-  sheikhs: { id: number; name: string; circle_name: string }[]
+function MoveSheikhModal({ initialStudentId, sheikhs, onClose, onMoved, onStale }: {
+  initialStudentId?: number
+  sheikhs: (SheikhInfo & { students: StudentInfo[] })[]
   onClose: () => void
   onMoved: () => void
+  onStale: () => void
 }) {
+  const [selectedStudentId, setSelectedStudentId] = useState<number | ''>(initialStudentId || '')
   const [selectedSheikhId, setSelectedSheikhId] = useState<number | ''>('')
+  const [studentQuery, setStudentQuery] = useState('')
+  const [sheikhQuery, setSheikhQuery] = useState('')
+  const [confirmed, setConfirmed] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  const students = sheikhs.flatMap((sheikh) => sheikh.students.map((student) => ({
+    ...student,
+    sheikh: { id: sheikh.id, name: sheikh.name },
+  })))
+  const selectedStudent = students.find((student) => student.id === selectedStudentId)
+  const currentSheikh = selectedStudent?.sheikh
+  const destinationSheikh = sheikhs.find((sheikh) => sheikh.id === selectedSheikhId)
+  const visibleStudents = filterMoveStudents(students, studentQuery)
+  const destinationSheikhs = filterDestinationSheikhs(sheikhs, currentSheikh?.id, sheikhQuery)
+
+  const selectStudent = (studentId: number) => {
+    setSelectedStudentId(studentId)
+    setSelectedSheikhId('')
+    setConfirmed(false)
+    setError('')
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedSheikhId) return
+    if (!selectedStudent || !currentSheikh || !selectedSheikhId || !confirmed) return
     setLoading(true)
     setError('')
     try {
-      await api.moveStudentSheikh(student.id, selectedSheikhId)
+      await api.moveStudentSheikh(selectedStudent.id, selectedSheikhId, currentSheikh.id)
       onMoved()
     } catch (err: any) {
-      setError(err.message || 'فشل النقل')
+      if (err?.status === 409) {
+        setError('تغيّر الشيخ الحالي للطالب. تم تحديث البيانات؛ راجع الاختيار ثم حاول مجدداً.')
+        setSelectedSheikhId('')
+        setConfirmed(false)
+        onStale()
+      } else {
+        setError(err.message || 'فشل النقل')
+      }
     } finally {
       setLoading(false)
     }
   }
 
-  const otherSheikhs = sheikhs.filter((s) => s.name !== currentSheikhName)
-
   return (
-    <Modal title={`نقل الطالب — ${student.name}`} onClose={onClose}>
+    <Modal title="نقل طالب إلى شيخ آخر" onClose={onClose} wide>
       <ErrorMsg error={error} />
-      <p className="text-sm text-deep-600 mb-4">الشيخ الحالي: <strong>{currentSheikhName}</strong></p>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <select value={selectedSheikhId} onChange={(e) => setSelectedSheikhId(e.target.value ? Number(e.target.value) : '')} required className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
-          <option value="">-- اختر الشيخ الجديد --</option>
-          {otherSheikhs.map((s) => (
-            <option key={s.id} value={s.id}>{s.name} — {s.circle_name}</option>
-          ))}
-        </select>
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.8fr)_minmax(0,1fr)]">
+          <section className="rounded-2xl border border-water-200 p-3" aria-labelledby="move-student-heading">
+            <h3 id="move-student-heading" className="mb-2 text-sm font-bold text-deep-800">1. اختر الطالب</h3>
+            <input value={studentQuery} onChange={(event) => setStudentQuery(event.target.value)} placeholder="ابحث بالاسم أو الرقم أو الهاتف أو الشيخ" aria-label="بحث الطلاب للنقل" className="surface-field mb-2 w-full rounded-xl px-3 py-2 text-sm" />
+            <div className="max-h-64 space-y-1 overflow-y-auto">
+              {visibleStudents.map((student) => <button key={student.id} type="button" onClick={() => selectStudent(student.id)} className={`w-full rounded-xl border px-3 py-2 text-right text-sm transition ${selectedStudentId === student.id ? 'border-cyan-500 bg-water-100/70' : 'border-transparent hover:bg-water-50/60'}`}>
+                <span className="block font-semibold text-deep-800">{student.name}</span>
+                <span className="block text-xs text-deep-500">{student.student_id ? `#${student.student_id}` : `#${student.id}`} · {student.sheikh?.name}</span>
+              </button>)}
+              {visibleStudents.length === 0 && <p className="py-6 text-center text-sm text-deep-400">لا توجد نتائج</p>}
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-water-200 bg-water-50/40 p-4" aria-labelledby="current-sheikh-heading">
+            <h3 id="current-sheikh-heading" className="text-sm font-bold text-deep-800">2. الطالب والشيخ الحالي</h3>
+            {selectedStudent && currentSheikh ? <div className="mt-4 space-y-3">
+              <div><p className="text-xs text-deep-500">الطالب</p><p className="font-bold text-deep-900">{selectedStudent.name}</p><p className="text-xs text-deep-500">{selectedStudent.student_id ? `#${selectedStudent.student_id}` : `#${selectedStudent.id}`}</p></div>
+              <div className="rounded-xl border border-water-200 bg-white/50 p-3 dark:bg-slate-800/50"><p className="text-xs text-deep-500">الشيخ الحالي</p><p className="font-bold text-cyan-700 dark:text-cyan-300">{currentSheikh.name}</p></div>
+            </div> : <p className="mt-4 text-sm text-deep-500">اختر طالباً لعرض الشيخ الحالي.</p>}
+          </section>
+
+          <section className="rounded-2xl border border-water-200 p-3" aria-labelledby="destination-sheikh-heading">
+            <h3 id="destination-sheikh-heading" className="mb-2 text-sm font-bold text-deep-800">3. اختر الشيخ الجديد</h3>
+            <input value={sheikhQuery} onChange={(event) => setSheikhQuery(event.target.value)} disabled={!selectedStudent} placeholder="ابحث باسم الشيخ أو الحلقة" aria-label="بحث الشيخ الجديد" className="surface-field mb-2 w-full rounded-xl px-3 py-2 text-sm disabled:opacity-50" />
+            <div className="max-h-64 space-y-1 overflow-y-auto">
+              {destinationSheikhs.map((sheikh) => <button key={sheikh.id} type="button" disabled={!selectedStudent} onClick={() => { setSelectedSheikhId(sheikh.id); setConfirmed(false); setError('') }} className={`w-full rounded-xl border px-3 py-2 text-right text-sm transition disabled:opacity-50 ${selectedSheikhId === sheikh.id ? 'border-cyan-500 bg-water-100/70' : 'border-transparent hover:bg-water-50/60'}`}>
+                <span className="block font-semibold text-deep-800">{sheikh.name}</span>
+                <span className="block text-xs text-deep-500">{sheikh.circle_name}</span>
+              </button>)}
+              {selectedStudent && destinationSheikhs.length === 0 && <p className="py-6 text-center text-sm text-deep-400">لا يوجد شيخ آخر مطابق</p>}
+            </div>
+          </section>
+        </div>
+
+        <div className="rounded-2xl border border-water-200 p-4">
+          <p className="text-sm font-bold text-deep-800">ملخص النقل</p>
+          {selectedStudent && currentSheikh && destinationSheikh ? <>
+            <p className="mt-2 text-sm text-deep-700"><strong>{selectedStudent.name}</strong> من <strong>{currentSheikh.name}</strong> إلى <strong>{destinationSheikh.name}</strong></p>
+            <label className="mt-3 flex cursor-pointer items-start gap-2 text-sm text-deep-700"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} className="mt-1" /><span>راجعت الطالب والشيخ الحالي والشيخ الجديد وأؤكد عملية النقل.</span></label>
+          </> : <p className="mt-2 text-sm text-deep-500">اختر الطالب والشيخ الجديد لإكمال الملخص.</p>}
+        </div>
         <div className="flex gap-3 pt-2">
-          <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 water-btn-outline rounded-xl text-sm">إلغاء</button>
-          <button type="submit" disabled={loading || !selectedSheikhId} className="flex-1 px-4 py-2.5 water-btn text-white rounded-xl text-sm font-medium disabled:opacity-50">{loading ? 'جاري...' : 'نقل'}</button>
+          <button type="button" onClick={onClose} disabled={loading} className="flex-1 px-4 py-2.5 water-btn-outline rounded-xl text-sm">إلغاء</button>
+          <button type="submit" disabled={loading || !selectedStudent || !selectedSheikhId || !confirmed} className="flex-1 px-4 py-2.5 water-btn text-white rounded-xl text-sm font-medium disabled:opacity-50">{loading ? 'جاري النقل...' : 'تأكيد النقل'}</button>
         </div>
       </form>
     </Modal>
@@ -1561,10 +1622,10 @@ function StudentStatusTabs({
   sheikhId,
   onViewStudent,
   onEditStudent,
+  onMoveStudent,
   onDeleteStudent,
   onDragStart,
   onDropReorder,
-  onDropOnSheikh,
   onZoomPic,
 }: {
   students: StudentInfo[]
@@ -1572,10 +1633,10 @@ function StudentStatusTabs({
   sheikhId: number
   onViewStudent: (s: StudentInfo) => void
   onEditStudent: (s: StudentInfo) => void
+  onMoveStudent: (s: StudentInfo) => void
   onDeleteStudent: (id: number) => void
   onDragStart: (studentId: number, fromSheikhId: number) => void
   onDropReorder: (sheikhId: number, targetStudentId?: number) => void
-  onDropOnSheikh: (sheikhId: number) => void
   onZoomPic?: (url: string) => void
 }) {
   const [openTab, setOpenTab] = useState('مقيد')
@@ -1618,7 +1679,7 @@ function StudentStatusTabs({
             if (drag.fromSheikhId === sheikhId) {
               onDropReorder(sheikhId)
             } else {
-              await onDropOnSheikh(sheikhId)
+              ;(window as any).__dragData = null
             }
           }}
         >
@@ -1629,6 +1690,7 @@ function StudentStatusTabs({
                   key={s.id}
                   draggable
                   onDragStart={() => { (window as any).__dragData = { studentId: s.id, fromSheikhId: sheikhId }; onDragStart(s.id, sheikhId) }}
+                  onDragEnd={() => { (window as any).__dragData = null }}
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={async (e) => {
                     e.stopPropagation()
@@ -1638,7 +1700,7 @@ function StudentStatusTabs({
                     if (drag.fromSheikhId === sheikhId) {
                       onDropReorder(sheikhId, s.id)
                     } else {
-                      await onDropOnSheikh(sheikhId)
+                      ;(window as any).__dragData = null
                     }
                   }}
                   className="flex items-center justify-between px-5 py-2.5 hover:bg-water-100/30 cursor-grab active:cursor-grabbing"
@@ -1656,6 +1718,7 @@ function StudentStatusTabs({
                   </div>
                   <div className="flex gap-2">
                     <button onClick={() => onEditStudent(s)} className="text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-800 dark:hover:text-cyan-300 transition">تعديل</button>
+                    <button onClick={() => onMoveStudent(s)} className="text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-800 dark:hover:text-cyan-300 transition">نقل</button>
                     <button onClick={() => onDeleteStudent(s.id)} className="text-xs text-red-400 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition">حذف</button>
                   </div>
                 </div>
@@ -1863,8 +1926,8 @@ export default function ManagePage() {
   const [showAddUser, setShowAddUser] = useState(false)
   const [showInviteUser, setShowInviteUser] = useState(false)
   const [editUser, setEditUser] = useState<UserInfo | null>(null)
-  const load = useCallback(async () => {
-    setLoading(true)
+  const load = useCallback(async (background = false) => {
+    if (!background) setLoading(true)
     setLoadError('')
     try {
       const [sheikhsData, tahfizSettings, usersData, studentsData] = await Promise.all([
@@ -1892,13 +1955,14 @@ export default function ManagePage() {
     } catch (err: any) {
       setLoadError(err.message || 'تعذر تحميل بيانات الإدارة')
     } finally {
-      setLoading(false)
+      if (!background) setLoading(false)
     }
   }, [])
 
   useEffect(() => { load() }, [load])
 
-  const [moveStudent, setMoveStudent] = useState<{ student: StudentInfo; sheikhName: string } | null>(null)
+  const [moveStudentId, setMoveStudentId] = useState<number | null>(null)
+  const [showMoveStudent, setShowMoveStudent] = useState(false)
   const handleDragStart = (studentId: number, sheikhId: number) => {
     ;(window as any).__dragData = { studentId, fromSheikhId: sheikhId }
   }
@@ -1922,19 +1986,6 @@ export default function ManagePage() {
     }
     try {
       await api.reorderStudents(sheikhId, ids)
-      load()
-    } catch (err) {
-      console.error(err)
-    }
-  }
-
-  const handleDropOnSheikh = async (sheikhId: number) => {
-    const drag = (window as any).__dragData
-    if (!drag) return
-    ;(window as any).__dragData = null
-    if (drag.fromSheikhId === sheikhId) return
-    try {
-      await api.moveStudentSheikh(drag.studentId, sheikhId)
       load()
     } catch (err) {
       console.error(err)
@@ -2023,7 +2074,10 @@ export default function ManagePage() {
             <button onClick={toggleAllSheikhs} className="water-btn-outline px-4 py-2 rounded-xl text-sm">
               {allExpanded ? 'طي الكل' : 'فتح الكل'}
             </button>
-            <button onClick={() => setShowAddSheikh(true)} className="water-btn text-white px-4 py-2 rounded-xl text-sm">+ إضافة شيخ</button>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => { setMoveStudentId(null); setShowMoveStudent(true) }} className="water-btn-outline px-4 py-2 rounded-xl text-sm">نقل طالب</button>
+              <button onClick={() => setShowAddSheikh(true)} className="water-btn text-white px-4 py-2 rounded-xl text-sm">+ إضافة شيخ</button>
+            </div>
           </div>
 
           {visibleSheikhs.length === 0 ? (
@@ -2056,10 +2110,10 @@ export default function ManagePage() {
                       sheikhId={sheikh.id}
                       onViewStudent={(s) => router.push(`/students/${s.id}`)}
                       onEditStudent={(s) => setEditStudent({ student: s, sheikhName: sheikh.name })}
+                      onMoveStudent={(s) => { setMoveStudentId(s.id); setShowMoveStudent(true) }}
                       onDeleteStudent={handleDeleteStudent}
                       onDragStart={handleDragStart}
                       onDropReorder={handleDropReorder}
-                      onDropOnSheikh={handleDropOnSheikh}
                       onZoomPic={(url) => setPreviewPic(url)}
                     />
                    )}
@@ -2146,19 +2200,20 @@ export default function ManagePage() {
             handleDeleteStudent(id)
           }}
           onMove={() => {
-            setMoveStudent(viewStudent)
+            setMoveStudentId(viewStudent.student.id)
+            setShowMoveStudent(true)
             setViewStudent(null)
           }}
           onZoomPic={(url) => setPreviewPic(url)}
         />
       )}
-      {moveStudent && (
+      {showMoveStudent && (
         <MoveSheikhModal
-          student={moveStudent.student}
-          currentSheikhName={moveStudent.sheikhName}
+          initialStudentId={moveStudentId || undefined}
           sheikhs={sheikhs}
-          onClose={() => setMoveStudent(null)}
-          onMoved={() => { setMoveStudent(null); load() }}
+          onClose={() => { setShowMoveStudent(false); setMoveStudentId(null) }}
+          onMoved={() => { setShowMoveStudent(false); setMoveStudentId(null); load() }}
+          onStale={() => { void load(true) }}
         />
       )}
 

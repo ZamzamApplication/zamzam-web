@@ -6,6 +6,7 @@ import type {
   Session,
   SessionAttendance,
   SheikhInfo,
+  MoveStudentResult,
   StudentProfile,
   User,
   WhatsAppGroup,
@@ -500,10 +501,13 @@ export const api = {
     })
   },
 
-  moveStudentSheikh(studentId: number, sheikhId: number) {
-    return request(`/students/${studentId}/move-sheikh`, {
+  moveStudentSheikh(studentId: number, sheikhId: number, expectedCurrentSheikhId: number) {
+    return request<MoveStudentResult>(`/students/${studentId}/move-sheikh`, {
       method: 'POST',
-      body: JSON.stringify({ sheikh_id: sheikhId }),
+      body: JSON.stringify({
+        sheikh_id: sheikhId,
+        expected_current_sheikh_id: expectedCurrentSheikhId,
+      }),
     })
   },
 
