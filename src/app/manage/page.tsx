@@ -8,7 +8,7 @@ import { mediaUrl } from '@/lib/format'
 import { compressProfileImage } from '@/lib/image'
 import { configuredAttendanceStatuses } from '@/lib/attendance'
 import { formatQuranRange } from '@/lib/quran'
-import type { Circle, ExcusedWeekdayInfo, QuranProgressEntry, QuranProgressRevision, QuranProgressTrendPoint, QuranRangeType, SheikhInfo, StudentGoal, StudentInfo, TahfizInvitation, UserInfo, WarningInfo, WarningRow, WhatsAppGroup } from '@/lib/types'
+import type { Circle, ExcusedWeekdayInfo, QuranProgressEntry, QuranProgressRevision, QuranProgressTrendPoint, QuranRangeType, SheikhDeletionPreview, SheikhInfo, SheikhStudentDeletionResolution, StudentGoal, StudentInfo, TahfizInvitation, UserInfo, WarningInfo, WarningRow, WhatsAppGroup } from '@/lib/types'
 import AsyncState from '@/components/AsyncState'
 
 const WEEKDAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
@@ -1055,6 +1055,176 @@ function DeleteStudentModal({ onClose, onConfirm }: { onClose: () => void; onCon
   )
 }
 
+
+function DeleteSheikhModal({ sheikh, onClose, onDeleted }: {
+  sheikh: { id: number; name: string }
+  onClose: () => void
+  onDeleted: () => void
+}) {
+  type DraftResolution = { action: '' | 'reassign' | 'delete'; sheikhId: number | '' }
+  const [preview, setPreview] = useState<SheikhDeletionPreview | null>(null)
+  const [resolutions, setResolutions] = useState<Record<number, DraftResolution>>({})
+  const [query, setQuery] = useState('')
+  const [bulkSheikhId, setBulkSheikhId] = useState<number | ''>('')
+  const [confirmed, setConfirmed] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
+
+  const loadPreview = useCallback(async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const data = await api.getSheikhDeletionPreview(sheikh.id)
+      setPreview(data)
+      setResolutions(Object.fromEntries(data.students.map(student => [
+        student.id,
+        { action: '', sheikhId: '' },
+      ])))
+      setConfirmed(false)
+    } catch (reason: any) {
+      setError(reason.message || 'تعذر تحميل طلاب الشيخ')
+    } finally {
+      setLoading(false)
+    }
+  }, [sheikh.id])
+
+  useEffect(() => { void loadPreview() }, [loadPreview])
+
+  const updateResolution = (studentId: number, patch: Partial<DraftResolution>) => {
+    setResolutions(current => ({
+      ...current,
+      [studentId]: { ...current[studentId], ...patch },
+    }))
+    setConfirmed(false)
+  }
+
+  const applyDestinationToAll = () => {
+    if (!preview || !bulkSheikhId) return
+    setResolutions(Object.fromEntries(preview.students.map(student => [
+      student.id,
+      { action: 'reassign', sheikhId: bulkSheikhId },
+    ])))
+    setConfirmed(false)
+  }
+
+  const markAllForDeletion = () => {
+    if (!preview || !window.confirm('تحديد جميع الطلاب للحذف النهائي مع سجلاتهم؟')) return
+    setResolutions(Object.fromEntries(preview.students.map(student => [
+      student.id,
+      { action: 'delete', sheikhId: '' },
+    ])))
+    setConfirmed(false)
+  }
+
+  const normalizedQuery = query.trim().toLocaleLowerCase('ar')
+  const visibleStudents = (preview?.students || []).filter(student => (
+    !normalizedQuery
+    || student.name.toLocaleLowerCase('ar').includes(normalizedQuery)
+    || student.student_id?.toLocaleLowerCase('ar').includes(normalizedQuery)
+    || student.phone?.toLocaleLowerCase('ar').includes(normalizedQuery)
+  ))
+  const resolutionValues = preview?.students.map(student => resolutions[student.id]) || []
+  const reassignedCount = resolutionValues.filter(item => item?.action === 'reassign').length
+  const deletedCount = resolutionValues.filter(item => item?.action === 'delete').length
+  const allResolved = Boolean(preview) && resolutionValues.every(item => (
+    item?.action === 'delete' || (item?.action === 'reassign' && Boolean(item.sheikhId))
+  ))
+
+  const submit = async () => {
+    if (!preview || !allResolved || !confirmed) return
+    setSubmitting(true)
+    setError('')
+    const payload: SheikhStudentDeletionResolution[] = preview.students.map(student => {
+      const choice = resolutions[student.id]
+      return choice.action === 'reassign'
+        ? { student_id: student.id, action: 'reassign', sheikh_id: Number(choice.sheikhId) }
+        : { student_id: student.id, action: 'delete' }
+    })
+    try {
+      await api.deleteSheikh(sheikh.id, payload)
+      onDeleted()
+    } catch (reason: any) {
+      if (reason.status === 409) {
+        await loadPreview()
+        setError(reason.message || 'تغيرت قائمة الطلاب. راجع الخيارات ثم أعد المحاولة.')
+      } else {
+        setError(reason.message || 'تعذر حذف الشيخ')
+      }
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="mobile-sheet-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-3 backdrop-blur-sm" onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-labelledby="delete-sheikh-title" className="mobile-sheet glass-strong max-h-[94vh] w-full max-w-5xl overflow-y-auto rounded-2xl p-5 md:p-6" onClick={event => event.stopPropagation()}>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 id="delete-sheikh-title" className="text-xl font-bold text-deep-900">حذف الشيخ — {sheikh.name}</h2>
+            <p className="mt-1 text-sm text-deep-500">يجب اتخاذ قرار واضح لكل طالب قبل إتمام الحذف.</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="إغلاق" className="text-2xl text-deep-400">×</button>
+        </div>
+
+        {error && <div role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-200">{error}</div>}
+        {loading ? <div className="page-loading my-12" aria-label="جاري تحميل الطلاب" /> : preview && <>
+          {preview.linked_usernames.length > 0 && <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+            حسابات الشيخ التالية ستبقى فعالة ولكن من دون ارتباط بشيخ: {preview.linked_usernames.join('، ')}
+          </div>}
+
+          {preview.students.length > 0 ? <>
+            <div className="mt-5 grid gap-3 md:grid-cols-[1fr_auto_auto]">
+              <label className="sr-only" htmlFor="delete-sheikh-search">بحث في الطلاب</label>
+              <input id="delete-sheikh-search" value={query} onChange={event => setQuery(event.target.value)} placeholder="ابحث باسم الطالب أو رقمه أو هاتفه..." className="surface-field rounded-xl px-4 py-2.5 text-sm" />
+              <div className="flex gap-2">
+                <select value={bulkSheikhId} onChange={event => setBulkSheikhId(event.target.value ? Number(event.target.value) : '')} className="surface-field min-w-44 rounded-xl px-3 py-2 text-sm">
+                  <option value="">نقل الجميع إلى...</option>
+                  {preview.destination_sheikhs.map(target => <option key={target.id} value={target.id}>{target.name}</option>)}
+                </select>
+                <button type="button" disabled={!bulkSheikhId} onClick={applyDestinationToAll} className="water-btn-outline rounded-xl px-3 py-2 text-xs disabled:opacity-50">تطبيق</button>
+              </div>
+              <button type="button" onClick={markAllForDeletion} className="rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 dark:border-red-800 dark:text-red-300">حذف جميع الطلاب</button>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {visibleStudents.map(student => {
+                const choice = resolutions[student.id] || { action: '', sheikhId: '' }
+                return <div key={student.id} className="grid gap-3 rounded-xl border border-water-200 p-3 md:grid-cols-[minmax(0,1fr)_180px_220px] md:items-center">
+                  <div className="min-w-0"><p className="truncate font-semibold text-deep-900">{student.name}</p><p className="mt-0.5 text-xs text-deep-500">{student.student_id ? `#${student.student_id}` : `المعرف ${student.id}`} · {student.status}{student.phone ? ` · ${student.phone}` : ''}</p></div>
+                  <select aria-label={`قرار الطالب ${student.name}`} value={choice.action} onChange={event => updateResolution(student.id, { action: event.target.value as DraftResolution['action'], sheikhId: '' })} className="surface-field rounded-lg px-3 py-2 text-sm">
+                    <option value="">اختر الإجراء</option>
+                    <option value="reassign" disabled={preview.destination_sheikhs.length === 0}>نقل إلى شيخ آخر</option>
+                    <option value="delete">حذف الطالب نهائياً</option>
+                  </select>
+                  {choice.action === 'reassign' ? <select aria-label={`الشيخ الجديد للطالب ${student.name}`} value={choice.sheikhId} onChange={event => updateResolution(student.id, { sheikhId: event.target.value ? Number(event.target.value) : '' })} className="surface-field rounded-lg px-3 py-2 text-sm">
+                    <option value="">اختر الشيخ الجديد</option>
+                    {preview.destination_sheikhs.map(target => <option key={target.id} value={target.id}>{target.name}</option>)}
+                  </select> : choice.action === 'delete' ? <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-900/20 dark:text-red-200">سيُحذف الطالب وكل سجلات حضوره وتقدمه.</p> : <span className="text-xs text-deep-400">لم يُحدد قرار بعد</span>}
+                </div>
+              })}
+            </div>
+          </> : <p className="mt-5 rounded-xl bg-water-50 p-4 text-sm text-deep-600 dark:bg-slate-800/50">لا يوجد طلاب مرتبطون بهذا الشيخ.</p>}
+
+          <div className="mt-5 rounded-xl border border-water-200 p-4">
+            <p className="text-sm font-bold text-deep-900">ملخص التنفيذ</p>
+            <p className="mt-1 text-sm text-deep-600">نقل: {reassignedCount} · حذف نهائي: {deletedCount} · دون قرار: {preview.students.length - reassignedCount - deletedCount}</p>
+            <label className="mt-3 flex cursor-pointer items-start gap-2 text-sm text-deep-700">
+              <input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} disabled={!allResolved} className="mt-1" />
+              <span>راجعت قرارات جميع الطلاب وأفهم أن حذف الطلاب المحددين لا يمكن التراجع عنه.</span>
+            </label>
+          </div>
+
+          <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row">
+            <button type="button" onClick={onClose} disabled={submitting} className="water-btn-outline flex-1 rounded-xl px-4 py-2.5 text-sm">إلغاء</button>
+            <button type="button" onClick={() => void submit()} disabled={!allResolved || !confirmed || submitting} className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-40">{submitting ? 'جاري التنفيذ...' : 'تنفيذ القرارات وحذف الشيخ'}</button>
+          </div>
+        </>}
+      </div>
+    </div>
+  )
+}
+
 // ─── Move Sheikh Modal ───────────────────────────────────────────────────────
 
 function MoveSheikhModal({ student, currentSheikhName, sheikhs, onClose, onMoved }: {
@@ -1687,6 +1857,7 @@ export default function ManagePage() {
   const [showAddCircle, setShowAddCircle] = useState(false)
   const [showAddSheikh, setShowAddSheikh] = useState(false)
   const [editSheikh, setEditSheikh] = useState<SheikhInfo | null>(null)
+  const [deleteSheikhTarget, setDeleteSheikhTarget] = useState<SheikhInfo | null>(null)
   const [addingStudent, setAddingStudent] = useState<{ id: number; name: string } | null>(null)
   const [editStudent, setEditStudent] = useState<{ student: StudentInfo; sheikhName: string } | null>(null)
   const [showAddUser, setShowAddUser] = useState(false)
@@ -1768,12 +1939,6 @@ export default function ManagePage() {
     } catch (err) {
       console.error(err)
     }
-  }
-
-  const handleDeleteSheikh = async (id: number) => {
-    if (!confirm('حذف الشيخ وجميع طلابه؟')) return
-    await api.deleteSheikh(id)
-    load()
   }
 
   const [deleteConfirm, setDeleteConfirm] = useState<{ studentId: number } | null>(null)
@@ -1881,7 +2046,7 @@ export default function ManagePage() {
                     <div className="grid grid-cols-3 gap-2 sm:flex" onClick={(e) => e.stopPropagation()}>
                       <button onClick={() => setAddingStudent({ id: sheikh.id, name: sheikh.name })} className="water-btn-outline px-3 py-2 rounded-xl text-xs">+ طالب</button>
                       <button onClick={() => setEditSheikh(sheikh)} className="water-btn-outline px-3 py-2 rounded-xl text-xs">تعديل</button>
-                      <button onClick={() => handleDeleteSheikh(sheikh.id)} className="px-3 py-2 rounded-xl text-xs border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50/50 dark:hover:bg-red-900/30 transition">حذف</button>
+                      <button onClick={() => setDeleteSheikhTarget(sheikh)} className="px-3 py-2 rounded-xl text-xs border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50/50 dark:hover:bg-red-900/30 transition">حذف</button>
                     </div>
                   </div>
                    {isExpanded && (
@@ -1952,6 +2117,7 @@ export default function ManagePage() {
       {showAddCircle && <AddCircleModal onClose={() => setShowAddCircle(false)} onCreated={() => { setShowAddCircle(false); load() }} />}
       {showAddSheikh && <AddSheikhModal circles={circles} onClose={() => setShowAddSheikh(false)} onCreated={() => { setShowAddSheikh(false); load() }} />}
       {editSheikh && <EditSheikhModal sheikh={editSheikh} circles={circles} onClose={() => setEditSheikh(null)} onUpdated={() => { setEditSheikh(null); load() }} />}
+      {deleteSheikhTarget && <DeleteSheikhModal sheikh={deleteSheikhTarget} onClose={() => setDeleteSheikhTarget(null)} onDeleted={() => { setDeleteSheikhTarget(null); load() }} />}
       {addingStudent && <AddStudentModal sheikhId={addingStudent.id} sheikhName={addingStudent.name} onClose={() => setAddingStudent(null)} onCreated={() => { setAddingStudent(null); load() }} />}
       {editStudent && <EditStudentModal student={editStudent.student} sheikhName={editStudent.sheikhName} onClose={() => setEditStudent(null)} onUpdated={() => { setEditStudent(null); load() }} />}
       {showAddUser && <AddUserModal sheikhs={sheikhs} onClose={() => setShowAddUser(false)} onCreated={() => { setShowAddUser(false); load() }} />}

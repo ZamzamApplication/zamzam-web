@@ -157,6 +157,27 @@ export interface SheikhInfo {
   month_start_day?: number
 }
 
+export interface SheikhDeletionStudent {
+  id: number
+  name: string
+  student_id?: string | null
+  phone?: string | null
+  status: string
+}
+
+export interface SheikhDeletionPreview {
+  sheikh: { id: number; name: string }
+  students: SheikhDeletionStudent[]
+  destination_sheikhs: Array<{ id: number; name: string }>
+  linked_usernames: string[]
+}
+
+export interface SheikhStudentDeletionResolution {
+  student_id: number
+  action: 'reassign' | 'delete'
+  sheikh_id?: number | null
+}
+
 export interface WhatsAppGroup {
   id: string
   name: string

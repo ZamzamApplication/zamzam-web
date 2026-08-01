@@ -75,9 +75,12 @@ async function request<T = any>(path: string, options?: RequestInit): Promise<T>
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }))
     const detail = typeof err.detail === 'object'
-      ? (err.detail.reason || err.detail.code || 'Request failed')
+      ? (err.detail.message || err.detail.reason || err.detail.code || 'Request failed')
       : err.detail
-    throw new Error(detail || 'Request failed')
+    const requestError = new Error(detail || 'Request failed') as Error & { status?: number; detail?: unknown }
+    requestError.status = res.status
+    requestError.detail = err.detail
+    throw requestError
   }
   if (res.status === 204) return undefined as T
   return res.json()
@@ -386,8 +389,15 @@ export const api = {
     })
   },
 
-  deleteSheikh(id: number) {
-    return request(`/sheikhs/${id}`, { method: 'DELETE' })
+  getSheikhDeletionPreview(id: number) {
+    return request<import('./types').SheikhDeletionPreview>(`/sheikhs/${id}/deletion-preview`)
+  },
+
+  deleteSheikh(id: number, studentResolutions: import('./types').SheikhStudentDeletionResolution[]) {
+    return request<{ message: string; reassigned_students: number; deleted_students: number }>(`/sheikhs/${id}/delete`, {
+      method: 'POST',
+      body: JSON.stringify({ student_resolutions: studentResolutions }),
+    })
   },
 
   getSheikhStudents(sheikhId: number) {
