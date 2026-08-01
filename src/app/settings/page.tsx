@@ -30,6 +30,7 @@ export default function TahfizSettingsPage() {
   const [monthStartDay, setMonthStartDay] = useState(1)
   const [progressTrackingEnabled, setProgressTrackingEnabled] = useState(false)
   const [sheikhSelectionEnabled, setSheikhSelectionEnabled] = useState(true)
+  const [restrictSheikhStudentAccess, setRestrictSheikhStudentAccess] = useState(true)
   const [attendanceStatuses, setAttendanceStatuses] = useState<string[]>([])
   const [attendanceStatusColors, setAttendanceStatusColors] = useState<Record<string, string>>({})
   const [attendanceStatusRenames, setAttendanceStatusRenames] = useState<Record<string, string>>({})
@@ -77,6 +78,7 @@ export default function TahfizSettingsPage() {
         setMonthStartDay(data.month_start_day ?? 1)
         setProgressTrackingEnabled(Boolean(data.progress_tracking_enabled))
         setSheikhSelectionEnabled(data.attendance_sheikh_selection_enabled ?? true)
+        setRestrictSheikhStudentAccess(data.restrict_sheikh_student_access ?? true)
         setAttendanceStatuses(configuredAttendanceStatuses(data.attendance_statuses))
         setAttendanceStatusColors(data.attendance_status_colors || {
           'حاضر': 'green', 'غياب': 'slate', 'غياب بعذر': 'amber', 'لا ينطبق': 'sky',
@@ -259,6 +261,7 @@ export default function TahfizSettingsPage() {
         attendance_streak_reset_statuses: excusedResetStatuses,
         progress_tracking_enabled: progressTrackingEnabled,
         attendance_sheikh_selection_enabled: sheikhSelectionEnabled,
+        restrict_sheikh_student_access: restrictSheikhStudentAccess,
         whatsend_enabled: whatsendEnabled,
         ...(whatsendEnabled ? {
           whatsend_api_url: whatsendApiUrl,
@@ -338,11 +341,27 @@ export default function TahfizSettingsPage() {
 
         <SettingsSection title="الحضور ومتابعة القرآن" description="الحالات وترتيبها والميزات التي تظهر أثناء تسجيل الحلقة.">
           <FeatureToggle
+            enabled={restrictSheikhStudentAccess}
+            onChange={(enabled) => {
+              if (!enabled && !window.confirm('عند إيقاف هذا الخيار سيتمكن جميع الشيوخ من عرض وتعديل بيانات جميع طلاب التحفيظ. هل تريد المتابعة؟')) return
+              setRestrictSheikhStudentAccess(enabled)
+            }}
+            title="تقييد الشيوخ بطلابهم"
+            description="عند التفعيل لا يستطيع الشيخ عرض أو تعديل إلا الطلاب المسندين إليه. يظل المدير قادراً على إدارة جميع الطلاب."
+          />
+          {!restrictSheikhStudentAccess && (
+            <p role="alert" className="mt-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 dark:border-amber-700 dark:bg-amber-900/25 dark:text-amber-200">
+              التقييد متوقف: يستطيع كل شيخ الوصول إلى جميع طلاب التحفيظ.
+            </p>
+          )}
+          <div className="mt-3">
+          <FeatureToggle
             enabled={progressTrackingEnabled}
             onChange={setProgressTrackingEnabled}
             title="متابعة الحفظ والمراجعة"
             description="إيقافها يخفي الميزة دون حذف البيانات السابقة."
           />
+          </div>
           <div className="mt-3">
             <FeatureToggle
               enabled={sheikhSelectionEnabled}

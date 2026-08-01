@@ -285,6 +285,7 @@ export default function SessionAttendancePage() {
     'حاضر': 'green', 'غياب': 'slate', 'غياب بعذر': 'amber', 'لا ينطبق': 'sky',
   })
   const [sheikhSelectionEnabled, setSheikhSelectionEnabled] = useState(true)
+  const [studentScopeRestricted, setStudentScopeRestricted] = useState(false)
   const [progressDrafts, setProgressDrafts] = useState<ProgressDraftMap>({})
   const [persistedProgressDrafts, setPersistedProgressDrafts] = useState<ProgressDraftMap>({})
   const [previousProgressDrafts, setPreviousProgressDrafts] = useState<ProgressDraftMap>({})
@@ -352,7 +353,9 @@ export default function SessionAttendancePage() {
       setAttendanceStatusColors(currentUser.tahfiz?.attendance_status_colors || {
         'حاضر': 'green', 'غياب': 'slate', 'غياب بعذر': 'amber', 'لا ينطبق': 'sky',
       })
-      setSheikhSelectionEnabled(currentUser.tahfiz?.attendance_sheikh_selection_enabled ?? true)
+      const restrictedSheikh = currentUser.role === 'sheikh' && Boolean(currentUser.tahfiz?.restrict_sheikh_student_access)
+      setStudentScopeRestricted(restrictedSheikh)
+      setSheikhSelectionEnabled(!restrictedSheikh && (currentUser.tahfiz?.attendance_sheikh_selection_enabled ?? true))
       const drafts: ProgressDraftMap = Object.fromEntries((enabled ? progress.entries : []).map((entry) => [progressDraftKey(entry.student_id, entry.category), progressEntryToInput(entry)]))
       const previousDrafts: ProgressDraftMap = Object.fromEntries((progress.previous_entries || []).map((entry) => [progressDraftKey(entry.student_id, entry.category), progressEntryToInput(entry)]))
       const requiredKeys = new Set<string>()
@@ -967,7 +970,11 @@ export default function SessionAttendancePage() {
           />
         ))}
         {visibleGroups.length === 0 && (
-          <div className="glass-card rounded-2xl p-8 text-center text-sm text-deep-500">لا يوجد طلاب مطابقون للبحث.</div>
+          <div className="glass-card rounded-2xl p-8 text-center text-sm text-deep-500">
+            {studentScopeRestricted && allStudents.length === 0
+              ? 'لا يوجد طلاب مسندون إليك حالياً. تواصل مع مدير التحفيظ لإسناد الطلاب.'
+              : 'لا يوجد طلاب مطابقون للبحث.'}
+          </div>
         )}
       </div>
 

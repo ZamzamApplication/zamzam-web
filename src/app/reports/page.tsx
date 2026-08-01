@@ -239,6 +239,12 @@ export default function ReportsPage() {
         </div>
       </section>
 
+      {circleRate?.scope === 'assigned_students' && (
+        <div role="status" className="mb-5 rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm font-semibold text-cyan-800 dark:border-cyan-800 dark:bg-cyan-900/25 dark:text-cyan-200">
+          تعرض هذه التقارير الطلاب المسندين إليك فقط.
+        </div>
+      )}
+
       {selectedCircle && (
         <div className="glass-card rounded-2xl p-5 mb-6">
           <div className="flex gap-2 mb-4">

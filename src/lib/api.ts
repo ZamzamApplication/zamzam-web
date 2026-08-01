@@ -429,6 +429,31 @@ export const api = {
     })
   },
 
+  createExcusedPeriod(studentId: number, body: { start_date: string; end_date: string; reason: string }) {
+    return request(`/students/${studentId}/excused-periods`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    })
+  },
+
+  updateExcusedPeriod(studentId: number, periodId: number, body: { start_date: string; end_date: string; reason: string }) {
+    return request(`/students/${studentId}/excused-periods/${periodId}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    })
+  },
+
+  cancelExcusedPeriod(studentId: number, periodId: number) {
+    return request(`/students/${studentId}/excused-periods/${periodId}/cancel`, { method: 'POST' })
+  },
+
+  endExcusedPeriodEarly(studentId: number, periodId: number, endDate: string) {
+    return request(`/students/${studentId}/excused-periods/${periodId}/early-return`, {
+      method: 'POST',
+      body: JSON.stringify({ end_date: endDate }),
+    })
+  },
+
   uploadStudentPic(studentId: number, file: File) {
     const formData = new FormData()
     formData.append('file', file)
@@ -568,23 +593,6 @@ export const api = {
 
   getStudentStreak(studentId: number) {
     return request(`/reports/student/${studentId}/streak`)
-  },
-
-  async exportDb() {
-    const runtime = getApiRuntime()
-    const token = await runtime.getAccessToken()
-    const supportTahfizId = typeof window !== 'undefined'
-      ? localStorage.getItem('support_tahfiz_id') || localStorage.getItem('active_tahfiz_id')
-      : null
-    const res = await fetch(`${API_BASE}/tahfiz/export-db`, {
-      credentials: 'include',
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(supportTahfizId ? { 'X-Tahfiz-ID': supportTahfizId } : {}),
-      },
-    })
-    if (!res.ok) throw new Error('فشل تصدير قاعدة البيانات')
-    return res.blob()
   },
 
   async exportFullDb() {

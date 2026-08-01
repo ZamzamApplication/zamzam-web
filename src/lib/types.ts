@@ -22,6 +22,7 @@ export interface User {
     excused_absence_reset_statuses?: string[]
     attendance_streak_alert_enabled?: boolean
     attendance_sheikh_selection_enabled?: boolean
+    restrict_sheikh_student_access?: boolean
     attendance_streak_status?: string
     attendance_streak_limit?: number
     attendance_streak_reset_statuses?: string[]
@@ -95,6 +96,7 @@ export interface Circle {
   excused_absence_reset_statuses?: string[]
   attendance_streak_alert_enabled?: boolean
   attendance_sheikh_selection_enabled?: boolean
+  restrict_sheikh_student_access?: boolean
   attendance_streak_status?: string
   attendance_streak_limit?: number
   attendance_streak_reset_statuses?: string[]
@@ -195,6 +197,18 @@ export interface ExcusedWeekdayInfo {
   note?: string | null
 }
 
+export interface ExcusedPeriodInfo {
+  id: number
+  student_id: number
+  start_date: string
+  end_date: string
+  reason: string
+  status: 'upcoming' | 'active' | 'completed' | 'cancelled'
+  cancelled_at?: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface StudentInfo {
   id: number
   name: string
@@ -209,6 +223,7 @@ export interface StudentInfo {
   sheikh?: { id: number; name: string }
   parent_phones?: ParentPhone[]
   excused_weekdays?: ExcusedWeekdayInfo[]
+  excused_periods?: ExcusedPeriodInfo[]
 }
 
 export interface AttendanceThresholdAlert {
@@ -222,6 +237,7 @@ export interface AttendanceThresholdAlert {
 export interface StudentProfile extends StudentInfo {
   parent_phones: ParentPhone[]
   excused_weekdays: ExcusedWeekdayInfo[]
+  excused_periods: ExcusedPeriodInfo[]
   attendance: {
     total: number
     present: number
@@ -251,6 +267,7 @@ export interface UserInfo {
 
 export interface CircleAttendanceRate {
   circle_id: number
+  scope?: 'tenant' | 'assigned_students'
   total_attendance_records: number
   total_applicable_records?: number
   status_counts: Record<string, number>
@@ -303,6 +320,7 @@ export interface AttendanceGridStudent {
 }
 
 export interface AttendanceGrid {
+  scope?: 'tenant' | 'assigned_students'
   sessions: AttendanceGridSession[]
   students: AttendanceGridStudent[]
 }
@@ -324,6 +342,7 @@ export interface StudentStatsItem {
 
 export interface CircleStudentStatsResponse {
   circle_id: number
+  scope?: 'tenant' | 'assigned_students'
   students: StudentStatsItem[]
 }
 

@@ -436,8 +436,14 @@ export default function AttendancePage() {
         </div>
       )}
 
+      {grid?.scope === 'assigned_students' && (
+        <div role="status" className="mb-4 rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm font-semibold text-cyan-800 dark:border-cyan-800 dark:bg-cyan-900/25 dark:text-cyan-200">
+          يعرض هذا السجل الطلاب المسندين إليك فقط.
+        </div>
+      )}
+
       <div className="glass-card rounded-lg p-4 md:p-5 mb-6 space-y-4">
-        <div>
+        {grid?.scope !== 'assigned_students' && <div>
           <label className="block text-sm font-semibold text-deep-800 mb-2">اختر الشيخ</label>
           <select
             value={selectedSheikh}
@@ -447,7 +453,7 @@ export default function AttendancePage() {
             <option value="">كل الشيوخ</option>
             {sheikhs.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
-        </div>
+        </div>}
 
         <div className="flex gap-2 flex-wrap items-center">
           <button
