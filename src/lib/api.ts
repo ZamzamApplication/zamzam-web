@@ -543,26 +543,30 @@ export const api = {
     })
   },
 
+  getExcusedPeriods(studentId: number) {
+    return request<import('./types').ExcusedPeriodInfo[]>(`/students/${studentId}/excused-periods`)
+  },
+
   createExcusedPeriod(studentId: number, body: { start_date: string; end_date: string; reason: string }) {
-    return request(`/students/${studentId}/excused-periods`, {
+    return request<import('./types').ExcusedPeriodInfo>(`/students/${studentId}/excused-periods`, {
       method: 'POST',
       body: JSON.stringify(body),
     })
   },
 
   updateExcusedPeriod(studentId: number, periodId: number, body: { start_date: string; end_date: string; reason: string }) {
-    return request(`/students/${studentId}/excused-periods/${periodId}`, {
+    return request<import('./types').ExcusedPeriodInfo>(`/students/${studentId}/excused-periods/${periodId}`, {
       method: 'PUT',
       body: JSON.stringify(body),
     })
   },
 
   cancelExcusedPeriod(studentId: number, periodId: number) {
-    return request(`/students/${studentId}/excused-periods/${periodId}/cancel`, { method: 'POST' })
+    return request<import('./types').ExcusedPeriodInfo>(`/students/${studentId}/excused-periods/${periodId}/cancel`, { method: 'POST' })
   },
 
   endExcusedPeriodEarly(studentId: number, periodId: number, endDate: string) {
-    return request(`/students/${studentId}/excused-periods/${periodId}/early-return`, {
+    return request<import('./types').ExcusedPeriodInfo>(`/students/${studentId}/excused-periods/${periodId}/early-return`, {
       method: 'POST',
       body: JSON.stringify({ end_date: endDate }),
     })

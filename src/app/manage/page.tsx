@@ -9,7 +9,7 @@ import { compressProfileImage } from '@/lib/image'
 import { configuredAttendanceStatuses } from '@/lib/attendance'
 import { formatQuranRange } from '@/lib/quran'
 import { filterDestinationSheikhs, filterMoveStudents } from '@/lib/move-student'
-import type { Circle, ExcusedWeekdayInfo, QuranProgressEntry, QuranProgressRevision, QuranProgressTrendPoint, QuranRangeType, SheikhDeletionPreview, SheikhInfo, SheikhStudentDeletionResolution, StudentGoal, StudentInfo, TahfizInvitation, UserInfo, WarningInfo, WarningRow, WhatsAppGroup } from '@/lib/types'
+import type { Circle, ExcusedPeriodInfo, ExcusedWeekdayInfo, QuranProgressEntry, QuranProgressRevision, QuranProgressTrendPoint, QuranRangeType, SheikhDeletionPreview, SheikhInfo, SheikhStudentDeletionResolution, StudentGoal, StudentInfo, TahfizInvitation, UserInfo, WarningInfo, WarningRow, WhatsAppGroup } from '@/lib/types'
 import AsyncState from '@/components/AsyncState'
 
 const WEEKDAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
@@ -18,6 +18,10 @@ function normalizeExcusedWeekdays(days: (ExcusedWeekdayInfo | number)[] | undefi
   return (days || []).map((day) => (
     typeof day === 'number' ? { weekday: day, note: '' } : { ...day, note: day.note || '' }
   ))
+}
+
+function excusedPeriodStatusLabel(status: ExcusedPeriodInfo['status']): string {
+  return { upcoming: 'قادمة', active: 'نشطة', completed: 'منتهية', cancelled: 'ملغاة' }[status]
 }
 
 // ─── Modal Wrapper ─────────────────────────────────────────────────────────
@@ -509,6 +513,11 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [excusedWeekdays, setExcusedWeekdays] = useState<ExcusedWeekdayInfo[]>(normalizeExcusedWeekdays(student.excused_weekdays))
+  const [excusedPeriods, setExcusedPeriods] = useState<ExcusedPeriodInfo[]>(student.excused_periods || [])
+  const [periodForm, setPeriodForm] = useState({ start_date: '', end_date: '', reason: '' })
+  const [editingPeriodId, setEditingPeriodId] = useState<number | null>(null)
+  const [periodBusy, setPeriodBusy] = useState(false)
+  const [periodError, setPeriodError] = useState('')
 
   useEffect(() => {
     if (!student.excused_weekdays) {
@@ -517,6 +526,82 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
       }).catch(() => {})
     }
   }, [student.id, student.excused_weekdays])
+
+  useEffect(() => {
+    api.getExcusedPeriods(student.id)
+      .then(setExcusedPeriods)
+      .catch((err: any) => setPeriodError(err.message || 'تعذر تحميل فترات الغياب بعذر'))
+  }, [student.id])
+
+  const resetPeriodForm = () => {
+    setPeriodForm({ start_date: '', end_date: '', reason: '' })
+    setEditingPeriodId(null)
+    setPeriodError('')
+  }
+
+  const saveExcusedPeriod = async () => {
+    if (!periodForm.start_date || !periodForm.end_date || !periodForm.reason.trim()) {
+      setPeriodError('أدخل تاريخ البداية والنهاية وسبب العذر.')
+      return
+    }
+    if (periodForm.start_date > periodForm.end_date) {
+      setPeriodError('يجب أن يكون تاريخ البداية قبل تاريخ النهاية أو مساوياً له.')
+      return
+    }
+    setPeriodBusy(true)
+    setPeriodError('')
+    try {
+      const body = { ...periodForm, reason: periodForm.reason.trim() }
+      const saved = editingPeriodId
+        ? await api.updateExcusedPeriod(student.id, editingPeriodId, body)
+        : await api.createExcusedPeriod(student.id, body)
+      setExcusedPeriods(current => editingPeriodId
+        ? current.map(period => period.id === saved.id ? saved : period)
+        : [saved, ...current])
+      resetPeriodForm()
+    } catch (err: any) {
+      setPeriodError(err.message || 'تعذر حفظ فترة الغياب بعذر')
+    } finally {
+      setPeriodBusy(false)
+    }
+  }
+
+  const startEditingPeriod = (period: ExcusedPeriodInfo) => {
+    setEditingPeriodId(period.id)
+    setPeriodForm({ start_date: period.start_date, end_date: period.end_date, reason: period.reason })
+    setPeriodError('')
+  }
+
+  const cancelExcusedPeriod = async (period: ExcusedPeriodInfo) => {
+    if (!window.confirm(`إلغاء فترة العذر: ${period.reason}؟`)) return
+    setPeriodBusy(true)
+    setPeriodError('')
+    try {
+      const updated = await api.cancelExcusedPeriod(student.id, period.id)
+      setExcusedPeriods(current => current.map(item => item.id === updated.id ? updated : item))
+      if (editingPeriodId === period.id) resetPeriodForm()
+    } catch (err: any) {
+      setPeriodError(err.message || 'تعذر إلغاء فترة العذر')
+    } finally {
+      setPeriodBusy(false)
+    }
+  }
+
+  const endExcusedPeriodEarly = async (period: ExcusedPeriodInfo) => {
+    const endDate = window.prompt('أدخل آخر يوم للعذر (يجب أن يسبق تاريخ النهاية الحالي)', new Date().toISOString().slice(0, 10))
+    if (!endDate) return
+    setPeriodBusy(true)
+    setPeriodError('')
+    try {
+      const updated = await api.endExcusedPeriodEarly(student.id, period.id, endDate)
+      setExcusedPeriods(current => current.map(item => item.id === updated.id ? updated : item))
+      if (editingPeriodId === period.id) resetPeriodForm()
+    } catch (err: any) {
+      setPeriodError(err.message || 'تعذر تسجيل العودة المبكرة')
+    } finally {
+      setPeriodBusy(false)
+    }
+  }
 
   const toggleExcusedWeekday = (wd: number) => {
     setExcusedWeekdays((prev) =>
@@ -619,7 +704,7 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
   }
 
   return (
-    <Modal title={`تعديل الطالب — ${student.name}`} onClose={onClose}>
+    <Modal title={`تعديل الطالب — ${student.name}`} onClose={onClose} wide>
       <ErrorMsg error={error} />
       <form onSubmit={handleSubmit} className="space-y-4">
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="الاسم" required className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
@@ -723,6 +808,28 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
                 ))}
             </div>
           )}
+        </div>
+        <div className="border-t border-water-200/30 pt-3">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <div><span className="block text-sm font-bold text-deep-700">فترة غياب بعذر</span><span className="text-xs text-deep-500">للسفر أو المرض أو أي عذر ممتد.</span></div>
+            {excusedPeriods.some(period => period.status === 'active') && <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-bold text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">عذر نشط</span>}
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <label className="text-xs font-medium text-deep-700">من تاريخ<input type="date" value={periodForm.start_date} onChange={event => setPeriodForm({ ...periodForm, start_date: event.target.value })} className="surface-field mt-1 w-full rounded-xl px-3 py-2" /></label>
+            <label className="text-xs font-medium text-deep-700">إلى تاريخ<input type="date" min={periodForm.start_date || undefined} value={periodForm.end_date} onChange={event => setPeriodForm({ ...periodForm, end_date: event.target.value })} className="surface-field mt-1 w-full rounded-xl px-3 py-2" /></label>
+            <label className="text-xs font-medium text-deep-700 sm:col-span-2">سبب العذر<textarea rows={2} minLength={2} maxLength={1000} value={periodForm.reason} onChange={event => setPeriodForm({ ...periodForm, reason: event.target.value })} placeholder="مثال: سفر مع الأسرة" className="surface-field mt-1 w-full rounded-xl px-3 py-2" /></label>
+          </div>
+          {periodError && <p role="alert" className="mt-2 text-xs font-semibold text-red-600">{periodError}</p>}
+          <div className="mt-3 flex gap-2">
+            <button type="button" disabled={periodBusy} onClick={() => void saveExcusedPeriod()} className="water-btn rounded-xl px-4 py-2 text-xs font-bold text-white disabled:opacity-50">{periodBusy ? 'جاري الحفظ...' : editingPeriodId ? 'حفظ تعديل الفترة' : 'إضافة فترة عذر'}</button>
+            {editingPeriodId && <button type="button" disabled={periodBusy} onClick={resetPeriodForm} className="water-btn-outline rounded-xl px-4 py-2 text-xs">إلغاء التعديل</button>}
+          </div>
+          <div className="mt-4 max-h-52 space-y-2 overflow-y-auto">
+            {excusedPeriods.length === 0 ? <p className="text-xs text-deep-400">لا توجد فترات عذر مسجلة.</p> : excusedPeriods.map(period => <article key={period.id} className="rounded-xl border border-water-200 bg-white/35 p-3 dark:bg-slate-800/30">
+              <div className="flex items-start justify-between gap-2"><div><p className="text-xs font-bold text-deep-800">{period.reason}</p><p className="mt-1 text-[11px] text-deep-500">{period.start_date} — {period.end_date}</p></div><span className="rounded-full bg-water-50 px-2 py-1 text-[10px] text-deep-700 dark:bg-slate-800">{excusedPeriodStatusLabel(period.status)}</span></div>
+              {period.status !== 'cancelled' && <div className="mt-2 flex flex-wrap gap-2"><button type="button" disabled={periodBusy} onClick={() => startEditingPeriod(period)} className="text-xs font-semibold text-cyan-700 dark:text-cyan-300">تعديل</button>{period.status === 'active' && <button type="button" disabled={periodBusy} onClick={() => void endExcusedPeriodEarly(period)} className="text-xs font-semibold text-amber-700 dark:text-amber-300">عودة مبكرة</button>}{(period.status === 'active' || period.status === 'upcoming') && <button type="button" disabled={periodBusy} onClick={() => void cancelExcusedPeriod(period)} className="text-xs font-semibold text-red-600 dark:text-red-300">إلغاء الفترة</button>}</div>}
+            </article>)}
+          </div>
         </div>
         <div className="border-t border-water-200/30 pt-3">
           <div className="flex items-center justify-between mb-2">
