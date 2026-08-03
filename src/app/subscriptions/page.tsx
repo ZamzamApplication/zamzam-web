@@ -239,6 +239,7 @@ export default function SubscriptionsPage() {
   const [expenseSearch, setExpenseSearch] = useState('')
   const [editingExpense, setEditingExpense] = useState<ExpenseRecord | null | undefined>(undefined)
   const [showBulkCorrection, setShowBulkCorrection] = useState(false)
+  const [activeSection, setActiveSection] = useState<'subscriptions' | 'expenses'>('subscriptions')
 
   const currency = settings?.currency || 'EGP'
   const pageSize = 30
@@ -527,27 +528,31 @@ export default function SubscriptionsPage() {
   return <div className="space-y-5">
     <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div><Link href="/manage" className="text-sm font-semibold text-cyan-700 dark:text-cyan-300">الإدارة ‹</Link><h1 className="mt-1 text-2xl font-bold text-deep-900">القسم المالي</h1><p className="mt-1 text-sm text-deep-500">الاشتراكات والمصروفات والوضع المالي للتحفيظ</p></div>
-      <div className="flex gap-2"><Link href="/settings" className="water-btn-outline rounded-xl px-4 py-2.5 text-sm font-semibold">إعدادات القسم المالي</Link><button type="button" onClick={() => void exportExcel()} disabled={busy || !settings?.enabled} className="water-btn-outline rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-50">Excel الاشتراكات</button></div>
+      <div className="flex flex-wrap gap-2"><button type="button" onClick={() => { setActiveSection('expenses'); setEditingExpense(null) }} disabled={expenseCategories.every(category => !category.enabled)} className="water-btn rounded-xl px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">إضافة مصروف</button><Link href="/settings" className="water-btn-outline rounded-xl px-4 py-2.5 text-sm font-semibold">الإعدادات</Link></div>
     </header>
 
     {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300">{error}</div>}
     {notice && <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">{notice}</div>}
 
-    <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+    <section className="grid gap-3 sm:grid-cols-3">
       {[
         ['المحصل نقديًا', overview?.cash_collected_minor ?? 0, 'text-emerald-600'],
         ['المصروفات', overview?.expenses_minor ?? 0, 'text-red-600'],
         ['صافي الوضع المالي', overview?.net_cash_minor ?? 0, (overview?.net_cash_minor ?? 0) >= 0 ? 'text-cyan-700' : 'text-red-600'],
-        ['الاشتراكات المتوقعة', overview?.expected_subscriptions_minor ?? 0, 'text-deep-900'],
-        ['غير المحصل', overview?.outstanding_subscriptions_minor ?? 0, 'text-amber-600'],
       ].map(([label, value, color]) => <div key={String(label)} className="glass-card rounded-2xl p-4"><p className="text-xs text-deep-500">{label}</p><p className={`mt-2 text-lg font-bold ${color}`}>{formatSubscriptionMoney(Number(value), currency)}</p></div>)}
     </section>
 
     <section className="glass-card rounded-2xl p-4">
-      <h2 className="font-bold text-deep-900">الحركة حسب طريقة الدفع</h2>
-      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{(overview?.payment_methods || []).map(item => <div key={item.method} className="rounded-xl border border-water-200 p-3"><p className="text-sm font-bold text-deep-800">{paymentMethodLabel(item.method)}</p><dl className="mt-2 space-y-1 text-xs"><div className="flex justify-between"><dt className="text-deep-500">اشتراكات</dt><dd className="text-emerald-600">{formatSubscriptionMoney(item.income_minor, currency)}</dd></div><div className="flex justify-between"><dt className="text-deep-500">مصروفات</dt><dd className="text-red-600">{formatSubscriptionMoney(item.expenses_minor, currency)}</dd></div><div className="flex justify-between border-t border-water-200 pt-1 font-bold"><dt>الصافي</dt><dd>{formatSubscriptionMoney(item.net_minor, currency)}</dd></div></dl></div>)}</div>
+      <h2 className="font-bold text-deep-900">التحصيل حسب طريقة الدفع</h2>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{(overview?.payment_methods || []).map(item => <div key={item.method} className="rounded-xl border border-water-200 p-3"><p className="text-sm font-bold text-deep-800">{paymentMethodLabel(item.method)}</p><p className="mt-2 text-lg font-bold text-emerald-600">{formatSubscriptionMoney(item.income_minor, currency)}</p></div>)}</div>
     </section>
 
+    <nav className="grid grid-cols-2 rounded-2xl border border-water-200 bg-white/50 p-1 dark:bg-slate-800/50" aria-label="أقسام المالية">
+      <button type="button" onClick={() => setActiveSection('subscriptions')} className={`rounded-xl px-4 py-3 text-sm font-bold ${activeSection === 'subscriptions' ? 'bg-cyan-600 text-white shadow' : 'text-deep-600'}`}>الاشتراكات</button>
+      <button type="button" onClick={() => setActiveSection('expenses')} className={`rounded-xl px-4 py-3 text-sm font-bold ${activeSection === 'expenses' ? 'bg-cyan-600 text-white shadow' : 'text-deep-600'}`}>المصروفات</button>
+    </nav>
+
+    {activeSection === 'subscriptions' && <>
     {!settings?.enabled && <section className="glass-card rounded-2xl p-5"><h2 className="text-lg font-bold text-deep-900">تفعيل الاشتراكات الشهرية</h2><p className="mt-1 text-sm text-deep-500">يمكن تسجيل المصروفات دون الاشتراكات، أو تفعيل رسوم الطلاب من هنا.</p><form onSubmit={activate} className="mt-4 grid gap-3 sm:grid-cols-3"><input inputMode="decimal" required value={activationFee} onChange={event => setActivationFee(event.target.value)} placeholder="الرسم الشهري" className="surface-field rounded-xl px-4 py-2.5" /><select value={activationCurrency} onChange={event => setActivationCurrency(event.target.value)} className="surface-field rounded-xl px-4 py-2.5"><option value="EGP">EGP</option><option value="SAR">SAR</option><option value="USD">USD</option></select><button disabled={busy} className="water-btn rounded-xl px-4 py-2.5 font-bold text-white disabled:opacity-50">تفعيل الاشتراكات</button></form></section>}
 
     <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-bold text-deep-900">اشتراكات الطلاب</h2><p className="text-sm text-deep-500">الرسوم والسداد للدورة المختارة</p></div>{settings?.enabled && <button type="button" onClick={() => setShowBulkCorrection(true)} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">تصحيح رسوم الشهر جماعيًا</button>}</div>
@@ -602,12 +607,13 @@ export default function SubscriptionsPage() {
     </section>
 
     {pages > 1 && <nav className="flex items-center justify-center gap-3" aria-label="صفحات الاشتراكات"><button type="button" disabled={page <= 1} onClick={() => setPage(value => value - 1)} className="water-btn-outline rounded-xl px-4 py-2 text-sm disabled:opacity-40">السابق</button><span className="text-sm text-deep-600">{page} من {pages}</span><button type="button" disabled={page >= pages} onClick={() => setPage(value => value + 1)} className="water-btn-outline rounded-xl px-4 py-2 text-sm disabled:opacity-40">التالي</button></nav>}
+    </>}
 
-    <section className="space-y-4 pt-3">
+    {activeSection === 'expenses' && <section className="space-y-4 pt-3">
       <div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-xl font-bold text-deep-900">المصروفات</h2><p className="text-sm text-deep-500">المصروفات الفعلية للدورة المختارة</p></div><div className="flex gap-2"><button type="button" onClick={() => void exportExpenseExcel()} disabled={busy} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-50">Excel المصروفات</button><button type="button" onClick={() => setEditingExpense(null)} disabled={expenseCategories.every(category => !category.enabled)} className="water-btn rounded-xl px-4 py-2 text-sm font-bold text-white disabled:opacity-50">إضافة مصروف</button></div></div>
       <div className="glass-card grid gap-3 rounded-2xl p-4 md:grid-cols-3"><label className="text-xs font-medium text-deep-600">التصنيف<select value={expenseCategoryFilter} onChange={event => setExpenseCategoryFilter(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-3 py-2.5 text-sm"><option value="">كل التصنيفات</option>{expenseCategories.map(category => <option key={category.id} value={category.id}>{category.label}</option>)}</select></label><label className="text-xs font-medium text-deep-600">طريقة الدفع<select value={expenseMethodFilter} onChange={event => setExpenseMethodFilter(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-3 py-2.5 text-sm"><option value="">كل الطرق</option>{SUBSCRIPTION_PAYMENT_METHODS.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label><label className="text-xs font-medium text-deep-600">بحث<input value={expenseSearch} onChange={event => setExpenseSearch(event.target.value)} placeholder="اسم المصروف أو الملاحظة" className="surface-field mt-1 w-full rounded-xl px-3 py-2.5 text-sm" /></label></div>
       <div className="glass-card overflow-hidden rounded-2xl"><div className="flex items-center justify-between border-b border-water-200 p-4"><span className="font-bold text-deep-800">سجل المصروفات</span><span className="text-sm font-bold text-red-600">{formatSubscriptionMoney(expenses.reduce((sum, item) => sum + item.amount_minor, 0), currency)}</span></div>{expenses.length === 0 ? <div className="p-10 text-center text-sm text-deep-500">لا توجد مصروفات مطابقة.</div> : <div className="divide-y divide-water-200/60">{expenses.map(expense => <article key={expense.id} className="grid gap-3 p-4 md:grid-cols-[1.4fr_1fr_1fr_auto] md:items-center"><div><h3 className="font-bold text-deep-900">{expense.name}</h3><p className="mt-1 text-xs text-deep-500">{expense.category_label}{expense.note ? ` · ${expense.note}` : ''}</p></div><div><p className="text-xs text-deep-500">المبلغ</p><p className="font-bold text-red-600">{formatSubscriptionMoney(expense.amount_minor, currency)}</p></div><div><p className="text-xs text-deep-500">الدفع</p><p className="text-sm text-deep-700">{expense.expense_date} · {paymentMethodLabel(expense.payment_method)}</p></div><div className="flex gap-2 md:justify-end"><button type="button" onClick={() => setEditingExpense(expense)} className="water-btn-outline rounded-lg px-3 py-1.5 text-xs">تعديل</button><button type="button" disabled={busy} onClick={() => void removeExpense(expense)} className="rounded-lg border border-red-200 px-3 py-1.5 text-xs text-red-600 dark:border-red-800">حذف</button></div></article>)}</div>}</div>
-    </section>
+    </section>}
 
     {payingRecord && <Modal title={`سداد اشتراك — ${payingRecord.student_name}`} onClose={() => setPayingRecord(null)}><PaymentForm count={1} totalMinor={payingRecord.fee_minor} currency={currency} busy={busy} onCancel={() => setPayingRecord(null)} onSubmit={data => submitPayment([payingRecord.id], data)} /></Modal>}
     {bulkPaying && <Modal title="تسجيل سداد جماعي" onClose={() => setBulkPaying(false)}><PaymentForm count={selected.size} totalMinor={selectedTotal} currency={currency} busy={busy} onCancel={() => setBulkPaying(false)} onSubmit={data => submitPayment(Array.from(selected), data)} /></Modal>}
