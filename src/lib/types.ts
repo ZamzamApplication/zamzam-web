@@ -133,6 +133,7 @@ export interface Circle {
   subscriptions_enabled?: boolean
   subscription_default_fee_minor?: number
   subscription_currency?: string
+  expense_categories?: ExpenseCategory[]
 }
 
 export interface Session {
@@ -240,6 +241,52 @@ export interface SubscriptionMonthRecord {
   payment_method: SubscriptionPaymentMethod | null
   payment_note: string | null
   receipt_number: string | null
+}
+
+export interface ExpenseCategory {
+  id: string
+  label: string
+  enabled: boolean
+}
+
+export interface ExpenseRecord {
+  id: number
+  name: string
+  category_id: string
+  category_label: string
+  amount_minor: number
+  currency: string
+  expense_date: string
+  payment_method: SubscriptionPaymentMethod
+  note: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ExpensePage {
+  items: ExpenseRecord[]
+  total: number
+  total_minor: number
+  page: number
+  page_size: number
+}
+
+export interface FinanceOverview {
+  period_start: string
+  period_end: string
+  currency: string
+  cash_collected_minor: number
+  expenses_minor: number
+  net_cash_minor: number
+  expected_subscriptions_minor: number
+  collected_subscriptions_minor: number
+  outstanding_subscriptions_minor: number
+  payment_methods: Array<{
+    method: SubscriptionPaymentMethod
+    income_minor: number
+    expenses_minor: number
+    net_minor: number
+  }>
 }
 
 export interface SubscriptionMonthSummary {
@@ -430,6 +477,7 @@ export interface AttendanceGridStudent {
   sheikh_name?: string | null
   next_warning_number: number
   remaining_warnings: number
+  subscription_amount_minor?: number | null
   records: Record<string, string>
 }
 

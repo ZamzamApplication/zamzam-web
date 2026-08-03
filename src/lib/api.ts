@@ -2,6 +2,9 @@ import { getApiRuntime } from './api-runtime'
 import type {
   AttendanceThresholdAlert,
   Circle,
+  ExpensePage,
+  ExpenseRecord,
+  FinanceOverview,
   QuranProgressInput,
   Session,
   SessionAttendance,
@@ -207,6 +210,50 @@ export const api = {
     if (filters.student_id) params.set('student_id', String(filters.student_id))
     if (filters.search) params.set('search', filters.search)
     return request<SubscriptionMonthRecord[]>(`/subscriptions/export?${params.toString()}`)
+  },
+
+  bulkCorrectSubscriptionAmount(data: { period: string; from_fee_minor: number; to_fee_minor: number }) {
+    return request<{ updated: number; skipped: number }>('/subscriptions/months/bulk-correct-amount', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    })
+  },
+
+  getFinanceOverview(period?: string) {
+    const query = period ? `?period=${encodeURIComponent(period)}` : ''
+    return request<FinanceOverview>(`/finance/overview${query}`)
+  },
+
+  getExpenses(filters: { period?: string; category_id?: string; payment_method?: SubscriptionPaymentMethod; search?: string; page?: number; page_size?: number }) {
+    const params = new URLSearchParams()
+    if (filters.period) params.set('period', filters.period)
+    if (filters.category_id) params.set('category_id', filters.category_id)
+    if (filters.payment_method) params.set('payment_method', filters.payment_method)
+    if (filters.search) params.set('search', filters.search)
+    if (filters.page) params.set('page', String(filters.page))
+    if (filters.page_size) params.set('page_size', String(filters.page_size))
+    return request<ExpensePage>(`/finance/expenses?${params.toString()}`)
+  },
+
+  exportExpenses(filters: { period?: string; category_id?: string; payment_method?: SubscriptionPaymentMethod; search?: string }) {
+    const params = new URLSearchParams()
+    if (filters.period) params.set('period', filters.period)
+    if (filters.category_id) params.set('category_id', filters.category_id)
+    if (filters.payment_method) params.set('payment_method', filters.payment_method)
+    if (filters.search) params.set('search', filters.search)
+    return request<ExpenseRecord[]>(`/finance/expenses/export?${params.toString()}`)
+  },
+
+  createExpense(data: { name: string; category_id: string; amount_minor: number; expense_date: string; payment_method: SubscriptionPaymentMethod; note?: string | null }) {
+    return request<ExpenseRecord>('/finance/expenses', { method: 'POST', body: JSON.stringify(data) })
+  },
+
+  updateExpense(expenseId: number, data: { name: string; category_id: string; amount_minor: number; expense_date: string; payment_method: SubscriptionPaymentMethod; note?: string | null }) {
+    return request<ExpenseRecord>(`/finance/expenses/${expenseId}`, { method: 'PATCH', body: JSON.stringify(data) })
+  },
+
+  deleteExpense(expenseId: number) {
+    return request<void>(`/finance/expenses/${expenseId}`, { method: 'DELETE' })
   },
 
   getUpcomingSessions() {

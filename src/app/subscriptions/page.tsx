@@ -16,6 +16,9 @@ import {
   SUBSCRIPTION_PAYMENT_METHODS,
 } from '@/lib/subscriptions'
 import type {
+  ExpenseCategory,
+  ExpenseRecord,
+  FinanceOverview,
   SheikhInfo,
   SubscriptionMonthRecord,
   SubscriptionMonthsResponse,
@@ -152,6 +155,53 @@ function ReceiptView({ receipt, currency, onClose }: { receipt: SubscriptionRece
   </Modal>
 }
 
+function ExpenseForm({ expense, categories, currency, busy, onCancel, onSubmit }: {
+  expense: ExpenseRecord | null
+  categories: ExpenseCategory[]
+  currency: string
+  busy: boolean
+  onCancel(): void
+  onSubmit(data: { name: string; category_id: string; amount_minor: number; expense_date: string; payment_method: SubscriptionPaymentMethod; note: string | null }): Promise<void>
+}) {
+  const available = categories.filter(category => category.enabled || category.id === expense?.category_id)
+  const [name, setName] = useState(expense?.name || '')
+  const [categoryId, setCategoryId] = useState(expense?.category_id || available[0]?.id || '')
+  const [amount, setAmount] = useState(expense ? minorToInput(expense.amount_minor) : '')
+  const [expenseDate, setExpenseDate] = useState(expense?.expense_date || todayValue())
+  const [method, setMethod] = useState<SubscriptionPaymentMethod>(expense?.payment_method || 'cash')
+  const [note, setNote] = useState(expense?.note || '')
+  const [formError, setFormError] = useState('')
+  return <form className="space-y-4" onSubmit={event => {
+    event.preventDefault()
+    const amountMinor = majorToMinor(amount)
+    if (!name.trim() || !categoryId || amountMinor === null || amountMinor <= 0) { setFormError('أدخل اسم المصروف والتصنيف ومبلغًا صحيحًا أكبر من صفر.'); return }
+    void onSubmit({ name: name.trim(), category_id: categoryId, amount_minor: amountMinor, expense_date: expenseDate, payment_method: method, note: note.trim() || null })
+  }}>
+    <label className="block text-sm font-medium text-deep-700">اسم المصروف<input required value={name} onChange={event => setName(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-4 py-2.5" /></label>
+    <div className="grid gap-3 sm:grid-cols-2">
+      <label className="text-sm font-medium text-deep-700">التصنيف<select required value={categoryId} onChange={event => setCategoryId(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-4 py-2.5">{available.map(category => <option key={category.id} value={category.id}>{category.label}</option>)}</select></label>
+      <label className="text-sm font-medium text-deep-700">المبلغ ({currency})<input inputMode="decimal" required value={amount} onChange={event => setAmount(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-4 py-2.5" /></label>
+      <label className="text-sm font-medium text-deep-700">تاريخ المصروف<input type="date" max={todayValue()} required value={expenseDate} onChange={event => setExpenseDate(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-4 py-2.5" /></label>
+      <label className="text-sm font-medium text-deep-700">طريقة الدفع<select value={method} onChange={event => setMethod(event.target.value as SubscriptionPaymentMethod)} className="surface-field mt-1 w-full rounded-xl px-4 py-2.5">{SUBSCRIPTION_PAYMENT_METHODS.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
+    </div>
+    <label className="block text-sm font-medium text-deep-700">ملاحظة (اختياري)<textarea rows={2} value={note} onChange={event => setNote(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-4 py-2.5" /></label>
+    {formError && <p role="alert" className="text-sm text-red-600">{formError}</p>}
+    <div className="flex gap-3"><button type="button" onClick={onCancel} className="water-btn-outline flex-1 rounded-xl px-4 py-2.5">إلغاء</button><button disabled={busy} className="water-btn flex-1 rounded-xl px-4 py-2.5 font-bold text-white disabled:opacity-50">{expense ? 'حفظ التعديل' : 'إضافة المصروف'}</button></div>
+  </form>
+}
+
+function BulkCorrectionForm({ period, currency, busy, onCancel, onSubmit }: { period: string; currency: string; busy: boolean; onCancel(): void; onSubmit(from: number, to: number): Promise<void> }) {
+  const [fromValue, setFromValue] = useState('')
+  const [toValue, setToValue] = useState('')
+  const [formError, setFormError] = useState('')
+  return <form className="space-y-4" onSubmit={event => { event.preventDefault(); const from = majorToMinor(fromValue); const to = majorToMinor(toValue); if (from === null || from <= 0 || to === null || from === to) { setFormError('أدخل قيمتين صحيحتين ومختلفتين.'); return } void onSubmit(from, to) }}>
+    <p className="rounded-xl border border-amber-200 bg-amber-50/60 p-3 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">سيتم تعديل السجلات غير المدفوعة المطابقة للقيمة القديمة في دورة {period} فقط. لن تتغير الإعفاءات أو الرسوم المخصصة أو الإيصالات المدفوعة.</p>
+    <div className="grid gap-3 sm:grid-cols-2"><label className="text-sm font-medium text-deep-700">القيمة القديمة ({currency})<input inputMode="decimal" required value={fromValue} onChange={event => setFromValue(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-4 py-2.5" /></label><label className="text-sm font-medium text-deep-700">القيمة الجديدة ({currency})<input inputMode="decimal" required value={toValue} onChange={event => setToValue(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-4 py-2.5" /></label></div>
+    {formError && <p role="alert" className="text-sm text-red-600">{formError}</p>}
+    <div className="flex gap-3"><button type="button" onClick={onCancel} className="water-btn-outline flex-1 rounded-xl px-4 py-2.5">إلغاء</button><button disabled={busy} className="water-btn flex-1 rounded-xl px-4 py-2.5 font-bold text-white disabled:opacity-50">تطبيق التصحيح</button></div>
+  </form>
+}
+
 export default function SubscriptionsPage() {
   const router = useRouter()
   const [settings, setSettings] = useState<SubscriptionSettings | null>(null)
@@ -181,6 +231,14 @@ export default function SubscriptionsPage() {
   const [activationCurrency, setActivationCurrency] = useState('EGP')
   const [showSettings, setShowSettings] = useState(false)
   const [settingsEnabled, setSettingsEnabled] = useState(true)
+  const [overview, setOverview] = useState<FinanceOverview | null>(null)
+  const [expenses, setExpenses] = useState<ExpenseRecord[]>([])
+  const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([])
+  const [expenseCategoryFilter, setExpenseCategoryFilter] = useState('')
+  const [expenseMethodFilter, setExpenseMethodFilter] = useState('')
+  const [expenseSearch, setExpenseSearch] = useState('')
+  const [editingExpense, setEditingExpense] = useState<ExpenseRecord | null | undefined>(undefined)
+  const [showBulkCorrection, setShowBulkCorrection] = useState(false)
 
   const currency = settings?.currency || 'EGP'
   const pageSize = 30
@@ -211,6 +269,19 @@ export default function SubscriptionsPage() {
     }
   }, [page, paidValue, period, search, settings?.enabled, sheikhId, studentIdFilter])
 
+  const loadFinance = useCallback(async () => {
+    try {
+      const [nextOverview, expensePage] = await Promise.all([
+        api.getFinanceOverview(period),
+        api.getExpenses({ period, category_id: expenseCategoryFilter || undefined, payment_method: expenseMethodFilter ? expenseMethodFilter as SubscriptionPaymentMethod : undefined, search: expenseSearch || undefined, page_size: 200 }),
+      ])
+      setOverview(nextOverview)
+      setExpenses(expensePage.items)
+    } catch (reason: any) {
+      setError(reason.message || 'تعذر تحميل البيانات المالية')
+    }
+  }, [expenseCategoryFilter, expenseMethodFilter, expenseSearch, period])
+
   useEffect(() => {
     let cancelled = false
     async function loadInitial() {
@@ -224,13 +295,14 @@ export default function SubscriptionsPage() {
         setMonthStartDay(startDay)
         const requestedStudentId = Number(new URLSearchParams(window.location.search).get('student_id'))
         if (Number.isInteger(requestedStudentId) && requestedStudentId > 0) setStudentIdFilter(requestedStudentId)
-        const [nextSettings, nextSheikhs] = await Promise.all([api.getSubscriptionSettings(), api.getSheikhs()])
+        const [nextSettings, nextSheikhs, tahfizSettings] = await Promise.all([api.getSubscriptionSettings(), api.getSheikhs(), api.getTahfizSettings()])
         if (cancelled) return
         setSettings(nextSettings)
         setActivationFee(minorToInput(nextSettings.default_monthly_fee_minor))
         setActivationCurrency(nextSettings.currency || 'EGP')
         setSettingsEnabled(nextSettings.enabled)
         setSheikhs(nextSheikhs)
+        setExpenseCategories(tahfizSettings.expense_categories || [])
         const effectiveStartDay = nextSettings.month_start_day || startDay
         setMonthStartDay(effectiveStartDay)
         setPeriod(nextSettings.current_period_start || monthRange(currentMonthValue(effectiveStartDay), effectiveStartDay).start)
@@ -245,6 +317,7 @@ export default function SubscriptionsPage() {
   }, [router])
 
   useEffect(() => { void loadRecords() }, [loadRecords])
+  useEffect(() => { if (!loading) void loadFinance() }, [loadFinance, loading])
 
   const selectedTotal = useMemo(() => selectedOutstandingTotal(records, selected), [records, selected])
   const unpaidOnPage = records.filter(record => !record.is_paid && record.fee_minor > 0)
@@ -402,36 +475,82 @@ export default function SubscriptionsPage() {
     }
   }
 
+  async function saveExpense(data: { name: string; category_id: string; amount_minor: number; expense_date: string; payment_method: SubscriptionPaymentMethod; note: string | null }) {
+    setBusy(true); setError('')
+    try {
+      if (editingExpense) await api.updateExpense(editingExpense.id, data)
+      else await api.createExpense(data)
+      setEditingExpense(undefined)
+      setNotice(editingExpense ? 'تم تحديث المصروف.' : 'تمت إضافة المصروف.')
+      await loadFinance()
+    } catch (reason: any) { setError(reason.message || 'تعذر حفظ المصروف') } finally { setBusy(false) }
+  }
+
+  async function removeExpense(expense: ExpenseRecord) {
+    if (!window.confirm(`حذف المصروف «${expense.name}»؟ سيبقى الإجراء محفوظًا في سجل التدقيق.`)) return
+    setBusy(true); setError('')
+    try { await api.deleteExpense(expense.id); setNotice('تم حذف المصروف.'); await loadFinance() }
+    catch (reason: any) { setError(reason.message || 'تعذر حذف المصروف') }
+    finally { setBusy(false) }
+  }
+
+  async function correctMonth(fromFeeMinor: number, toFeeMinor: number) {
+    if (!window.confirm('تأكيد التصحيح الجماعي لهذا الشهر؟ سيُسجل الإجراء في سجل التدقيق.')) return
+    setBusy(true); setError('')
+    try {
+      const result = await api.bulkCorrectSubscriptionAmount({ period, from_fee_minor: fromFeeMinor, to_fee_minor: toFeeMinor })
+      setShowBulkCorrection(false)
+      setNotice(`تم تحديث ${result.updated} سجل وتجاوز ${result.skipped} سجل غير مطابق أو محمي.`)
+      await Promise.all([loadRecords(), loadFinance()])
+    } catch (reason: any) { setError(reason.message || 'تعذر تصحيح رسوم الشهر') }
+    finally { setBusy(false) }
+  }
+
+  async function exportExpenseExcel() {
+    setBusy(true); setError('')
+    try {
+      const rows = await api.exportExpenses({ period, category_id: expenseCategoryFilter || undefined, payment_method: expenseMethodFilter ? expenseMethodFilter as SubscriptionPaymentMethod : undefined, search: expenseSearch || undefined })
+      const ExcelJS = await import('exceljs')
+      const workbook = new ExcelJS.Workbook()
+      const sheet = workbook.addWorksheet('المصروفات', { views: [{ rightToLeft: true }] })
+      sheet.columns = [{ header: 'المصروف', key: 'name', width: 28 }, { header: 'التصنيف', key: 'category', width: 18 }, { header: 'التاريخ', key: 'date', width: 16 }, { header: `المبلغ (${currency})`, key: 'amount', width: 16 }, { header: 'طريقة الدفع', key: 'method', width: 18 }, { header: 'ملاحظة', key: 'note', width: 30 }]
+      rows.forEach(row => sheet.addRow({ name: row.name, category: row.category_label, date: row.expense_date, amount: row.amount_minor / 100, method: paymentMethodLabel(row.payment_method), note: row.note || '' }))
+      sheet.getRow(1).font = { bold: true }; sheet.getColumn('amount').numFmt = '#,##0.00'; sheet.autoFilter = { from: 'A1', to: 'F1' }
+      const buffer = await workbook.xlsx.writeBuffer(); const url = URL.createObjectURL(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })); const link = document.createElement('a'); link.href = url; link.download = `expenses-${period}.xlsx`; link.click(); URL.revokeObjectURL(url)
+    } catch (reason: any) { setError(reason.message || 'تعذر تصدير المصروفات') } finally { setBusy(false) }
+  }
+
   if (loading) return <div className="page-loading" aria-label="جاري تحميل الاشتراكات" />
   if (!settings && error) return <AsyncState message={error} onRetry={() => window.location.reload()} />
-
-  if (!settings?.enabled) return <div className="mx-auto max-w-2xl space-y-5">
-    <div><Link href="/manage" className="text-sm font-semibold text-cyan-700 dark:text-cyan-300">الإدارة ‹</Link><h1 className="mt-2 text-3xl font-bold text-deep-900">الاشتراكات</h1></div>
-    <section className="glass-card rounded-2xl p-6 md:p-8">
-      <div className="mb-5 text-center"><div className="text-4xl">🧾</div><h2 className="mt-3 text-xl font-bold text-deep-900">تفعيل الاشتراكات الشهرية</h2><p className="mt-2 text-sm text-deep-500">سيبدأ السجل من الدورة الحالية فقط، وسيُحسب كامل المبلغ لكل طالب مقيد.</p></div>
-      {error && <p role="alert" className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/30 dark:text-red-300">{error}</p>}
-      <form onSubmit={activate} className="space-y-4">
-        <label className="block text-sm font-medium text-deep-700">الرسوم الشهرية الافتراضية
-          <input inputMode="decimal" required value={activationFee} onChange={event => setActivationFee(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-4 py-2.5" />
-        </label>
-        <label className="block text-sm font-medium text-deep-700">العملة
-          <select value={activationCurrency} onChange={event => setActivationCurrency(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-4 py-2.5"><option value="EGP">جنيه مصري (EGP)</option><option value="SAR">ريال سعودي (SAR)</option><option value="USD">دولار أمريكي (USD)</option></select>
-        </label>
-        <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">لا تُضاف رسوم تاريخية. السفر وغياب بعذر لا يوقفان الاشتراك تلقائيًا.</div>
-        <button disabled={busy} className="water-btn w-full rounded-xl px-5 py-3 font-bold text-white disabled:opacity-50">{busy ? 'جاري التفعيل...' : 'تفعيل وإنشاء الدورة الحالية'}</button>
-      </form>
-    </section>
-  </div>
 
   const pages = Math.max(1, Math.ceil(total / pageSize))
   return <div className="space-y-5">
     <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-      <div><Link href="/manage" className="text-sm font-semibold text-cyan-700 dark:text-cyan-300">الإدارة ‹</Link><h1 className="mt-1 text-2xl font-bold text-deep-900">الاشتراكات</h1><p className="mt-1 text-sm text-deep-500">متابعة الرسوم الشهرية وتسجيل السداد</p></div>
-      <div className="flex gap-2"><button type="button" onClick={() => setShowSettings(true)} className="water-btn-outline rounded-xl px-4 py-2.5 text-sm font-semibold">إعدادات الاشتراكات</button><button type="button" onClick={() => void exportExcel()} disabled={busy} className="water-btn-outline rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-50">تنزيل Excel</button></div>
+      <div><Link href="/manage" className="text-sm font-semibold text-cyan-700 dark:text-cyan-300">الإدارة ‹</Link><h1 className="mt-1 text-2xl font-bold text-deep-900">القسم المالي</h1><p className="mt-1 text-sm text-deep-500">الاشتراكات والمصروفات والوضع المالي للتحفيظ</p></div>
+      <div className="flex gap-2"><Link href="/settings" className="water-btn-outline rounded-xl px-4 py-2.5 text-sm font-semibold">إعدادات القسم المالي</Link><button type="button" onClick={() => void exportExcel()} disabled={busy || !settings?.enabled} className="water-btn-outline rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-50">Excel الاشتراكات</button></div>
     </header>
 
     {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300">{error}</div>}
     {notice && <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">{notice}</div>}
+
+    <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+      {[
+        ['المحصل نقديًا', overview?.cash_collected_minor ?? 0, 'text-emerald-600'],
+        ['المصروفات', overview?.expenses_minor ?? 0, 'text-red-600'],
+        ['صافي الوضع المالي', overview?.net_cash_minor ?? 0, (overview?.net_cash_minor ?? 0) >= 0 ? 'text-cyan-700' : 'text-red-600'],
+        ['الاشتراكات المتوقعة', overview?.expected_subscriptions_minor ?? 0, 'text-deep-900'],
+        ['غير المحصل', overview?.outstanding_subscriptions_minor ?? 0, 'text-amber-600'],
+      ].map(([label, value, color]) => <div key={String(label)} className="glass-card rounded-2xl p-4"><p className="text-xs text-deep-500">{label}</p><p className={`mt-2 text-lg font-bold ${color}`}>{formatSubscriptionMoney(Number(value), currency)}</p></div>)}
+    </section>
+
+    <section className="glass-card rounded-2xl p-4">
+      <h2 className="font-bold text-deep-900">الحركة حسب طريقة الدفع</h2>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{(overview?.payment_methods || []).map(item => <div key={item.method} className="rounded-xl border border-water-200 p-3"><p className="text-sm font-bold text-deep-800">{paymentMethodLabel(item.method)}</p><dl className="mt-2 space-y-1 text-xs"><div className="flex justify-between"><dt className="text-deep-500">اشتراكات</dt><dd className="text-emerald-600">{formatSubscriptionMoney(item.income_minor, currency)}</dd></div><div className="flex justify-between"><dt className="text-deep-500">مصروفات</dt><dd className="text-red-600">{formatSubscriptionMoney(item.expenses_minor, currency)}</dd></div><div className="flex justify-between border-t border-water-200 pt-1 font-bold"><dt>الصافي</dt><dd>{formatSubscriptionMoney(item.net_minor, currency)}</dd></div></dl></div>)}</div>
+    </section>
+
+    {!settings?.enabled && <section className="glass-card rounded-2xl p-5"><h2 className="text-lg font-bold text-deep-900">تفعيل الاشتراكات الشهرية</h2><p className="mt-1 text-sm text-deep-500">يمكن تسجيل المصروفات دون الاشتراكات، أو تفعيل رسوم الطلاب من هنا.</p><form onSubmit={activate} className="mt-4 grid gap-3 sm:grid-cols-3"><input inputMode="decimal" required value={activationFee} onChange={event => setActivationFee(event.target.value)} placeholder="الرسم الشهري" className="surface-field rounded-xl px-4 py-2.5" /><select value={activationCurrency} onChange={event => setActivationCurrency(event.target.value)} className="surface-field rounded-xl px-4 py-2.5"><option value="EGP">EGP</option><option value="SAR">SAR</option><option value="USD">USD</option></select><button disabled={busy} className="water-btn rounded-xl px-4 py-2.5 font-bold text-white disabled:opacity-50">تفعيل الاشتراكات</button></form></section>}
+
+    <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-bold text-deep-900">اشتراكات الطلاب</h2><p className="text-sm text-deep-500">الرسوم والسداد للدورة المختارة</p></div>{settings?.enabled && <button type="button" onClick={() => setShowBulkCorrection(true)} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">تصحيح رسوم الشهر جماعيًا</button>}</div>
 
     <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
       {[
@@ -484,10 +603,18 @@ export default function SubscriptionsPage() {
 
     {pages > 1 && <nav className="flex items-center justify-center gap-3" aria-label="صفحات الاشتراكات"><button type="button" disabled={page <= 1} onClick={() => setPage(value => value - 1)} className="water-btn-outline rounded-xl px-4 py-2 text-sm disabled:opacity-40">السابق</button><span className="text-sm text-deep-600">{page} من {pages}</span><button type="button" disabled={page >= pages} onClick={() => setPage(value => value + 1)} className="water-btn-outline rounded-xl px-4 py-2 text-sm disabled:opacity-40">التالي</button></nav>}
 
+    <section className="space-y-4 pt-3">
+      <div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-xl font-bold text-deep-900">المصروفات</h2><p className="text-sm text-deep-500">المصروفات الفعلية للدورة المختارة</p></div><div className="flex gap-2"><button type="button" onClick={() => void exportExpenseExcel()} disabled={busy} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-50">Excel المصروفات</button><button type="button" onClick={() => setEditingExpense(null)} disabled={expenseCategories.every(category => !category.enabled)} className="water-btn rounded-xl px-4 py-2 text-sm font-bold text-white disabled:opacity-50">إضافة مصروف</button></div></div>
+      <div className="glass-card grid gap-3 rounded-2xl p-4 md:grid-cols-3"><label className="text-xs font-medium text-deep-600">التصنيف<select value={expenseCategoryFilter} onChange={event => setExpenseCategoryFilter(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-3 py-2.5 text-sm"><option value="">كل التصنيفات</option>{expenseCategories.map(category => <option key={category.id} value={category.id}>{category.label}</option>)}</select></label><label className="text-xs font-medium text-deep-600">طريقة الدفع<select value={expenseMethodFilter} onChange={event => setExpenseMethodFilter(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-3 py-2.5 text-sm"><option value="">كل الطرق</option>{SUBSCRIPTION_PAYMENT_METHODS.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label><label className="text-xs font-medium text-deep-600">بحث<input value={expenseSearch} onChange={event => setExpenseSearch(event.target.value)} placeholder="اسم المصروف أو الملاحظة" className="surface-field mt-1 w-full rounded-xl px-3 py-2.5 text-sm" /></label></div>
+      <div className="glass-card overflow-hidden rounded-2xl"><div className="flex items-center justify-between border-b border-water-200 p-4"><span className="font-bold text-deep-800">سجل المصروفات</span><span className="text-sm font-bold text-red-600">{formatSubscriptionMoney(expenses.reduce((sum, item) => sum + item.amount_minor, 0), currency)}</span></div>{expenses.length === 0 ? <div className="p-10 text-center text-sm text-deep-500">لا توجد مصروفات مطابقة.</div> : <div className="divide-y divide-water-200/60">{expenses.map(expense => <article key={expense.id} className="grid gap-3 p-4 md:grid-cols-[1.4fr_1fr_1fr_auto] md:items-center"><div><h3 className="font-bold text-deep-900">{expense.name}</h3><p className="mt-1 text-xs text-deep-500">{expense.category_label}{expense.note ? ` · ${expense.note}` : ''}</p></div><div><p className="text-xs text-deep-500">المبلغ</p><p className="font-bold text-red-600">{formatSubscriptionMoney(expense.amount_minor, currency)}</p></div><div><p className="text-xs text-deep-500">الدفع</p><p className="text-sm text-deep-700">{expense.expense_date} · {paymentMethodLabel(expense.payment_method)}</p></div><div className="flex gap-2 md:justify-end"><button type="button" onClick={() => setEditingExpense(expense)} className="water-btn-outline rounded-lg px-3 py-1.5 text-xs">تعديل</button><button type="button" disabled={busy} onClick={() => void removeExpense(expense)} className="rounded-lg border border-red-200 px-3 py-1.5 text-xs text-red-600 dark:border-red-800">حذف</button></div></article>)}</div>}</div>
+    </section>
+
     {payingRecord && <Modal title={`سداد اشتراك — ${payingRecord.student_name}`} onClose={() => setPayingRecord(null)}><PaymentForm count={1} totalMinor={payingRecord.fee_minor} currency={currency} busy={busy} onCancel={() => setPayingRecord(null)} onSubmit={data => submitPayment([payingRecord.id], data)} /></Modal>}
     {bulkPaying && <Modal title="تسجيل سداد جماعي" onClose={() => setBulkPaying(false)}><PaymentForm count={selected.size} totalMinor={selectedTotal} currency={currency} busy={busy} onCancel={() => setBulkPaying(false)} onSubmit={data => submitPayment(Array.from(selected), data)} /></Modal>}
     {editingRecord && <Modal title={`تعديل رسوم — ${editingRecord.student_name}`} onClose={() => setEditingRecord(null)}><FeeForm record={editingRecord} currency={currency} busy={busy} onCancel={() => setEditingRecord(null)} onSubmit={saveFee} /></Modal>}
     {receipt && <ReceiptView receipt={receipt} currency={currency} onClose={() => setReceipt(null)} />}
+    {editingExpense !== undefined && <Modal title={editingExpense ? `تعديل مصروف — ${editingExpense.name}` : 'إضافة مصروف'} onClose={() => setEditingExpense(undefined)} wide><ExpenseForm expense={editingExpense} categories={expenseCategories} currency={currency} busy={busy} onCancel={() => setEditingExpense(undefined)} onSubmit={saveExpense} /></Modal>}
+    {showBulkCorrection && <Modal title="تصحيح رسوم شهر كامل" onClose={() => setShowBulkCorrection(false)}><BulkCorrectionForm period={period} currency={currency} busy={busy} onCancel={() => setShowBulkCorrection(false)} onSubmit={correctMonth} /></Modal>}
     {showSettings && <Modal title="إعدادات الاشتراكات" onClose={() => setShowSettings(false)}><form onSubmit={saveSettings} className="space-y-4"><label className="block text-sm font-medium text-deep-700">الرسوم الافتراضية ({activationCurrency})<input inputMode="decimal" value={activationFee} onChange={event => setActivationFee(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-4 py-2.5" /></label><label className="block text-sm font-medium text-deep-700">العملة<select value={activationCurrency} onChange={event => setActivationCurrency(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-4 py-2.5"><option value="EGP">جنيه مصري (EGP)</option><option value="SAR">ريال سعودي (SAR)</option><option value="USD">دولار أمريكي (USD)</option></select></label><label className="flex items-center gap-2 rounded-xl border border-water-200 p-3 text-sm font-medium text-deep-700"><input type="checkbox" checked={settingsEnabled} onChange={event => setSettingsEnabled(event.target.checked)} /> الاشتراكات مفعلة</label><button disabled={busy} className="water-btn w-full rounded-xl px-4 py-2.5 font-bold text-white disabled:opacity-50">حفظ الإعدادات</button></form></Modal>}
   </div>
 }

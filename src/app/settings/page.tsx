@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { api } from '@/lib/api'
 import { configuredAttendanceStatuses } from '@/lib/attendance'
 import { configuredExcelExportTemplates, DEFAULT_EXCEL_EXPORT_TEMPLATES, type ExcelExportTemplates } from '@/lib/excel-templates'
-import type { Circle, SheikhInfo, TahfizInvitation } from '@/lib/types'
+import type { Circle, ExpenseCategory, SheikhInfo, TahfizInvitation } from '@/lib/types'
 import AsyncState from '@/components/AsyncState'
 import ExcelTemplateSettings from '@/components/ExcelTemplateSettings'
 import { majorToMinor, minorToInput } from '@/lib/subscriptions'
@@ -34,6 +34,7 @@ export default function TahfizSettingsPage() {
   const [subscriptionsEnabled, setSubscriptionsEnabled] = useState(false)
   const [subscriptionDefaultFee, setSubscriptionDefaultFee] = useState('')
   const [subscriptionCurrency, setSubscriptionCurrency] = useState('EGP')
+  const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([])
   const [sheikhSelectionEnabled, setSheikhSelectionEnabled] = useState(true)
   const [restrictSheikhStudentAccess, setRestrictSheikhStudentAccess] = useState(true)
   const [attendanceStatuses, setAttendanceStatuses] = useState<string[]>([])
@@ -85,6 +86,7 @@ export default function TahfizSettingsPage() {
         setSubscriptionsEnabled(Boolean(data.subscriptions_enabled))
         setSubscriptionDefaultFee(minorToInput(data.subscription_default_fee_minor ?? 0))
         setSubscriptionCurrency(data.subscription_currency || 'EGP')
+        setExpenseCategories(data.expense_categories || [])
         setSheikhSelectionEnabled(data.attendance_sheikh_selection_enabled ?? true)
         setRestrictSheikhStudentAccess(data.restrict_sheikh_student_access ?? true)
         setAttendanceStatuses(configuredAttendanceStatuses(data.attendance_statuses))
@@ -276,6 +278,7 @@ export default function TahfizSettingsPage() {
         subscriptions_enabled: subscriptionsEnabled,
         subscription_default_fee_minor: subscriptionFeeMinor,
         subscription_currency: subscriptionCurrency,
+        expense_categories: expenseCategories,
         attendance_sheikh_selection_enabled: sheikhSelectionEnabled,
         restrict_sheikh_student_access: restrictSheikhStudentAccess,
         whatsend_enabled: whatsendEnabled,
@@ -355,7 +358,7 @@ export default function TahfizSettingsPage() {
           <p className="mt-3 text-xs text-deep-500">بداية الشهر تتحكم في نطاقات سجل الحضور والتقارير الشهرية.</p>
         </SettingsSection>
 
-        <SettingsSection title="الحضور ومتابعة القرآن" description="الحالات وترتيبها والميزات التي تظهر أثناء تسجيل الحلقة.">
+        <SettingsSection title="الحضور ومتابعة القرآن والقسم المالي" description="الحالات وميزات المتابعة والاشتراكات والمصروفات.">
           <FeatureToggle
             enabled={restrictSheikhStudentAccess}
             onChange={(enabled) => {
@@ -385,7 +388,7 @@ export default function TahfizSettingsPage() {
                 if (!enabled && !window.confirm('سيؤدي إيقاف الاشتراكات إلى منع إنشاء سجلات جديدة مع الاحتفاظ بجميع السجلات والمدفوعات السابقة. هل تريد المتابعة؟')) return
                 setSubscriptionsEnabled(enabled)
               }}
-              title="الاشتراكات الشهرية"
+              title="الاشتراكات الشهرية — القسم المالي"
               description="ميزة اختيارية لمتابعة رسوم الطلاب. إيقافها يخفي التشغيل اليومي ويحفظ السجلات السابقة."
             />
             {subscriptionsEnabled && <div className="mt-3 grid gap-3 rounded-xl border border-water-200 bg-white/35 p-4 md:grid-cols-2 dark:bg-slate-800/35">
@@ -401,8 +404,22 @@ export default function TahfizSettingsPage() {
                   <option value="USD">دولار أمريكي (USD)</option>
                 </select>
               </label>
-              <p className="text-xs text-deep-500 md:col-span-2">يمكن تعديل رسوم طالب بعينه من صفحة الاشتراكات. لا يمكن تغيير العملة بعد إنشاء أول سجل.</p>
+              <p className="text-xs text-deep-500 md:col-span-2">يمكن تعديل رسوم طالب بعينه من القسم المالي. لا يمكن تغيير العملة بعد إنشاء أول اشتراك أو مصروف.</p>
             </div>}
+            <div className="mt-4 rounded-xl border border-water-200 bg-white/35 p-4 dark:bg-slate-800/35">
+              <div className="flex items-center justify-between gap-3">
+                <div><h3 className="text-sm font-bold text-deep-800">تصنيفات المصروفات</h3><p className="mt-1 text-xs text-deep-500">يمكن تعطيل التصنيف مع الاحتفاظ بالمصروفات السابقة.</p></div>
+                <button type="button" onClick={() => setExpenseCategories(current => [...current, { id: `custom_${globalThis.crypto?.randomUUID?.().replaceAll('-', '') || Date.now()}`, label: 'تصنيف جديد', enabled: true }])} className="water-btn-outline rounded-lg px-3 py-2 text-xs font-semibold">إضافة تصنيف</button>
+              </div>
+              <div className="mt-3 grid gap-2">
+                {expenseCategories.map((category, index) => <div key={category.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-water-200 p-2">
+                  <input value={category.label} onChange={event => setExpenseCategories(current => current.map(item => item.id === category.id ? { ...item, label: event.target.value } : item))} required className="surface-field min-w-36 flex-1 rounded-lg px-3 py-2 text-sm" aria-label={`اسم التصنيف ${index + 1}`} />
+                  <button type="button" disabled={index === 0} onClick={() => setExpenseCategories(current => { const next = [...current]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; return next })} className="rounded-lg border border-water-200 px-2 py-1 disabled:opacity-30" aria-label="تحريك لأعلى">↑</button>
+                  <button type="button" disabled={index === expenseCategories.length - 1} onClick={() => setExpenseCategories(current => { const next = [...current]; [next[index], next[index + 1]] = [next[index + 1], next[index]]; return next })} className="rounded-lg border border-water-200 px-2 py-1 disabled:opacity-30" aria-label="تحريك لأسفل">↓</button>
+                  <label className="flex items-center gap-1 text-xs text-deep-600"><input type="checkbox" checked={category.enabled} onChange={event => setExpenseCategories(current => current.map(item => item.id === category.id ? { ...item, enabled: event.target.checked } : item))} /> مفعّل</label>
+                </div>)}
+              </div>
+            </div>
           </div>
           <div className="mt-3">
             <FeatureToggle

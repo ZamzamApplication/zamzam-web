@@ -75,6 +75,7 @@ export const DEFAULT_EXCEL_EXPORT_TEMPLATES: ExcelExportTemplates = {
       standardColumn('serial', 'م', 6, false),
       standardColumn('student', 'الطالب', 24),
       standardColumn('sheikh', 'الشيخ', 20),
+      standardColumn('subscription_amount', 'مبلغ الاشتراك', 16),
       standardColumn('attendance', 'الحضور', 18),
     ],
   },

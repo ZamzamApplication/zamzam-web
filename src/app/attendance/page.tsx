@@ -390,6 +390,7 @@ export default function AttendancePage() {
   }
 
   const openExcelPreview = () => {
+    const canViewFinance = user?.role === 'admin' || user?.role === 'super_admin'
     const sessionColumns = displaySessions.map((session) => ({
       id: `session_${session.id}`,
       label: formatDateWithWeekday(session.date),
@@ -400,12 +401,14 @@ export default function AttendancePage() {
       columns: [
         { id: 'student', label: 'الطالب' },
         { id: 'sheikh', label: 'الشيخ' },
+        ...(canViewFinance ? [{ id: 'subscription_amount', label: 'مبلغ الاشتراك' }] : []),
         ...sessionColumns,
       ],
       rows: displayStudents.map((student) => {
         const row: Record<string, string | number | null> = {
           student: student.name,
           sheikh: student.sheikh_name || 'بدون شيخ',
+          ...(canViewFinance ? { subscription_amount: student.subscription_amount_minor == null ? null : student.subscription_amount_minor / 100 } : {}),
         }
         displaySessions.forEach((session) => {
           row[`session_${session.id}`] = student.records[String(session.id)] || 'لا ينطبق'
@@ -414,7 +417,11 @@ export default function AttendancePage() {
       }),
     }
     const templates = configuredExcelExportTemplates(user?.tahfiz?.excel_export_templates)
-    setExcelSheets([applyExcelTemplate(sourceSheet, templates.attendance)])
+    const attendanceTemplate = canViewFinance ? templates.attendance : {
+      ...templates.attendance,
+      columns: templates.attendance.columns.filter(column => column.id !== 'subscription_amount'),
+    }
+    setExcelSheets([applyExcelTemplate(sourceSheet, attendanceTemplate)])
   }
 
   return (
