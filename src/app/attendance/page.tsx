@@ -79,26 +79,27 @@ function toLocalDateString(date: Date): string {
   return `${year}-${month}-${day}`
 }
 
-function statusMatches(status: string, rule: FilterRule): boolean {
+function statusMatches(status: string | null | undefined, rule: FilterRule): boolean {
+  if (status == null) return false
   const hasMatch = status === rule.status
   return rule.operator === 'is' ? hasMatch : !hasMatch
 }
 
-function matchesRule(student: { records: Record<string, string> }, rule: FilterRule, sessions: AttendanceGridSession[]): boolean {
+function matchesRule(student: { records: Record<string, string | null> }, rule: FilterRule, sessions: AttendanceGridSession[]): boolean {
   if (rule.target === 'weekday') {
     const matchingSessions = sessions.filter((s) => getSessionWeekday(s.date) === (rule.weekday ?? 0))
     if (matchingSessions.length === 0) return true
     return matchingSessions.some((session) => {
-      const status = student.records[String(session.id)] || 'لا ينطبق'
+      const status = student.records[String(session.id)]
       return statusMatches(status, rule)
     })
   }
 
-  const status = student.records[String(rule.sessionId)] || 'لا ينطبق'
+  const status = student.records[String(rule.sessionId)]
   return statusMatches(status, rule)
 }
 
-function evaluateGroup(student: { records: Record<string, string> }, group: FilterGroup, sessions: AttendanceGridSession[]): boolean {
+function evaluateGroup(student: { records: Record<string, string | null> }, group: FilterGroup, sessions: AttendanceGridSession[]): boolean {
   if (group.rules.length === 0) return true
   let result = matchesRule(student, group.rules[0], sessions)
   for (let i = 1; i < group.rules.length; i++) {
@@ -411,7 +412,7 @@ export default function AttendancePage() {
           ...(canViewFinance ? { subscription_amount: student.subscription_amount_minor == null ? null : student.subscription_amount_minor / 100 } : {}),
         }
         displaySessions.forEach((session) => {
-          row[`session_${session.id}`] = student.records[String(session.id)] || 'لا ينطبق'
+          row[`session_${session.id}`] = student.records[String(session.id)]
         })
         return row
       }),
@@ -662,8 +663,8 @@ export default function AttendancePage() {
                   )}
                 </div>
                 <div className="divide-y divide-water-200/20">
-                  {displaySessions.map((s) => {
-                    const status = student.records[String(s.id)] || 'لا ينطبق'
+                  {displaySessions.filter((s) => student.records[String(s.id)] != null).map((s) => {
+                    const status = student.records[String(s.id)]!
                     return (
                       <div key={s.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
                         <span className="text-xs text-deep-600 truncate">{formatDateWithWeekday(s.date)}</span>
@@ -714,12 +715,16 @@ export default function AttendancePage() {
                     </div>
                   </td>
                   {displaySessions.map((s) => {
-                    const status = student.records[String(s.id)] || 'لا ينطبق'
+                    const status = student.records[String(s.id)]
                     return (
                       <td key={s.id} className="text-center py-2 px-2">
-                        <span className={`inline-block rounded-lg border px-2 py-1 text-xs font-medium ${statusColorClass(status)}`}>
-                          {status}
-                        </span>
+                        {status == null ? (
+                          <span className="text-deep-300" aria-label="لم يكن الطالب مسجلاً في هذه الحلقة">—</span>
+                        ) : (
+                          <span className={`inline-block rounded-lg border px-2 py-1 text-xs font-medium ${statusColorClass(status)}`}>
+                            {status}
+                          </span>
+                        )}
                       </td>
                     )
                   })}
@@ -887,8 +892,8 @@ ${selectedLabels.map((label) => `* ${label}`).join('\n') || '* ...'}
             </div>
           ) : (
             <div className="grid gap-2">
-              {sessions.map((session) => {
-                const status = student.records[String(session.id)] || 'لا ينطبق'
+              {sessions.filter((session) => student.records[String(session.id)] != null).map((session) => {
+                const status = student.records[String(session.id)]!
                 const checked = selectedIds.includes(session.id)
                 return (
                   <label

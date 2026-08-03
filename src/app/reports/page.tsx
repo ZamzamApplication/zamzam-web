@@ -27,6 +27,7 @@ export default function ReportsPage() {
   const [excelSheets, setExcelSheets] = useState<SpreadsheetSheet[] | null>(null)
   const [previewPic, setPreviewPic] = useState<string | null>(null)
   const [studentSearch, setStudentSearch] = useState('')
+  const [studentSort, setStudentSort] = useState<'name' | 'rate_desc' | 'rate_asc'>('name')
   const reportRequestId = useRef(0)
   const [progressReport, setProgressReport] = useState<{
     enabled: boolean
@@ -132,9 +133,17 @@ export default function ReportsPage() {
 
   if (loading) return <div className="page-loading" aria-label="جاري التحميل" />
 
-  const sortedStudents = [...studentStats].sort((a, b) =>
+  const compareStudentNames = (a: StudentStatsItem, b: StudentStatsItem) =>
     a.student_name.localeCompare(b.student_name, 'ar', { sensitivity: 'base' })
-  )
+  const sortedStudents = [...studentStats].sort((a, b) => {
+    if (studentSort === 'rate_desc') {
+      return b.attendance_rate - a.attendance_rate || compareStudentNames(a, b)
+    }
+    if (studentSort === 'rate_asc') {
+      return a.attendance_rate - b.attendance_rate || compareStudentNames(a, b)
+    }
+    return compareStudentNames(a, b)
+  })
   const normalizedStudentSearch = studentSearch.trim().toLocaleLowerCase('ar')
   const displayStudents = sortedStudents.filter(student => (
     !normalizedStudentSearch
@@ -310,9 +319,24 @@ export default function ReportsPage() {
                 <h2 className="text-lg font-bold text-deep-800">نسب حضور الطلاب</h2>
                 <p className="text-xs text-deep-500 mt-1">{periodLabel}</p>
               </div>
-              <button type="button" onClick={openExcelPreview} className="water-btn text-white rounded-xl px-4 py-2 text-sm font-semibold">
-                معاينة وتصدير Excel
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="flex items-center gap-2 text-sm text-deep-600">
+                  <span className="whitespace-nowrap">ترتيب حسب</span>
+                  <select
+                    value={studentSort}
+                    onChange={(event) => setStudentSort(event.target.value as typeof studentSort)}
+                    className="rounded-xl border border-water-200 bg-white/80 px-3 py-2 text-sm text-deep-800 outline-none focus:border-cyan-500 dark:bg-slate-800"
+                    aria-label="ترتيب الطلاب"
+                  >
+                    <option value="name">الاسم</option>
+                    <option value="rate_desc">النسبة: الأعلى أولاً</option>
+                    <option value="rate_asc">النسبة: الأقل أولاً</option>
+                  </select>
+                </label>
+                <button type="button" onClick={openExcelPreview} className="water-btn text-white rounded-xl px-4 py-2 text-sm font-semibold">
+                  معاينة وتصدير Excel
+                </button>
+              </div>
             </div>
             {displayStudents.length === 0 ? (
               <div className="text-center text-deep-500 py-4">لا يوجد طلاب</div>

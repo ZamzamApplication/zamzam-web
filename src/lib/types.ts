@@ -478,7 +478,7 @@ export interface AttendanceGridStudent {
   next_warning_number: number
   remaining_warnings: number
   subscription_amount_minor?: number | null
-  records: Record<string, string>
+  records: Record<string, string | null>
 }
 
 export interface AttendanceGrid {
