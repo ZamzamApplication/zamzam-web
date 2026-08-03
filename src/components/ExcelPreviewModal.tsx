@@ -87,15 +87,20 @@ export default function ExcelPreviewModal({
         const worksheet = workbook.addWorksheet(safeSheetName(sheet.name, sheetIndex), {
           views: [{ rightToLeft: true, state: 'frozen', ySplit: headerRows }],
           pageSetup: {
+            paperSize: 9,
             orientation: 'landscape',
+            fitToPage: true,
+            fitToWidth: 1,
+            fitToHeight: 0,
+            horizontalCentered: true,
             printTitlesRow: `1:${headerRows}`,
             margins: {
-              left: 0.4 / 2.54,
-              right: 0.4 / 2.54,
-              top: 0.4 / 2.54,
-              bottom: 0.4 / 2.54,
-              header: 0.4 / 2.54,
-              footer: 0.4 / 2.54,
+              left: 0.25,
+              right: 0.25,
+              top: 0.3,
+              bottom: 0.3,
+              header: 0.15,
+              footer: 0.15,
             },
           },
         })
@@ -185,6 +190,9 @@ export default function ExcelPreviewModal({
             from: { row: 1, column: 1 },
             to: { row: 1, column: sheet.columns.length },
           }
+        }
+        if (sheet.columns.length > 0 && worksheet.rowCount > 0) {
+          worksheet.pageSetup.printArea = `A1:${worksheet.getColumn(sheet.columns.length).letter}${worksheet.rowCount}`
         }
       })
 
