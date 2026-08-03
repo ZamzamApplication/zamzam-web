@@ -95,12 +95,12 @@ export default function ExcelPreviewModal({
             horizontalCentered: true,
             printTitlesRow: `1:${headerRows}`,
             margins: {
-              left: 0.25,
-              right: 0.25,
-              top: 0.3,
-              bottom: 0.3,
-              header: 0.15,
-              footer: 0.15,
+              left: 0.1,
+              right: 0.1,
+              top: 0.15,
+              bottom: 0.15,
+              header: 0.05,
+              footer: 0.05,
             },
           },
         })

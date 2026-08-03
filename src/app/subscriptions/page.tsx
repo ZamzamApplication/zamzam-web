@@ -420,7 +420,7 @@ export default function SubscriptionsPage() {
       const rows = await api.exportSubscriptions({ period, paid: paidValue, sheikh_id: sheikhId ? Number(sheikhId) : undefined, student_id: studentIdFilter, search: search || undefined })
       const ExcelJS = await import('exceljs')
       const workbook = new ExcelJS.Workbook()
-      const sheet = workbook.addWorksheet('الاشتراكات', { views: [{ rightToLeft: true }], pageSetup: { paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, horizontalCentered: true, printTitlesRow: '1:1', margins: { left: 0.25, right: 0.25, top: 0.3, bottom: 0.3, header: 0.15, footer: 0.15 } } })
+      const sheet = workbook.addWorksheet('الاشتراكات', { views: [{ rightToLeft: true }], pageSetup: { paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, horizontalCentered: true, printTitlesRow: '1:1', margins: { left: 0.1, right: 0.1, top: 0.15, bottom: 0.15, header: 0.05, footer: 0.05 } } })
       const safeText = (value: string | null | undefined) => {
         const text = value || ''
         return /^[=+\-@]/.test(text) ? `'${text}` : text
@@ -514,7 +514,7 @@ export default function SubscriptionsPage() {
       const rows = await api.exportExpenses({ period, category_id: expenseCategoryFilter || undefined, payment_method: expenseMethodFilter ? expenseMethodFilter as SubscriptionPaymentMethod : undefined, search: expenseSearch || undefined })
       const ExcelJS = await import('exceljs')
       const workbook = new ExcelJS.Workbook()
-      const sheet = workbook.addWorksheet('المصروفات', { views: [{ rightToLeft: true }], pageSetup: { paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, horizontalCentered: true, printTitlesRow: '1:1', margins: { left: 0.25, right: 0.25, top: 0.3, bottom: 0.3, header: 0.15, footer: 0.15 } } })
+      const sheet = workbook.addWorksheet('المصروفات', { views: [{ rightToLeft: true }], pageSetup: { paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, horizontalCentered: true, printTitlesRow: '1:1', margins: { left: 0.1, right: 0.1, top: 0.15, bottom: 0.15, header: 0.05, footer: 0.05 } } })
       sheet.columns = [{ header: 'المصروف', key: 'name', width: 28 }, { header: 'التصنيف', key: 'category', width: 18 }, { header: 'التاريخ', key: 'date', width: 16 }, { header: `المبلغ (${currency})`, key: 'amount', width: 16 }, { header: 'طريقة الدفع', key: 'method', width: 18 }, { header: 'ملاحظة', key: 'note', width: 30 }]
       rows.forEach(row => sheet.addRow({ name: row.name, category: row.category_label, date: row.expense_date, amount: row.amount_minor / 100, method: paymentMethodLabel(row.payment_method), note: row.note || '' }))
       sheet.getRow(1).font = { bold: true }; sheet.getColumn('amount').numFmt = '#,##0.00'; sheet.autoFilter = { from: 'A1', to: 'F1' }; sheet.pageSetup.printArea = `A1:F${sheet.rowCount}`
