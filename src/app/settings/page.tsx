@@ -1,15 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
 import { configuredAttendanceStatuses } from '@/lib/attendance'
 import { configuredExcelExportTemplates, DEFAULT_EXCEL_EXPORT_TEMPLATES, type ExcelExportTemplates } from '@/lib/excel-templates'
-import type { Circle, ExpenseCategory, SheikhInfo, TahfizInvitation } from '@/lib/types'
+import type { Circle, SheikhInfo, TahfizInvitation } from '@/lib/types'
 import AsyncState from '@/components/AsyncState'
 import ExcelTemplateSettings from '@/components/ExcelTemplateSettings'
-import { majorToMinor, minorToInput } from '@/lib/subscriptions'
 
 const WEEKDAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
 const STATUS_COLOR_OPTIONS = [
@@ -23,6 +22,11 @@ const STATUS_COLOR_OPTIONS = [
 
 export default function TahfizSettingsPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const requestedSection = searchParams.get('section')
+  const section = ['general', 'attendance', 'progress', 'excel', 'invitations', 'integrations'].includes(requestedSection || '')
+    ? requestedSection as 'general' | 'attendance' | 'progress' | 'excel' | 'invitations' | 'integrations'
+    : null
   const [settings, setSettings] = useState<Circle | null>(null)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -31,10 +35,6 @@ export default function TahfizSettingsPage() {
   const [weekStartDay, setWeekStartDay] = useState(6)
   const [monthStartDay, setMonthStartDay] = useState(1)
   const [progressTrackingEnabled, setProgressTrackingEnabled] = useState(false)
-  const [subscriptionsEnabled, setSubscriptionsEnabled] = useState(false)
-  const [subscriptionDefaultFee, setSubscriptionDefaultFee] = useState('')
-  const [subscriptionCurrency, setSubscriptionCurrency] = useState('EGP')
-  const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([])
   const [sheikhSelectionEnabled, setSheikhSelectionEnabled] = useState(true)
   const [restrictSheikhStudentAccess, setRestrictSheikhStudentAccess] = useState(true)
   const [attendanceStatuses, setAttendanceStatuses] = useState<string[]>([])
@@ -57,6 +57,7 @@ export default function TahfizSettingsPage() {
   const [whatsendEnabled, setWhatsendEnabled] = useState(true)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [dirty, setDirty] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [invitations, setInvitations] = useState<TahfizInvitation[]>([])
@@ -83,10 +84,6 @@ export default function TahfizSettingsPage() {
         setWeekStartDay(data.week_start_day ?? 6)
         setMonthStartDay(data.month_start_day ?? 1)
         setProgressTrackingEnabled(Boolean(data.progress_tracking_enabled))
-        setSubscriptionsEnabled(Boolean(data.subscriptions_enabled))
-        setSubscriptionDefaultFee(minorToInput(data.subscription_default_fee_minor ?? 0))
-        setSubscriptionCurrency(data.subscription_currency || 'EGP')
-        setExpenseCategories(data.expense_categories || [])
         setSheikhSelectionEnabled(data.attendance_sheikh_selection_enabled ?? true)
         setRestrictSheikhStudentAccess(data.restrict_sheikh_student_access ?? true)
         setAttendanceStatuses(configuredAttendanceStatuses(data.attendance_statuses))
@@ -116,8 +113,16 @@ export default function TahfizSettingsPage() {
   }
 
   useEffect(() => {
+    if (section !== 'invitations') return
     loadInvitations().catch((err: any) => setError(err.message || 'تعذر تحميل الدعوات'))
-  }, [])
+  }, [section])
+
+  useEffect(() => {
+    if (!dirty || section === 'invitations') return
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => event.preventDefault()
+    window.addEventListener('beforeunload', warnBeforeUnload)
+    return () => window.removeEventListener('beforeunload', warnBeforeUnload)
+  }, [dirty, section])
 
   const showInvitationLink = (invitation: TahfizInvitation) => {
     if (!invitation.path) return
@@ -247,51 +252,48 @@ export default function TahfizSettingsPage() {
     setAttendanceStatusNameError('')
   }
 
-  const save = async (event: React.FormEvent) => {
+  const save = async (event: React.FormEvent, activeSection: NonNullable<typeof section>) => {
     event.preventDefault()
-    if (!name.trim() || attendanceStatuses.length === 0) return
-    const subscriptionFeeMinor = majorToMinor(subscriptionDefaultFee)
-    if (subscriptionFeeMinor === null || (subscriptionsEnabled && subscriptionFeeMinor <= 0)) {
-      setError('أدخل رسماً شهرياً صحيحاً أكبر من صفر قبل تفعيل الاشتراكات')
-      return
-    }
+    if (activeSection === 'general' && !name.trim()) return
+    if (activeSection === 'attendance' && attendanceStatuses.length === 0) return
     setSaving(true)
     setError('')
     setNotice('')
     try {
-      const updated = await api.updateTahfizSettings({
-        name: name.trim(),
-        description,
-        contact_phone: contactPhone,
-        max_warnings: maxWarnings,
-        week_start_day: weekStartDay,
-        month_start_day: monthStartDay,
-        attendance_statuses: attendanceStatuses,
-        attendance_status_renames: attendanceStatusRenames,
-        attendance_status_colors: attendanceStatusColors,
-        excel_export_templates: excelExportTemplates,
-        attendance_streak_alert_enabled: streakAlertEnabled,
-        attendance_streak_status: streakStatus,
-        attendance_streak_limit: excusedStreakLimit,
-        attendance_streak_reset_statuses: excusedResetStatuses,
-        progress_tracking_enabled: progressTrackingEnabled,
-        subscriptions_enabled: subscriptionsEnabled,
-        subscription_default_fee_minor: subscriptionFeeMinor,
-        subscription_currency: subscriptionCurrency,
-        expense_categories: expenseCategories,
-        attendance_sheikh_selection_enabled: sheikhSelectionEnabled,
-        restrict_sheikh_student_access: restrictSheikhStudentAccess,
-        whatsend_enabled: whatsendEnabled,
-        ...(whatsendEnabled ? {
-          whatsend_api_url: whatsendApiUrl,
-          whatsend_groups_url: whatsendGroupsUrl,
-          ...(whatsendApiKey ? { whatsend_api_key: whatsendApiKey } : {}),
-        } : {}),
-      })
+      const payloads: Record<Exclude<NonNullable<typeof section>, 'invitations'>, Record<string, unknown>> = {
+        general: {
+          name: name.trim(), description, contact_phone: contactPhone,
+          max_warnings: maxWarnings, week_start_day: weekStartDay, month_start_day: monthStartDay,
+        },
+        attendance: {
+          attendance_statuses: attendanceStatuses,
+          attendance_status_renames: attendanceStatusRenames,
+          attendance_status_colors: attendanceStatusColors,
+          attendance_streak_alert_enabled: streakAlertEnabled,
+          attendance_streak_status: streakStatus,
+          attendance_streak_limit: excusedStreakLimit,
+          attendance_streak_reset_statuses: excusedResetStatuses,
+          attendance_sheikh_selection_enabled: sheikhSelectionEnabled,
+          restrict_sheikh_student_access: restrictSheikhStudentAccess,
+        },
+        progress: { progress_tracking_enabled: progressTrackingEnabled },
+        excel: { excel_export_templates: excelExportTemplates },
+        integrations: {
+          whatsend_enabled: whatsendEnabled,
+          ...(whatsendEnabled ? {
+            whatsend_api_url: whatsendApiUrl,
+            whatsend_groups_url: whatsendGroupsUrl,
+            ...(whatsendApiKey ? { whatsend_api_key: whatsendApiKey } : {}),
+          } : {}),
+        },
+      }
+      if (activeSection === 'invitations') return
+      const updated = await api.updateTahfizSettings(payloads[activeSection])
       setSettings(updated)
+      setDirty(false)
       setAttendanceStatusRenames({})
       setWhatsendApiKey('')
-      setNotice('تم حفظ إعدادات التحفيظ')
+      setNotice('تم حفظ الإعدادات')
       const storedUser = JSON.parse(localStorage.getItem('user') || '{}')
       if (storedUser.tahfiz) {
         storedUser.tahfiz.name = updated.name
@@ -308,17 +310,43 @@ export default function TahfizSettingsPage() {
   if (loading) return <div className="page-loading" aria-label="جاري تحميل الإعدادات" />
   if (!settings) return <AsyncState message={error || 'تعذر تحميل إعدادات التحفيظ'} />
 
+  if (!section) {
+    const categories = [
+      { key: 'general', icon: '🏠', title: 'بيانات التحفيظ', description: 'الاسم، التواصل، الفترات والإنذارات' },
+      { key: 'attendance', icon: '✓', title: 'الحضور', description: 'الصلاحيات، حالات الحضور وتنبيهات التكرار' },
+      { key: 'progress', icon: '📖', title: 'متابعة القرآن', description: 'تفعيل متابعة الحفظ والمراجعة' },
+      { key: 'excel', icon: '📊', title: 'قوالب Excel', description: 'الأعمدة والعناوين وتنسيق ملفات التصدير' },
+      { key: 'invitations', icon: '👥', title: 'دعوات الانضمام', description: 'إضافة المديرين والشيوخ ومتابعة الدعوات' },
+      { key: 'integrations', icon: '🔗', title: 'التكاملات', description: 'إعداد خدمات WhatSend وواتساب' },
+    ] as const
+    return <div className="space-y-5">
+      <header className="flex flex-wrap items-start justify-between gap-3 px-1">
+        <div><h1 className="text-2xl font-bold text-deep-900">إعدادات التحفيظ</h1><p className="mt-1 text-sm text-deep-500">اختر القسم الذي تريد تعديله.</p></div>
+        <Link href="/audit-log" className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">📋 سجل التدقيق</Link>
+      </header>
+      {error && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/25 dark:text-red-200">{error}</div>}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {categories.map(category => <Link key={category.key} href={`/settings?section=${category.key}`} className="glass-card group rounded-2xl p-5 transition hover:-translate-y-0.5 hover:border-cyan-300 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-500">
+          <span className="grid h-11 w-11 place-items-center rounded-xl bg-water-100 text-xl">{category.icon}</span>
+          <h2 className="mt-4 font-bold text-deep-900 group-hover:text-cyan-700 dark:group-hover:text-cyan-300">{category.title}</h2>
+          <p className="mt-1 text-sm leading-6 text-deep-500">{category.description}</p>
+          <span className="mt-4 inline-block text-sm font-semibold text-cyan-700 dark:text-cyan-300">فتح الإعدادات ‹</span>
+        </Link>)}
+      </div>
+    </div>
+  }
+
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-start justify-between gap-3 px-1">
-        <div><h1 className="text-2xl font-bold text-deep-900">إعدادات التحفيظ</h1><p className="mt-1 text-sm text-deep-500">إدارة بيانات التحفيظ والحضور والتقارير والتكاملات.</p></div>
-        <Link href="/audit-log" className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">📋 سجل التدقيق</Link>
+        <div><Link href="/settings" onClick={event => { if (dirty && section !== 'invitations' && !window.confirm('لديك تغييرات غير محفوظة. هل تريد الخروج؟')) event.preventDefault() }} className="text-sm font-semibold text-cyan-700 dark:text-cyan-300">كل الإعدادات ‹</Link><h1 className="mt-1 text-2xl font-bold text-deep-900">إعدادات التحفيظ</h1></div>
       </header>
 
       {error && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/25 dark:text-red-200">{error}</div>}
       {notice && <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/25 dark:text-emerald-200">{notice}</div>}
 
-      <form onSubmit={save} className="space-y-5">
+      <form onSubmit={event => void save(event, section)} onChangeCapture={() => setDirty(true)} onClickCapture={event => { if ((event.target as HTMLElement).closest('button:not([type="submit"])')) setDirty(true) }} className="space-y-5">
+        {section === 'general' && <>
         <SettingsSection title="بيانات التحفيظ" description="الاسم وبيانات التواصل الظاهرة للمستخدمين.">
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <label className="text-sm font-semibold text-deep-700">
@@ -357,8 +385,9 @@ export default function TahfizSettingsPage() {
           </div>
           <p className="mt-3 text-xs text-deep-500">بداية الشهر تتحكم في نطاقات سجل الحضور والتقارير الشهرية.</p>
         </SettingsSection>
+        </>}
 
-        <SettingsSection title="الحضور ومتابعة القرآن والقسم المالي" description="الحالات وميزات المتابعة والاشتراكات والمصروفات.">
+        {section === 'attendance' && <SettingsSection title="إعدادات الحضور" description="صلاحيات الوصول، الحالات وتنبيهات التكرار.">
           <FeatureToggle
             enabled={restrictSheikhStudentAccess}
             onChange={(enabled) => {
@@ -373,54 +402,6 @@ export default function TahfizSettingsPage() {
               التقييد متوقف: يستطيع كل شيخ الوصول إلى جميع طلاب التحفيظ.
             </p>
           )}
-          <div className="mt-3">
-          <FeatureToggle
-            enabled={progressTrackingEnabled}
-            onChange={setProgressTrackingEnabled}
-            title="متابعة الحفظ والمراجعة"
-            description="إيقافها يخفي الميزة دون حذف البيانات السابقة."
-          />
-          </div>
-          <div className="mt-3">
-            <FeatureToggle
-              enabled={subscriptionsEnabled}
-              onChange={(enabled) => {
-                if (!enabled && !window.confirm('سيؤدي إيقاف الاشتراكات إلى منع إنشاء سجلات جديدة مع الاحتفاظ بجميع السجلات والمدفوعات السابقة. هل تريد المتابعة؟')) return
-                setSubscriptionsEnabled(enabled)
-              }}
-              title="الاشتراكات الشهرية — القسم المالي"
-              description="ميزة اختيارية لمتابعة رسوم الطلاب. إيقافها يخفي التشغيل اليومي ويحفظ السجلات السابقة."
-            />
-            {subscriptionsEnabled && <div className="mt-3 grid gap-3 rounded-xl border border-water-200 bg-white/35 p-4 md:grid-cols-2 dark:bg-slate-800/35">
-              <label className="text-sm font-semibold text-deep-700">
-                الرسم الشهري الافتراضي
-                <input inputMode="decimal" value={subscriptionDefaultFee} onChange={event => setSubscriptionDefaultFee(event.target.value)} required className="surface-field mt-1.5 w-full rounded-xl px-4 py-2.5 font-normal" />
-              </label>
-              <label className="text-sm font-semibold text-deep-700">
-                العملة
-                <select value={subscriptionCurrency} onChange={event => setSubscriptionCurrency(event.target.value)} className="surface-field mt-1.5 w-full rounded-xl px-4 py-2.5 font-normal">
-                  <option value="EGP">جنيه مصري (EGP)</option>
-                  <option value="SAR">ريال سعودي (SAR)</option>
-                  <option value="USD">دولار أمريكي (USD)</option>
-                </select>
-              </label>
-              <p className="text-xs text-deep-500 md:col-span-2">يمكن تعديل رسوم طالب بعينه من القسم المالي. لا يمكن تغيير العملة بعد إنشاء أول اشتراك أو مصروف.</p>
-            </div>}
-            <div className="mt-4 rounded-xl border border-water-200 bg-white/35 p-4 dark:bg-slate-800/35">
-              <div className="flex items-center justify-between gap-3">
-                <div><h3 className="text-sm font-bold text-deep-800">تصنيفات المصروفات</h3><p className="mt-1 text-xs text-deep-500">يمكن تعطيل التصنيف مع الاحتفاظ بالمصروفات السابقة.</p></div>
-                <button type="button" onClick={() => setExpenseCategories(current => [...current, { id: `custom_${globalThis.crypto?.randomUUID?.().replaceAll('-', '') || Date.now()}`, label: 'تصنيف جديد', enabled: true }])} className="water-btn-outline rounded-lg px-3 py-2 text-xs font-semibold">إضافة تصنيف</button>
-              </div>
-              <div className="mt-3 grid gap-2">
-                {expenseCategories.map((category, index) => <div key={category.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-water-200 p-2">
-                  <input value={category.label} onChange={event => setExpenseCategories(current => current.map(item => item.id === category.id ? { ...item, label: event.target.value } : item))} required className="surface-field min-w-36 flex-1 rounded-lg px-3 py-2 text-sm" aria-label={`اسم التصنيف ${index + 1}`} />
-                  <button type="button" disabled={index === 0} onClick={() => setExpenseCategories(current => { const next = [...current]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; return next })} className="rounded-lg border border-water-200 px-2 py-1 disabled:opacity-30" aria-label="تحريك لأعلى">↑</button>
-                  <button type="button" disabled={index === expenseCategories.length - 1} onClick={() => setExpenseCategories(current => { const next = [...current]; [next[index], next[index + 1]] = [next[index + 1], next[index]]; return next })} className="rounded-lg border border-water-200 px-2 py-1 disabled:opacity-30" aria-label="تحريك لأسفل">↓</button>
-                  <label className="flex items-center gap-1 text-xs text-deep-600"><input type="checkbox" checked={category.enabled} onChange={event => setExpenseCategories(current => current.map(item => item.id === category.id ? { ...item, enabled: event.target.checked } : item))} /> مفعّل</label>
-                </div>)}
-              </div>
-            </div>
-          </div>
           <div className="mt-3">
             <FeatureToggle
               enabled={sheikhSelectionEnabled}
@@ -545,16 +526,25 @@ export default function TahfizSettingsPage() {
               </div>}
             </div>
           </div>
-        </SettingsSection>
+        </SettingsSection>}
 
-        <SettingsSection title="قوالب Excel" description="اختر الأعمدة وعناوينها مرة واحدة لجميع ملفات الحضور والتقارير.">
+        {section === 'progress' && <SettingsSection title="متابعة القرآن" description="تحكم في ظهور تسجيل الحفظ والمراجعة.">
+          <FeatureToggle
+            enabled={progressTrackingEnabled}
+            onChange={setProgressTrackingEnabled}
+            title="متابعة الحفظ والمراجعة"
+            description="إيقافها يخفي الميزة دون حذف البيانات السابقة."
+          />
+        </SettingsSection>}
+
+        {section === 'excel' && <SettingsSection title="قوالب Excel" description="اختر الأعمدة وعناوينها مرة واحدة لجميع ملفات الحضور والتقارير.">
           <p className="text-xs leading-5 text-deep-500">
             الأعمدة المخصصة تظهر فارغة في كل صف لتعبئتها بعد التنزيل. ستستخدم المعاينة والتصدير هذه الإعدادات تلقائياً.
           </p>
           <ExcelTemplateSettings value={excelExportTemplates} onChange={setExcelExportTemplates} />
-        </SettingsSection>
+        </SettingsSection>}
 
-        <SettingsSection title="دعوات الانضمام" description="روابط مؤقتة لإضافة المديرين والشيوخ.">
+        {section === 'invitations' && <SettingsSection title="دعوات الانضمام" description="روابط مؤقتة لإضافة المديرين والشيوخ.">
           <p className="mt-1 text-xs text-deep-500">أنشئ روابط مؤقتة، وتابع المقبول والمنتهي، أو ألغِ وأعد إرسال الدعوات.</p>
           <div className="mt-4 grid gap-3 md:grid-cols-4">
             <select value={invitationRole} onChange={event => { setInvitationRole(event.target.value as 'admin' | 'sheikh'); setInvitationSheikhId(null) }} className="surface-field rounded-xl px-3 py-2.5 text-sm">
@@ -596,40 +586,36 @@ export default function TahfizSettingsPage() {
               </div>
             ))}
           </div>
-        </SettingsSection>
+        </SettingsSection>}
 
-        <SettingsSection title="التكاملات" description="خدمات خارجية اختيارية؛ تبقى إعداداتها محفوظة عند إيقافها.">
+        {section === 'integrations' && <SettingsSection title="التكاملات" description="خدمات خارجية اختيارية؛ تبقى إعداداتها محفوظة عند إيقافها.">
           <FeatureToggle enabled={whatsendEnabled} onChange={setWhatsendEnabled} title="تكامل WhatSend" description="إرسال الإنذارات وتحميل مجموعات واتساب. إيقافه يحتفظ بالإعدادات." />
           {whatsendEnabled && <div className="mt-4 grid gap-4">
             <input value={whatsendApiUrl} onChange={event => setWhatsendApiUrl(event.target.value)} dir="ltr" placeholder="Send API URL" className="surface-field rounded-xl px-4 py-2.5" />
             <input value={whatsendGroupsUrl} onChange={event => setWhatsendGroupsUrl(event.target.value)} dir="ltr" placeholder="Groups API URL (اختياري)" className="surface-field rounded-xl px-4 py-2.5" />
             <input type="password" value={whatsendApiKey} onChange={event => setWhatsendApiKey(event.target.value)} dir="ltr" placeholder={settings.whatsend_api_key_configured ? 'المفتاح محفوظ — اكتب بديلاً لتغييره' : 'API key'} className="surface-field rounded-xl px-4 py-2.5" />
           </div>}
-        </SettingsSection>
+        </SettingsSection>}
 
-        <div className="settings-save-bar sticky z-20 flex justify-start">
-          <button type="submit" disabled={saving || !name.trim() || attendanceStatuses.length === 0} className="water-btn rounded-xl px-7 py-3 font-semibold text-white shadow-lg disabled:opacity-50">
+        {section !== 'invitations' && <div className="settings-save-bar sticky z-20 flex justify-start">
+          <button type="submit" disabled={saving || (section === 'general' && !name.trim()) || (section === 'attendance' && attendanceStatuses.length === 0)} className="water-btn rounded-xl px-7 py-3 font-semibold text-white shadow-lg disabled:opacity-50">
             {saving ? 'جاري الحفظ...' : 'حفظ الإعدادات'}
           </button>
-        </div>
+        </div>}
       </form>
     </div>
   )
 }
 
 function SettingsSection({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
-  const [open, setOpen] = useState(false)
   return (
-    <details open={open} onToggle={event => setOpen(event.currentTarget.open)} className="group glass-card rounded-2xl">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5">
-        <span>
-          <span className="block font-bold text-deep-900">{title}</span>
-          <span className="mt-1 block text-xs font-normal text-deep-500">{description}</span>
-        </span>
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-water-100 text-lg text-deep-600 transition group-open:rotate-180">⌄</span>
-      </summary>
-      <div className="border-t border-water-200/60 px-5 pb-5 pt-4">{children}</div>
-    </details>
+    <section className="glass-card rounded-2xl overflow-hidden">
+      <header className="border-b border-water-200/60 p-5">
+        <h2 className="font-bold text-deep-900">{title}</h2>
+        <p className="mt-1 text-xs text-deep-500">{description}</p>
+      </header>
+      <div className="p-5">{children}</div>
+    </section>
   )
 }
 

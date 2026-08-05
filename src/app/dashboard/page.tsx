@@ -111,7 +111,6 @@ export default function DashboardPage() {
     { title: 'تسجيل الحضور', desc: 'راجع سجل الحضور والتصفيات المحفوظة', href: '/attendance' },
     ...(canManage ? [{ title: 'إدارة الطلاب', desc: 'الشيوخ والطلاب والمستخدمون', href: '/manage' }] : []),
     ...(canManage ? [{ title: 'القسم المالي', desc: 'الاشتراكات والمصروفات والوضع المالي', href: '/finance' }] : []),
-    { title: 'التقارير', desc: 'نسب الحضور وأداء الطلاب في التحفيظ', href: '/reports' },
   ]
 
   return (

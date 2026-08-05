@@ -82,14 +82,17 @@ export default function SessionsPage() {
 
   return (
     <div>
-      <div className="flex justify-between items-center gap-3 mb-5">
+      <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
         <h1 className="text-2xl font-bold text-deep-800">الحلقات</h1>
-        {canManage && <button
-          onClick={() => setShowModal(true)}
-          className="water-btn text-white px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap"
-        >
-          + إضافة حلقة
-        </button>}
+        <div className="flex flex-wrap gap-2">
+          <Link href="/reports" className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold whitespace-nowrap">التقارير</Link>
+          {canManage && <button
+            onClick={() => setShowModal(true)}
+            className="water-btn text-white px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap"
+          >
+            + إضافة حلقة
+          </button>}
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-2 mb-5 p-1 rounded-xl bg-water-100/35" role="tablist" aria-label="تصفية الحلقات">

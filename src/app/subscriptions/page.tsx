@@ -462,10 +462,15 @@ export default function SubscriptionsPage() {
     event.preventDefault()
     const feeMinor = majorToMinor(activationFee)
     if (feeMinor === null || feeMinor <= 0) { setError('أدخل رسومًا افتراضية صحيحة أكبر من صفر.'); return }
+    if (expenseCategories.length === 0 || expenseCategories.some(category => !category.label.trim()) || !expenseCategories.some(category => category.enabled)) {
+      setError('أضف تصنيفًا واحدًا مفعلًا على الأقل، وتأكد من أن كل الأسماء مكتملة.')
+      return
+    }
     if (!settingsEnabled && !window.confirm('إيقاف الاشتراكات يمنع إنشاء سجلات جديدة، لكنه لا يحذف السجلات الحالية. هل تريد المتابعة؟')) return
     setBusy(true)
     setError('')
     try {
+      await api.updateTahfizSettings({ expense_categories: expenseCategories })
       const updated = await api.updateSubscriptionSettings({ enabled: settingsEnabled, default_monthly_fee_minor: feeMinor, currency: activationCurrency })
       setSettings(updated)
       setShowSettings(false)
@@ -529,7 +534,7 @@ export default function SubscriptionsPage() {
   return <div className="space-y-5">
     <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div><Link href="/manage" className="text-sm font-semibold text-cyan-700 dark:text-cyan-300">الإدارة ‹</Link><h1 className="mt-1 text-2xl font-bold text-deep-900">القسم المالي</h1><p className="mt-1 text-sm text-deep-500">الاشتراكات والمصروفات والوضع المالي للتحفيظ</p></div>
-      <div className="flex flex-wrap gap-2"><button type="button" onClick={() => { setActiveSection('expenses'); setEditingExpense(null) }} disabled={expenseCategories.every(category => !category.enabled)} className="water-btn rounded-xl px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">إضافة مصروف</button><Link href="/settings" className="water-btn-outline rounded-xl px-4 py-2.5 text-sm font-semibold">الإعدادات</Link></div>
+      <div className="flex flex-wrap gap-2"><button type="button" onClick={() => { setActiveSection('expenses'); setEditingExpense(null) }} disabled={expenseCategories.every(category => !category.enabled)} className="water-btn rounded-xl px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">إضافة مصروف</button><button type="button" onClick={() => setShowSettings(true)} className="water-btn-outline rounded-xl px-4 py-2.5 text-sm font-semibold">إعدادات المالية</button></div>
     </header>
 
     {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300">{error}</div>}
@@ -622,6 +627,25 @@ export default function SubscriptionsPage() {
     {receipt && <ReceiptView receipt={receipt} currency={currency} onClose={() => setReceipt(null)} />}
     {editingExpense !== undefined && <Modal title={editingExpense ? `تعديل مصروف — ${editingExpense.name}` : 'إضافة مصروف'} onClose={() => setEditingExpense(undefined)} wide><ExpenseForm expense={editingExpense} categories={expenseCategories} currency={currency} busy={busy} onCancel={() => setEditingExpense(undefined)} onSubmit={saveExpense} /></Modal>}
     {showBulkCorrection && <Modal title="تصحيح رسوم شهر كامل" onClose={() => setShowBulkCorrection(false)}><BulkCorrectionForm period={period} currency={currency} busy={busy} onCancel={() => setShowBulkCorrection(false)} onSubmit={correctMonth} /></Modal>}
-    {showSettings && <Modal title="إعدادات الاشتراكات" onClose={() => setShowSettings(false)}><form onSubmit={saveSettings} className="space-y-4"><label className="block text-sm font-medium text-deep-700">الرسوم الافتراضية ({activationCurrency})<input inputMode="decimal" value={activationFee} onChange={event => setActivationFee(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-4 py-2.5" /></label><label className="block text-sm font-medium text-deep-700">العملة<select value={activationCurrency} onChange={event => setActivationCurrency(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-4 py-2.5"><option value="EGP">جنيه مصري (EGP)</option><option value="SAR">ريال سعودي (SAR)</option><option value="USD">دولار أمريكي (USD)</option></select></label><label className="flex items-center gap-2 rounded-xl border border-water-200 p-3 text-sm font-medium text-deep-700"><input type="checkbox" checked={settingsEnabled} onChange={event => setSettingsEnabled(event.target.checked)} /> الاشتراكات مفعلة</label><button disabled={busy} className="water-btn w-full rounded-xl px-4 py-2.5 font-bold text-white disabled:opacity-50">حفظ الإعدادات</button></form></Modal>}
+    {showSettings && <Modal title="إعدادات المالية" onClose={() => setShowSettings(false)} wide><form onSubmit={saveSettings} className="space-y-5">
+      <section className="space-y-4">
+        <div><h3 className="font-bold text-deep-900">الاشتراكات الشهرية</h3><p className="mt-1 text-xs text-deep-500">تحكم في الرسوم الافتراضية وتفعيل التحصيل.</p></div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block text-sm font-medium text-deep-700">الرسوم الافتراضية ({activationCurrency})<input inputMode="decimal" value={activationFee} onChange={event => setActivationFee(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-4 py-2.5" /></label>
+          <label className="block text-sm font-medium text-deep-700">العملة<select value={activationCurrency} onChange={event => setActivationCurrency(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-4 py-2.5"><option value="EGP">جنيه مصري (EGP)</option><option value="SAR">ريال سعودي (SAR)</option><option value="USD">دولار أمريكي (USD)</option></select></label>
+        </div>
+        <label className="flex items-center gap-2 rounded-xl border border-water-200 p-3 text-sm font-medium text-deep-700"><input type="checkbox" checked={settingsEnabled} onChange={event => setSettingsEnabled(event.target.checked)} /> الاشتراكات مفعلة</label>
+      </section>
+      <section className="border-t border-water-200 pt-5">
+        <div className="flex items-center justify-between gap-3"><div><h3 className="font-bold text-deep-900">تصنيفات المصروفات</h3><p className="mt-1 text-xs text-deep-500">عطّل التصنيف للاحتفاظ بالسجلات السابقة.</p></div><button type="button" onClick={() => setExpenseCategories(current => [...current, { id: `custom_${globalThis.crypto?.randomUUID?.().replaceAll('-', '') || Date.now()}`, label: 'تصنيف جديد', enabled: true }])} className="water-btn-outline shrink-0 rounded-lg px-3 py-2 text-xs font-semibold">إضافة</button></div>
+        <div className="mt-3 grid gap-2">{expenseCategories.map((category, index) => <div key={category.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-water-200 p-2">
+          <input required value={category.label} onChange={event => setExpenseCategories(current => current.map(item => item.id === category.id ? { ...item, label: event.target.value } : item))} className="surface-field min-w-36 flex-1 rounded-lg px-3 py-2 text-sm" aria-label={`اسم التصنيف ${index + 1}`} />
+          <button type="button" disabled={index === 0} onClick={() => setExpenseCategories(current => { const next = [...current]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; return next })} className="rounded-lg border border-water-200 px-2 py-1 disabled:opacity-30" aria-label="تحريك لأعلى">↑</button>
+          <button type="button" disabled={index === expenseCategories.length - 1} onClick={() => setExpenseCategories(current => { const next = [...current]; [next[index], next[index + 1]] = [next[index + 1], next[index]]; return next })} className="rounded-lg border border-water-200 px-2 py-1 disabled:opacity-30" aria-label="تحريك لأسفل">↓</button>
+          <label className="flex items-center gap-1 text-xs text-deep-600"><input type="checkbox" checked={category.enabled} onChange={event => setExpenseCategories(current => current.map(item => item.id === category.id ? { ...item, enabled: event.target.checked } : item))} /> مفعّل</label>
+        </div>)}</div>
+      </section>
+      <button disabled={busy} className="water-btn w-full rounded-xl px-4 py-2.5 font-bold text-white disabled:opacity-50">{busy ? 'جاري الحفظ...' : 'حفظ إعدادات المالية'}</button>
+    </form></Modal>}
   </div>
 }
