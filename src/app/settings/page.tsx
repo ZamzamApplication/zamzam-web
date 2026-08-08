@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
-import { configuredAttendanceStatuses } from '@/lib/attendance'
+import { configuredAttendanceStatuses, configuredPresentStatus } from '@/lib/attendance'
 import { configuredExcelExportTemplates, DEFAULT_EXCEL_EXPORT_TEMPLATES, type ExcelExportTemplates } from '@/lib/excel-templates'
 import type { Circle, SheikhInfo, TahfizInvitation } from '@/lib/types'
 import AsyncState from '@/components/AsyncState'
@@ -47,6 +47,7 @@ export default function TahfizSettingsPage() {
   const [excusedResetStatuses, setExcusedResetStatuses] = useState<string[]>(['حاضر'])
   const [streakAlertEnabled, setStreakAlertEnabled] = useState(true)
   const [streakStatus, setStreakStatus] = useState('غياب بعذر')
+  const [presentStatus, setPresentStatus] = useState('حاضر')
   const [newAttendanceStatus, setNewAttendanceStatus] = useState('')
   const [editingAttendanceStatus, setEditingAttendanceStatus] = useState<string | null>(null)
   const [editedAttendanceStatusName, setEditedAttendanceStatusName] = useState('')
@@ -87,6 +88,7 @@ export default function TahfizSettingsPage() {
         setSheikhSelectionEnabled(data.attendance_sheikh_selection_enabled ?? true)
         setRestrictSheikhStudentAccess(data.restrict_sheikh_student_access ?? true)
         setAttendanceStatuses(configuredAttendanceStatuses(data.attendance_statuses))
+        setPresentStatus(configuredPresentStatus(data.present_status, data.attendance_statuses))
         setAttendanceStatusColors(data.attendance_status_colors || {
           'حاضر': 'green', 'غياب': 'slate', 'غياب بعذر': 'amber', 'لا ينطبق': 'sky',
         })
@@ -192,6 +194,7 @@ export default function TahfizSettingsPage() {
     setAttendanceStatuses(current => {
       const next = current.filter(item => item !== status)
       if (status === streakStatus) setStreakStatus(next[0] || '')
+      if (status === presentStatus) setPresentStatus(configuredPresentStatus(undefined, next))
       return next
     })
     setExcusedResetStatuses(current => current.filter(item => item !== status))
@@ -235,6 +238,7 @@ export default function TahfizSettingsPage() {
         return next
       })
       setStreakStatus(current => current === previousName ? nextName : current)
+      setPresentStatus(current => current === previousName ? nextName : current)
       setExcusedResetStatuses(current => current.map(status => status === previousName ? nextName : status))
       setAttendanceStatusRenames(current => {
         const next = { ...current }
@@ -273,6 +277,7 @@ export default function TahfizSettingsPage() {
           attendance_streak_status: streakStatus,
           attendance_streak_limit: excusedStreakLimit,
           attendance_streak_reset_statuses: excusedResetStatuses,
+          present_status: presentStatus,
           attendance_sheikh_selection_enabled: sheikhSelectionEnabled,
           restrict_sheikh_student_access: restrictSheikhStudentAccess,
         },
@@ -485,6 +490,17 @@ export default function TahfizSettingsPage() {
                 className="surface-field min-w-0 flex-1 rounded-xl px-4 py-2.5"
               />
               <button type="button" onClick={addAttendanceStatus} disabled={!newAttendanceStatus.trim()} className="water-btn-outline rounded-xl px-4 text-sm disabled:opacity-40">إضافة</button>
+            </div>
+            <div className="mt-5">
+              <label className="block text-sm font-bold text-deep-800" htmlFor="present-status">
+                الحالة التي تعني الحضور (حاضر)
+              </label>
+              <p className="mt-1 text-xs leading-5 text-deep-500">
+                تُستخدم هذه الحالة في متابعة القرآن، وحساب الحاضرين في الإحصائيات والتقارير. إنها الحالة التي تُفعل عندها متابعة الحفظ والمراجعة للطالب.
+              </p>
+              <select id="present-status" value={presentStatus} onChange={event => setPresentStatus(event.target.value)} className="surface-field mt-2 w-full rounded-xl px-4 py-2.5 text-sm font-normal">
+                {attendanceStatuses.map(status => <option key={status} value={status}>{status}</option>)}
+              </select>
             </div>
             <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-800 dark:bg-amber-900/20">
               <FeatureToggle

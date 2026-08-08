@@ -26,6 +26,7 @@ export interface User {
     attendance_streak_status?: string
     attendance_streak_limit?: number
     attendance_streak_reset_statuses?: string[]
+    present_status?: string
     whatsend_enabled?: boolean
     progress_tracking_enabled?: boolean
   } | null
@@ -124,6 +125,7 @@ export interface Circle {
   attendance_streak_status?: string
   attendance_streak_limit?: number
   attendance_streak_reset_statuses?: string[]
+  present_status?: string
   contact_phone?: string
   whatsend_api_url?: string
   whatsend_groups_url?: string
@@ -402,6 +404,7 @@ export interface StudentProfile extends StudentInfo {
   attendance: {
     total: number
     present: number
+    present_status?: string
     absent: number
     excused: number
     not_applicable: number

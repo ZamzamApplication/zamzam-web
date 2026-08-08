@@ -99,7 +99,7 @@ export default function StudentProfilePage() {
 
   const stats = [
     ['إجمالي السجلات', profile.attendance.total],
-    ['حاضر', profile.attendance.present],
+    [profile.attendance.present_status || 'حاضر', profile.attendance.present],
     ['غياب', profile.attendance.absent],
     ['غياب بعذر', profile.attendance.excused],
   ]

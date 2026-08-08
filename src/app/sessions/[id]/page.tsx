@@ -8,7 +8,7 @@ import type { AttendanceThresholdAlert, ProgressCategory, QuranProgressInput, Se
 import InlineQuranProgress, { createRequiredProgressDraft, INLINE_PROGRESS_CATEGORIES, isSurahAyahRangeComplete, type ProgressDraftMap, progressDraftKey, progressEntryToInput } from '@/components/InlineQuranProgress'
 import AttendanceStatusControl, { attendanceStatusColorClass } from '@/components/AttendanceStatusControl'
 import { QUALITY_OPTIONS, SURAHS, surahInfo } from '@/lib/quran'
-import { configuredAttendanceStatuses, DEFAULT_ATTENDANCE_STATUSES } from '@/lib/attendance'
+import { configuredAttendanceStatuses, configuredPresentStatus, DEFAULT_ATTENDANCE_STATUSES } from '@/lib/attendance'
 
 function isProgressDraftComplete(draft?: QuranProgressInput) {
   return isSurahAyahRangeComplete(draft)
@@ -45,6 +45,7 @@ function StudentRow({
   attendanceStatuses,
   attendanceStatusColors,
   sheikhSelectionEnabled,
+  presentStatus,
 }: {
   student: { id: number; name: string; status: string; notes?: string; sheikh_id: number | null; profile_pic?: string | null }
   circleSheikhs: { id: number; name: string }[]
@@ -66,6 +67,7 @@ function StudentRow({
   attendanceStatuses: string[]
   attendanceStatusColors: Record<string, string>
   sheikhSelectionEnabled: boolean
+  presentStatus: string
 }) {
   const [notes, setNotes] = useState(student.notes || '')
 
@@ -135,7 +137,7 @@ function StudentRow({
       />
         </label>
       </div>
-      {progressEnabled && student.status === 'حاضر' && (
+      {progressEnabled && student.status === presentStatus && (
         <InlineQuranProgress
           student={student}
           drafts={progressDrafts}
@@ -175,6 +177,7 @@ function SheikhAccordion({
   attendanceStatuses,
   attendanceStatusColors,
   sheikhSelectionEnabled,
+  presentStatus,
 }: {
   group: SheikhGroup
   circleSheikhs: { id: number; name: string }[]
@@ -198,6 +201,7 @@ function SheikhAccordion({
   attendanceStatuses: string[]
   attendanceStatusColors: Record<string, string>
   sheikhSelectionEnabled: boolean
+  presentStatus: string
 }) {
 
   return (
@@ -208,7 +212,7 @@ function SheikhAccordion({
       >
         <span className="text-lg font-bold text-deep-800">{group.sheikh.name}</span>
         <span className="text-deep-500 text-sm">
-          {group.students.filter((s) => s.status !== 'غياب').length}/{group.students.length}
+          {group.students.filter((s) => s.status === presentStatus).length}/{group.students.length}
         </span>
       </button>
 
@@ -244,6 +248,7 @@ function SheikhAccordion({
               attendanceStatuses={attendanceStatuses}
               attendanceStatusColors={attendanceStatusColors}
               sheikhSelectionEnabled={sheikhSelectionEnabled}
+              presentStatus={presentStatus}
             />
           ))}
         </div>
@@ -284,6 +289,7 @@ export default function SessionAttendancePage() {
   const [attendanceStatusColors, setAttendanceStatusColors] = useState<Record<string, string>>({
     'حاضر': 'green', 'غياب': 'slate', 'غياب بعذر': 'amber', 'لا ينطبق': 'sky',
   })
+  const [presentStatus, setPresentStatus] = useState('حاضر')
   const [sheikhSelectionEnabled, setSheikhSelectionEnabled] = useState(true)
   const [studentScopeRestricted, setStudentScopeRestricted] = useState(false)
   const [progressDrafts, setProgressDrafts] = useState<ProgressDraftMap>({})
@@ -350,6 +356,8 @@ export default function SessionAttendancePage() {
       const enabled = Boolean(currentUser.tahfiz?.progress_tracking_enabled)
       setProgressEnabled(enabled)
       setAttendanceStatuses(configuredAttendanceStatuses(currentUser.tahfiz?.attendance_statuses))
+      const effectivePresentStatus = configuredPresentStatus(currentUser.tahfiz?.present_status, currentUser.tahfiz?.attendance_statuses)
+      setPresentStatus(effectivePresentStatus)
       setAttendanceStatusColors(currentUser.tahfiz?.attendance_status_colors || {
         'حاضر': 'green', 'غياب': 'slate', 'غياب بعذر': 'amber', 'لا ينطبق': 'sky',
       })
@@ -360,7 +368,7 @@ export default function SessionAttendancePage() {
       const previousDrafts: ProgressDraftMap = Object.fromEntries((progress.previous_entries || []).map((entry) => [progressDraftKey(entry.student_id, entry.category), progressEntryToInput(entry)]))
       const requiredKeys = new Set<string>()
       if (enabled && !sessionData.is_confirmed) {
-        sessionData.sheikh_groups.flatMap((group: SheikhGroup) => group.students).filter((student: SheikhGroup['students'][number]) => student.status === 'حاضر').forEach((student: SheikhGroup['students'][number]) => {
+        sessionData.sheikh_groups.flatMap((group: SheikhGroup) => group.students).filter((student: SheikhGroup['students'][number]) => student.status === effectivePresentStatus).forEach((student: SheikhGroup['students'][number]) => {
           INLINE_PROGRESS_CATEGORIES.forEach(({ key: category }) => {
             const key = progressDraftKey(student.id, category)
             if (drafts[key]) return
@@ -477,7 +485,7 @@ export default function SessionAttendancePage() {
     const sessionData = dataRef.current
     if (!sessionData) return true
     if (progressEnabled && !sessionData.is_confirmed) {
-      const presentStudents = sessionData.sheikh_groups.flatMap((group) => group.students).filter((student) => student.status === 'حاضر')
+      const presentStudents = sessionData.sheikh_groups.flatMap((group) => group.students).filter((student) => student.status === presentStatus)
       const incompleteStudent = presentStudents.find((student) => INLINE_PROGRESS_CATEGORIES.some(({ key: category }) => !isProgressDraftComplete(progressDrafts[progressDraftKey(student.id, category)])))
       if (incompleteStudent) {
         const group = sessionData.sheikh_groups.find((item) => item.students.some((student) => student.id === incompleteStudent.id))
@@ -524,18 +532,18 @@ export default function SessionAttendancePage() {
     } finally {
       setProgressSaving(false)
     }
-  }, [dirtyProgressKeys, persistedProgressDrafts, progressDrafts, progressEnabled])
+  }, [dirtyProgressKeys, persistedProgressDrafts, progressDrafts, progressEnabled, presentStatus])
 
   const saveProgressAndOpenNext = useCallback(async (studentId: number) => {
     if (!(await saveProgressDrafts())) return
     const students = dataRef.current?.sheikh_groups.flatMap((group) => group.students) || []
     const currentIndex = students.findIndex((student) => student.id === studentId)
-    const next = students.slice(currentIndex + 1).find((student) => student.status === 'حاضر')
+    const next = students.slice(currentIndex + 1).find((student) => student.status === presentStatus)
     if (next) document.getElementById(`student-row-${next.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }, [saveProgressDrafts])
+  }, [saveProgressDrafts, presentStatus])
 
   const applyProgressToPresent = useCallback(() => {
-    const presentStudents = dataRef.current?.sheikh_groups.flatMap((group) => group.students).filter((student) => student.status === 'حاضر') || []
+    const presentStudents = dataRef.current?.sheikh_groups.flatMap((group) => group.students).filter((student) => student.status === presentStatus) || []
     if (presentStudents.length === 0) return
     const additions: ProgressDraftMap = {}
     const keys: string[] = []
@@ -564,7 +572,7 @@ export default function SessionAttendancePage() {
       return next
     })
     setSaveState('pending')
-  }, [bulkCategory, bulkFromAyah, bulkFromSurah, bulkQuality, bulkToAyah, bulkToSurah])
+  }, [bulkCategory, bulkFromAyah, bulkFromSurah, bulkQuality, bulkToAyah, bulkToSurah, presentStatus])
 
   const handleUpdateStatus = useCallback((studentId: number, newStatus: string) => {
     setData((prev) => {
@@ -579,7 +587,7 @@ export default function SessionAttendancePage() {
         })),
       }
     })
-    if (newStatus !== 'حاضر') {
+    if (newStatus !== presentStatus) {
       setProgressDrafts((current) => {
         const next = { ...current }
         INLINE_PROGRESS_CATEGORIES.forEach(({ key: category }) => {
@@ -617,7 +625,7 @@ export default function SessionAttendancePage() {
       }
     }
     queueUpdate(studentId, { status: newStatus })
-  }, [persistedProgressDrafts, previousProgressDrafts, progressDrafts, progressEnabled, queueUpdate])
+  }, [persistedProgressDrafts, previousProgressDrafts, progressDrafts, progressEnabled, queueUpdate, presentStatus])
 
   const handleUpdateNotes = useCallback((studentId: number, notes: string) => {
     setData((prev) => {
@@ -739,7 +747,7 @@ export default function SessionAttendancePage() {
   }
 
   const presentCount = data.sheikh_groups.reduce(
-    (acc, g) => acc + g.students.filter((s) => s.status === 'حاضر').length,
+    (acc, g) => acc + g.students.filter((s) => s.status === presentStatus).length,
     0
   )
   const allStudents = data.sheikh_groups.flatMap((group) => group.students)
@@ -765,7 +773,7 @@ export default function SessionAttendancePage() {
   const summaryItems = visibleSummaryStatuses.map((status) => ({
     label: status,
     value: allStudents.filter((student) => student.status === status).length,
-    suffix: status === 'حاضر' ? `/ ${totalCount}` : undefined,
+    suffix: status === presentStatus ? `/ ${totalCount}` : undefined,
     className: attendanceStatusColorClass(attendanceStatusColors[status]),
   }))
 
@@ -967,6 +975,7 @@ export default function SessionAttendancePage() {
             attendanceStatuses={attendanceStatuses}
             attendanceStatusColors={attendanceStatusColors}
             sheikhSelectionEnabled={sheikhSelectionEnabled}
+            presentStatus={presentStatus}
           />
         ))}
         {visibleGroups.length === 0 && (
