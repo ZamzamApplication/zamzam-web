@@ -295,6 +295,7 @@ export default function SessionAttendancePage() {
   const [progressDrafts, setProgressDrafts] = useState<ProgressDraftMap>({})
   const [persistedProgressDrafts, setPersistedProgressDrafts] = useState<ProgressDraftMap>({})
   const [previousProgressDrafts, setPreviousProgressDrafts] = useState<ProgressDraftMap>({})
+  const [suggestedProgressDrafts, setSuggestedProgressDrafts] = useState<ProgressDraftMap>({})
   const [savedProgressKeys, setSavedProgressKeys] = useState<Set<string>>(new Set())
   const [dirtyProgressKeys, setDirtyProgressKeys] = useState<Set<string>>(new Set())
   const [progressSaving, setProgressSaving] = useState(false)
@@ -366,13 +367,16 @@ export default function SessionAttendancePage() {
       setSheikhSelectionEnabled(!restrictedSheikh && (currentUser.tahfiz?.attendance_sheikh_selection_enabled ?? true))
       const drafts: ProgressDraftMap = Object.fromEntries((enabled ? progress.entries : []).map((entry) => [progressDraftKey(entry.student_id, entry.category), progressEntryToInput(entry)]))
       const previousDrafts: ProgressDraftMap = Object.fromEntries((progress.previous_entries || []).map((entry) => [progressDraftKey(entry.student_id, entry.category), progressEntryToInput(entry)]))
+      const suggestedDrafts: ProgressDraftMap = Object.fromEntries((progress.suggested_entries || []).map((entry) => [progressDraftKey(entry.student_id, entry.category), entry]))
       const requiredKeys = new Set<string>()
       if (enabled && !sessionData.is_confirmed) {
         sessionData.sheikh_groups.flatMap((group: SheikhGroup) => group.students).filter((student: SheikhGroup['students'][number]) => student.status === effectivePresentStatus).forEach((student: SheikhGroup['students'][number]) => {
           INLINE_PROGRESS_CATEGORIES.forEach(({ key: category }) => {
             const key = progressDraftKey(student.id, category)
             if (drafts[key]) return
-            drafts[key] = createRequiredProgressDraft(student.id, student.sheikh_id, category, previousDrafts[key])
+            drafts[key] = suggestedDrafts[key]
+              ? { ...suggestedDrafts[key], sheikh_id: student.sheikh_id }
+              : createRequiredProgressDraft(student.id, student.sheikh_id, category, previousDrafts[key])
             requiredKeys.add(key)
           })
         })
@@ -381,6 +385,7 @@ export default function SessionAttendancePage() {
       const persistedDrafts: ProgressDraftMap = Object.fromEntries((enabled ? progress.entries : []).map((entry) => [progressDraftKey(entry.student_id, entry.category), progressEntryToInput(entry)]))
       setPersistedProgressDrafts(persistedDrafts)
       setPreviousProgressDrafts(previousDrafts)
+      setSuggestedProgressDrafts(suggestedDrafts)
       setSavedProgressKeys(new Set(Object.keys(persistedDrafts)))
       setDirtyProgressKeys(requiredKeys)
       if (requiredKeys.size > 0) setSaveState('pending')
@@ -475,7 +480,7 @@ export default function SessionAttendancePage() {
 
   const handleProgressChange = useCallback((draft: QuranProgressInput) => {
     const key = progressDraftKey(draft.student_id, draft.category)
-    setProgressDrafts((current) => ({ ...current, [key]: { ...draft, range_type: 'surah_ayah' } }))
+    setProgressDrafts((current) => ({ ...current, [key]: draft }))
     setDirtyProgressKeys((current) => new Set(current).add(key))
     setSaveError('')
     setSaveState('pending')
@@ -610,7 +615,9 @@ export default function SessionAttendancePage() {
         INLINE_PROGRESS_CATEGORIES.forEach(({ key: category }) => {
           const key = progressDraftKey(studentId, category)
           if (progressDrafts[key]) return
-          additions[key] = createRequiredProgressDraft(studentId, student.sheikh_id, category, previousProgressDrafts[key])
+          additions[key] = suggestedProgressDrafts[key]
+            ? { ...suggestedProgressDrafts[key], sheikh_id: student.sheikh_id }
+            : createRequiredProgressDraft(studentId, student.sheikh_id, category, previousProgressDrafts[key])
           keys.push(key)
         })
         if (keys.length > 0) {
@@ -625,7 +632,7 @@ export default function SessionAttendancePage() {
       }
     }
     queueUpdate(studentId, { status: newStatus })
-  }, [persistedProgressDrafts, previousProgressDrafts, progressDrafts, progressEnabled, queueUpdate, presentStatus])
+  }, [persistedProgressDrafts, previousProgressDrafts, progressDrafts, progressEnabled, queueUpdate, presentStatus, suggestedProgressDrafts])
 
   const handleUpdateNotes = useCallback((studentId: number, notes: string) => {
     setData((prev) => {

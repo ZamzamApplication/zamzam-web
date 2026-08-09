@@ -17,6 +17,12 @@ export function progressDraftKey(studentId: number, category: ProgressCategory) 
 
 export function isSurahAyahRangeComplete(draft?: QuranProgressInput) {
   if (!draft) return false
+  if (draft.range_type === 'page') {
+    const fromPage = draft.from_page || 0
+    const toPage = draft.to_page || 0
+    return fromPage >= 1 && toPage >= fromPage && toPage <= 604
+      && draft.quality_score >= 1 && draft.quality_score <= 5
+  }
   const fromSurah = draft.from_surah || 0
   const fromAyah = draft.from_ayah || 0
   const toSurah = draft.to_surah || 0
@@ -35,11 +41,13 @@ export function progressEntryToInput(entry: QuranProgressEntry): QuranProgressIn
     student_id: entry.student_id,
     sheikh_id: entry.sheikh_id,
     category: entry.category,
-    range_type: 'surah_ayah',
-    from_surah: entry.from_surah || 1,
-    from_ayah: entry.from_ayah || 1,
-    to_surah: entry.to_surah || entry.from_surah || 1,
-    to_ayah: entry.to_ayah || entry.from_ayah || 1,
+    range_type: entry.range_type,
+    from_surah: entry.from_surah,
+    from_ayah: entry.from_ayah,
+    to_surah: entry.to_surah,
+    to_ayah: entry.to_ayah,
+    from_page: entry.from_page,
+    to_page: entry.to_page,
     quality_score: entry.quality_score,
     mistakes: entry.mistakes,
     notes: entry.notes,
@@ -140,7 +148,7 @@ export default function InlineQuranProgress({
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="text-sm font-bold text-deep-800">متابعة القرآن</p>
-          <p className="text-[11px] text-deep-500">اختر السورة والآيات والتقييم لكل قسم.</p>
+          <p className="text-[11px] text-deep-500">راجع الورد المقترح تلقائياً ثم أضف التقييم.</p>
         </div>
         <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${allComplete ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{allComplete ? '✓ مكتمل' : 'كل الأقسام مطلوبة'}</span>
       </div>
@@ -161,6 +169,17 @@ export default function InlineQuranProgress({
                 <span className={`rounded-lg px-2 py-1 text-[10px] ${isDirty ? 'bg-amber-50 text-amber-700' : isSaved ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{isDirty ? 'غير محفوظ' : isSaved ? '✓ محفوظ' : 'مطلوب'}</span>
               </div>
               <div className="mt-2 grid grid-cols-2 gap-2">
+                {draft.range_type === 'page' ? (
+                  <>
+                    <label className="text-[11px] text-deep-500">من صفحة
+                      <input type="number" min={1} max={604} value={draft.from_page || 1} onChange={(event) => onChange({ ...draft, from_page: Number(event.target.value) })} disabled={disabled} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm" />
+                    </label>
+                    <label className="text-[11px] text-deep-500">إلى صفحة
+                      <input type="number" min={draft.from_page || 1} max={604} value={draft.to_page || draft.from_page || 1} onChange={(event) => onChange({ ...draft, to_page: Number(event.target.value) })} disabled={disabled} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm" />
+                    </label>
+                  </>
+                ) : (
+                  <>
                   <label className="text-[11px] text-deep-500">من سورة
                     <select value={fromSurah} onChange={(event) => { const nextSurah = Number(event.target.value); const nextToSurah = Math.max(nextSurah, toSurah || nextSurah); onChange({ ...draft, from_surah: nextSurah, to_surah: nextToSurah, from_ayah: 1, to_ayah: 1 }) }} disabled={disabled} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm">
                       <option value={0} disabled hidden>اختر السورة</option>
@@ -176,6 +195,8 @@ export default function InlineQuranProgress({
                   </label>
                   <AyahSelect label="إلى آية" value={draft.to_ayah || 1} surah={toSurah} disabled={disabled} onChange={(value) => onChange({ ...draft, to_ayah: toSurah === fromSurah ? Math.max(draft.from_ayah || 1, value) : value })} />
                   <button type="button" onClick={() => onChange({ ...draft, from_ayah: 1, to_ayah: toSurahMaxAyah })} disabled={disabled || fromSurah === 0 || toSurah === 0} className="col-span-2 rounded-lg border border-water-200 bg-water-50 px-2 py-1.5 text-[10px] font-semibold text-cyan-700 disabled:opacity-50">السور المحددة كاملة</button>
+                  </>
+                )}
                   <div className="col-span-2">
                     <p className="mb-1 text-[11px] font-semibold text-deep-600">التقييم</p>
                     <div className="flex flex-wrap gap-1">

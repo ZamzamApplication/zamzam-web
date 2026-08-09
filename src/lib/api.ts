@@ -357,6 +357,7 @@ export const api = {
       enabled: boolean
       entries: import('./types').QuranProgressEntry[]
       previous_entries: import('./types').QuranProgressEntry[]
+      suggested_entries: QuranProgressInput[]
     }>(`/sessions/${sessionId}/progress`)
   },
 
@@ -376,6 +377,17 @@ export const api = {
       trend: import('./types').QuranProgressTrendPoint[]
       revisions: import('./types').QuranProgressRevision[]
     }>(`/students/${studentId}/progress`)
+  },
+
+  getStudentQuranPlans(studentId: number) {
+    return request<{ plans: import('./types').StudentQuranPlan[] }>(`/students/${studentId}/quran-plans`)
+  },
+
+  updateStudentQuranPlans(studentId: number, plans: Omit<import('./types').StudentQuranPlan, 'id' | 'student_id' | 'updated_at'>[]) {
+    return request<{ plans: import('./types').StudentQuranPlan[] }>(`/students/${studentId}/quran-plans`, {
+      method: 'PUT',
+      body: JSON.stringify({ plans }),
+    })
   },
 
   createStudentGoal(studentId: number, data: Record<string, unknown>) {

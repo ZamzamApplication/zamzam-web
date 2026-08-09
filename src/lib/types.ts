@@ -513,6 +513,20 @@ export interface CircleStudentStatsResponse {
 
 export type ProgressCategory = 'new_memorization' | 'recent_revision' | 'old_revision' | 'test'
 export type QuranRangeType = 'surah_ayah' | 'page'
+export type WardCategory = Exclude<ProgressCategory, 'test'>
+export type WardIncrementUnit = 'ayahs' | 'lines' | 'pages'
+
+export interface StudentQuranPlan {
+  id?: number
+  student_id: number
+  category: WardCategory
+  increment_unit: WardIncrementUnit
+  increment_amount: number
+  next_surah: number | null
+  next_ayah: number | null
+  next_page: number | null
+  updated_at?: string
+}
 
 export interface QuranProgressEntry {
   id: number
