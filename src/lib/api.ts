@@ -131,6 +131,13 @@ export const api = {
     })
   },
 
+  createTahfiz(name: string, contactPhone?: string) {
+    return request<{ message: string; tahfiz_id: number; membership_id: number; status: 'pending'; role: 'admin' }>('/auth/tahfiz', {
+      method: 'POST',
+      body: JSON.stringify({ name, contact_phone: contactPhone?.trim() || null }),
+    })
+  },
+
   getDashboardSummary() {
     return request('/reports/dashboard-summary')
   },

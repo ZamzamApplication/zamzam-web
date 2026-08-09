@@ -69,7 +69,17 @@ function ThemeToggle() {
   )
 }
 
-function TahfizSwitcher({ user, onSwitch, switchingId }: { user: User; onSwitch: (tahfizId: number) => void; switchingId: number | null }) {
+function TahfizSwitcher({
+  user,
+  onSwitch,
+  onCreate,
+  switchingId,
+}: {
+  user: User
+  onSwitch: (tahfizId: number) => void
+  onCreate: () => void
+  switchingId: number | null
+}) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const memberships = user.memberships || []
@@ -91,7 +101,7 @@ function TahfizSwitcher({ user, onSwitch, switchingId }: { user: User; onSwitch:
     }
   }, [open])
 
-  if (memberships.length <= 1 || !current) return null
+  if (!current) return null
 
   return (
     <div ref={containerRef} className="relative">
@@ -171,6 +181,17 @@ function TahfizSwitcher({ user, onSwitch, switchingId }: { user: User; onSwitch:
               )
             })}
           </div>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false)
+              onCreate()
+            }}
+            className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-cyan-300 px-3 py-2.5 text-sm font-bold text-cyan-700 hover:bg-cyan-50 dark:border-cyan-700 dark:text-cyan-300 dark:hover:bg-cyan-950/40"
+          >
+            <span aria-hidden="true">＋</span> إنشاء تحفيظ جديد
+          </button>
         </div>
       )}
     </div>
@@ -183,6 +204,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const [supportName, setSupportName] = useState('')
   const [switchingTahfizId, setSwitchingTahfizId] = useState<number | null>(null)
   const [switchError, setSwitchError] = useState('')
+  const [workspaceNotice, setWorkspaceNotice] = useState('')
+  const [showCreateTahfiz, setShowCreateTahfiz] = useState(false)
+  const [newTahfizName, setNewTahfizName] = useState('')
+  const [newTahfizPhone, setNewTahfizPhone] = useState('')
+  const [creatingTahfiz, setCreatingTahfiz] = useState(false)
+  const [createTahfizError, setCreateTahfizError] = useState('')
   const router = useRouter()
   const pathname = usePathname()
 
@@ -229,6 +256,27 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     } catch (error: any) {
       setSwitchError(error.message || 'تعذر تبديل التحفيظ')
       setSwitchingTahfizId(null)
+    }
+  }
+
+  const createTahfiz = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (newTahfizName.trim().length < 2) return
+    setCreatingTahfiz(true)
+    setCreateTahfizError('')
+    try {
+      await api.createTahfiz(newTahfizName.trim(), newTahfizPhone)
+      const refreshed = await api.getMe()
+      setUser(refreshed)
+      localStorage.setItem('user', JSON.stringify(refreshed))
+      setShowCreateTahfiz(false)
+      setNewTahfizName('')
+      setNewTahfizPhone('')
+      setWorkspaceNotice('تم إرسال طلب التحفيظ الجديد للمراجعة. سيظهر للتبديل بعد اعتماده.')
+    } catch (error: any) {
+      setCreateTahfizError(error.message || 'تعذر إنشاء التحفيظ')
+    } finally {
+      setCreatingTahfiz(false)
     }
   }
 
@@ -354,8 +402,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <span className="nav-brand-mark">💧</span> زمزم
             </Link>
             <div className="flex items-center gap-2">
-              <TahfizSwitcher user={user} onSwitch={switchTahfiz} switchingId={switchingTahfizId} />
-              {(!user.memberships || user.memberships.length <= 1) && <span className="mobile-user-badge" title={user.username}>{user.username.charAt(0).toUpperCase()}</span>}
+              <TahfizSwitcher user={user} onSwitch={switchTahfiz} onCreate={() => { setCreateTahfizError(''); setShowCreateTahfiz(true) }} switchingId={switchingTahfizId} />
               <ThemeToggle />
               <button onClick={logout} className="nav-icon-btn" title="تسجيل الخروج" aria-label="تسجيل الخروج">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -384,7 +431,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               )}
             </div>
             <div className="flex items-center gap-2 md:gap-3">
-              <TahfizSwitcher user={user} onSwitch={switchTahfiz} switchingId={switchingTahfizId} />
+              <TahfizSwitcher user={user} onSwitch={switchTahfiz} onCreate={() => { setCreateTahfizError(''); setShowCreateTahfiz(true) }} switchingId={switchingTahfizId} />
               <ThemeToggle />
               <span className="nav-username">{user.username}</span>
               <button
@@ -420,6 +467,32 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {switchError && (
           <div role="alert" className="bg-red-50 px-4 py-2 text-center text-sm font-semibold text-red-700 dark:bg-red-950/70 dark:text-red-200">
             {switchError}
+          </div>
+        )}
+        {workspaceNotice && (
+          <div role="status" className="bg-cyan-50 px-4 py-2 text-center text-sm font-semibold text-cyan-800 dark:bg-cyan-950/70 dark:text-cyan-100">
+            {workspaceNotice}
+          </div>
+        )}
+        {showCreateTahfiz && (
+          <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/35 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="create-tahfiz-title" onClick={() => !creatingTahfiz && setShowCreateTahfiz(false)}>
+            <form onSubmit={createTahfiz} className="glass-strong w-full max-w-md rounded-2xl p-6" onClick={(event) => event.stopPropagation()}>
+              <h2 id="create-tahfiz-title" className="text-xl font-bold text-deep-900">إنشاء تحفيظ جديد</h2>
+              <p className="mt-2 text-sm text-deep-500">سيُربط التحفيظ بحسابك الحالي بصلاحية مدير، ويصبح متاحاً للتبديل بعد اعتماد المنصة.</p>
+              <label className="mt-4 grid gap-1 text-sm font-semibold text-deep-700">
+                اسم التحفيظ
+                <input autoFocus required minLength={2} maxLength={100} value={newTahfizName} onChange={(event) => setNewTahfizName(event.target.value)} className="surface-field rounded-xl px-3 py-2.5" />
+              </label>
+              <label className="mt-3 grid gap-1 text-sm font-semibold text-deep-700">
+                رقم التواصل <span className="text-xs font-normal text-deep-400">(اختياري)</span>
+                <input type="tel" maxLength={20} value={newTahfizPhone} onChange={(event) => setNewTahfizPhone(event.target.value)} className="surface-field rounded-xl px-3 py-2.5" />
+              </label>
+              {createTahfizError && <p role="alert" className="mt-3 text-sm font-semibold text-red-600">{createTahfizError}</p>}
+              <div className="mt-5 flex gap-3">
+                <button type="button" disabled={creatingTahfiz} onClick={() => setShowCreateTahfiz(false)} className="water-btn-outline flex-1 rounded-xl px-4 py-2 disabled:opacity-50">إلغاء</button>
+                <button type="submit" disabled={creatingTahfiz || newTahfizName.trim().length < 2} className="water-btn flex-1 rounded-xl px-4 py-2 font-bold text-white disabled:opacity-50">{creatingTahfiz ? 'جاري الإنشاء…' : 'إرسال للمراجعة'}</button>
+              </div>
+            </form>
           </div>
         )}
         {!loading && user?.role === 'super_admin' && supportName && !isDedicatedPlatform && (

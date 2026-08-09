@@ -11,6 +11,7 @@ export interface SpreadsheetColumn {
   groupId?: string
   groupLabel?: string
   dateValue?: string
+  headerFontFamily?: string
 }
 
 export interface SpreadsheetSheet {
@@ -71,6 +72,10 @@ export default function ExcelPreviewModal({
     fontSize: `${activeSheet.dateFontSize || 12}pt`,
     fontWeight: activeSheet.dateBold === false ? 400 : 700,
   }
+  const columnHeaderStyle = (column: SpreadsheetColumn) => ({
+    ...headerStyle,
+    fontFamily: column.headerFontFamily || activeSheet.headerFontFamily || 'Arial',
+  })
 
   const exportWorkbook = async () => {
     setExporting(true)
@@ -153,6 +158,15 @@ export default function ExcelPreviewModal({
             cell.alignment = { horizontal: 'center', vertical: 'middle' }
           })
         }
+        sheet.columns.forEach((column, columnIndex) => {
+          for (let rowNumber = 1; rowNumber <= headerRows; rowNumber++) {
+            const cell = worksheet.getCell(rowNumber, columnIndex + 1)
+            cell.font = {
+              ...cell.font,
+              name: column.headerFontFamily || sheet.headerFontFamily || 'Arial',
+            }
+          }
+        })
         if (hierarchical) {
           sheet.columns.forEach((column, columnIndex) => {
             if (!column.dateValue) return
@@ -251,14 +265,14 @@ export default function ExcelPreviewModal({
                 {activeSheet.columns.map((column, index) => {
                   if (!hierarchical) {
                     return (
-                      <th key={column.id} className="border border-slate-500 p-2" style={{ ...headerStyle, minWidth: `${(column.width ?? 18) * 8}px` }}>
+                      <th key={column.id} className="border border-slate-500 p-2" style={{ ...columnHeaderStyle(column), minWidth: `${(column.width ?? 18) * 8}px` }}>
                         {column.label}
                       </th>
                     )
                   }
                   if (!column.groupId) {
                     return (
-                      <th key={column.id} rowSpan={2} className="border border-slate-500 p-2" style={{ ...headerStyle, minWidth: `${(column.width ?? 18) * 8}px` }}>
+                      <th key={column.id} rowSpan={2} className="border border-slate-500 p-2" style={{ ...columnHeaderStyle(column), minWidth: `${(column.width ?? 18) * 8}px` }}>
                         {column.label}
                       </th>
                     )
@@ -266,13 +280,13 @@ export default function ExcelPreviewModal({
                   if (index > 0 && activeSheet.columns[index - 1].groupId === column.groupId) return null
                   let span = 1
                   while (index + span < activeSheet.columns.length && activeSheet.columns[index + span].groupId === column.groupId) span += 1
-                  return <th key={column.groupId} colSpan={span} className="border border-slate-500 p-2" style={headerStyle}>{column.groupLabel}</th>
+                  return <th key={column.groupId} colSpan={span} className="border border-slate-500 p-2" style={columnHeaderStyle(column)}>{column.groupLabel}</th>
                 })}
               </tr>
               {hierarchical && (
                 <tr>
                   {activeSheet.columns.filter((column) => column.groupId).map((column) => (
-                    <th key={column.id} className="border border-slate-500 p-2" style={{ ...(column.dateValue ? dateStyle : headerStyle), minWidth: `${(column.width ?? 18) * 8}px` }}>
+                    <th key={column.id} className="border border-slate-500 p-2" style={{ ...(column.dateValue ? dateStyle : columnHeaderStyle(column)), minWidth: `${(column.width ?? 18) * 8}px` }}>
                       {column.label}
                     </th>
                   ))}

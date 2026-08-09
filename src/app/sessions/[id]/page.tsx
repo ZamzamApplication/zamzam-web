@@ -7,7 +7,6 @@ import { getArabicDay, mediaUrl } from '@/lib/format'
 import type { AttendanceThresholdAlert, ProgressCategory, QuranProgressInput, Session, SessionAttendance, SheikhGroup } from '@/lib/types'
 import InlineQuranProgress, { createRequiredProgressDraft, INLINE_PROGRESS_CATEGORIES, isSurahAyahRangeComplete, type ProgressDraftMap, progressDraftKey, progressEntryToInput } from '@/components/InlineQuranProgress'
 import AttendanceStatusControl, { attendanceStatusColorClass } from '@/components/AttendanceStatusControl'
-import { QUALITY_OPTIONS, SURAHS, surahInfo } from '@/lib/quran'
 import { configuredAttendanceStatuses, configuredPresentStatus, DEFAULT_ATTENDANCE_STATUSES } from '@/lib/attendance'
 
 function isProgressDraftComplete(draft?: QuranProgressInput) {
@@ -299,12 +298,6 @@ export default function SessionAttendancePage() {
   const [savedProgressKeys, setSavedProgressKeys] = useState<Set<string>>(new Set())
   const [dirtyProgressKeys, setDirtyProgressKeys] = useState<Set<string>>(new Set())
   const [progressSaving, setProgressSaving] = useState(false)
-  const [bulkCategory, setBulkCategory] = useState<ProgressCategory>('new_memorization')
-  const [bulkFromSurah, setBulkFromSurah] = useState(1)
-  const [bulkFromAyah, setBulkFromAyah] = useState(1)
-  const [bulkToSurah, setBulkToSurah] = useState(1)
-  const [bulkToAyah, setBulkToAyah] = useState(1)
-  const [bulkQuality, setBulkQuality] = useState(3)
   const [showReopen, setShowReopen] = useState(false)
   const [reopenReason, setReopenReason] = useState('')
   const [reopening, setReopening] = useState(false)
@@ -547,38 +540,6 @@ export default function SessionAttendancePage() {
     if (next) document.getElementById(`student-row-${next.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }, [saveProgressDrafts, presentStatus])
 
-  const applyProgressToPresent = useCallback(() => {
-    const presentStudents = dataRef.current?.sheikh_groups.flatMap((group) => group.students).filter((student) => student.status === presentStatus) || []
-    if (presentStudents.length === 0) return
-    const additions: ProgressDraftMap = {}
-    const keys: string[] = []
-    presentStudents.forEach((student) => {
-      const key = progressDraftKey(student.id, bulkCategory)
-      keys.push(key)
-      additions[key] = {
-        student_id: student.id,
-        sheikh_id: student.sheikh_id,
-        category: bulkCategory,
-        range_type: 'surah_ayah',
-        from_surah: bulkFromSurah,
-        from_ayah: bulkFromAyah,
-        to_surah: bulkToSurah,
-        to_ayah: bulkToAyah,
-        quality_score: bulkQuality,
-        mistakes: 0,
-        notes: null,
-        next_assignment: null,
-      }
-    })
-    setProgressDrafts((current) => ({ ...current, ...additions }))
-    setDirtyProgressKeys((current) => {
-      const next = new Set(current)
-      keys.forEach((key) => next.add(key))
-      return next
-    })
-    setSaveState('pending')
-  }, [bulkCategory, bulkFromAyah, bulkFromSurah, bulkQuality, bulkToAyah, bulkToSurah, presentStatus])
-
   const handleUpdateStatus = useCallback((studentId: number, newStatus: string) => {
     setData((prev) => {
       if (!prev) return prev
@@ -753,10 +714,6 @@ export default function SessionAttendancePage() {
     )
   }
 
-  const presentCount = data.sheikh_groups.reduce(
-    (acc, g) => acc + g.students.filter((s) => s.status === presentStatus).length,
-    0
-  )
   const allStudents = data.sheikh_groups.flatMap((group) => group.students)
   const normalizedStudentSearch = studentSearch.trim().toLocaleLowerCase('ar')
   const visibleGroups = data.sheikh_groups
@@ -885,60 +842,6 @@ export default function SessionAttendancePage() {
           </div>
         ))}
       </div>
-
-      {progressEnabled && !data.is_confirmed && (
-        <section className="glass-card mb-4 rounded-xl p-3 md:p-4">
-          <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
-            <div>
-              <h2 className="text-sm font-bold text-deep-800">تطبيق سريع على الحاضرين</h2>
-              <p className="mt-1 text-[11px] text-deep-500">طبّق نفس المقدار على الجميع، ثم عدّل الاستثناءات داخل صف كل طالب.</p>
-            </div>
-            <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-700 dark:bg-cyan-900/25 dark:text-cyan-300">{presentCount} حاضر</span>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[1fr_1.2fr_.7fr_1.2fr_.7fr_1.1fr_auto] lg:items-end">
-            <label className="text-[11px] text-deep-500">النوع
-              <select value={bulkCategory} onChange={(event) => setBulkCategory(event.target.value as ProgressCategory)} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm">
-                {INLINE_PROGRESS_CATEGORIES.map((category) => <option key={category.key} value={category.key}>{category.label}</option>)}
-              </select>
-            </label>
-            <label className="text-[11px] text-deep-500">من سورة
-              <select value={bulkFromSurah} onChange={(event) => { const value = Number(event.target.value); setBulkFromSurah(value); setBulkToSurah((current) => Math.max(current, value)); setBulkFromAyah(1); setBulkToAyah(1) }} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm">
-                {SURAHS.map((surah) => <option key={surah.number} value={surah.number}>{surah.number}. {surah.name} — {surah.ayahs} آية</option>)}
-              </select>
-            </label>
-            <label className="text-[11px] text-deep-500">من آية
-              <select value={bulkFromAyah} onChange={(event) => { const value = Number(event.target.value); setBulkFromAyah(value); if (bulkToSurah === bulkFromSurah) setBulkToAyah((current) => Math.max(current, value)) }} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm">
-                {Array.from({ length: surahInfo(bulkFromSurah).ayahs }, (_, index) => index + 1).map((ayah) => <option key={ayah} value={ayah}>{ayah}</option>)}
-              </select>
-            </label>
-            <label className="text-[11px] text-deep-500">إلى سورة
-              <select value={bulkToSurah} onChange={(event) => { const value = Number(event.target.value); setBulkToSurah(value); setBulkToAyah(value === bulkFromSurah ? bulkFromAyah : 1) }} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm">
-                {SURAHS.filter((surah) => surah.number >= bulkFromSurah).map((surah) => <option key={surah.number} value={surah.number}>{surah.number}. {surah.name} — {surah.ayahs} آية</option>)}
-              </select>
-            </label>
-            <label className="text-[11px] text-deep-500">إلى آية
-              <select value={bulkToAyah} onChange={(event) => setBulkToAyah(Number(event.target.value))} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm">
-                {Array.from(
-                  { length: surahInfo(bulkToSurah).ayahs - (bulkToSurah === bulkFromSurah ? bulkFromAyah : 1) + 1 },
-                  (_, index) => (bulkToSurah === bulkFromSurah ? bulkFromAyah : 1) + index,
-                ).map((ayah) => <option key={ayah} value={ayah}>{ayah}</option>)}
-              </select>
-            </label>
-            <label className="text-[11px] text-deep-500">التقييم
-              <select value={bulkQuality} onChange={(event) => setBulkQuality(Number(event.target.value))} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm">
-                {QUALITY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
-            </label>
-            <button type="button" onClick={applyProgressToPresent} disabled={presentCount === 0} className="water-btn rounded-lg px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">تطبيق على الحاضرين</button>
-          </div>
-          {dirtyProgressKeys.size > 0 && (
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-800 dark:bg-amber-900/20">
-              <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">{dirtyProgressKeys.size} سجلات متابعة بانتظار الحفظ</span>
-              <button type="button" onClick={() => saveProgressDrafts()} disabled={progressSaving} className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">{progressSaving ? 'جاري الحفظ...' : 'حفظ المتابعة الآن'}</button>
-            </div>
-          )}
-        </section>
-      )}
 
       <div className="flex justify-start mb-2">
         <button

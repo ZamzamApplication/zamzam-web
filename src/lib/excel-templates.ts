@@ -17,6 +17,7 @@ export interface ExcelTemplateColumn {
   enabled: boolean
   custom: boolean
   width: number
+  header_font_family: string
   show_header: boolean
   subcolumns: ExcelTemplateSubcolumn[]
 }
@@ -48,7 +49,17 @@ export interface ExcelExportTemplate {
 export type ExcelExportTemplates = Record<ExcelTemplateKey, ExcelExportTemplate>
 
 function standardColumn(id: string, label: string, width: number, enabled = true): ExcelTemplateColumn {
-  return { id, label, enabled, custom: false, width, show_header: true, subcolumns: [] }
+  return { id, label, enabled, custom: false, width, header_font_family: 'Arial', show_header: true, subcolumns: [] }
+}
+
+function quranRangeColumn(id: 'memorization' | 'revision', label: string): ExcelTemplateColumn {
+  return {
+    ...standardColumn(id, label, 18),
+    subcolumns: [
+      { id: 'from', label: 'من', width: 18 },
+      { id: 'to', label: 'إلى', width: 18 },
+    ],
+  }
 }
 
 const DEFAULT_TEMPLATE_STYLE = {
@@ -76,6 +87,8 @@ export const DEFAULT_EXCEL_EXPORT_TEMPLATES: ExcelExportTemplates = {
       standardColumn('student', 'الطالب', 24),
       standardColumn('sheikh', 'الشيخ', 20),
       standardColumn('subscription_amount', 'مبلغ الاشتراك', 16),
+      quranRangeColumn('memorization', 'الحفظ'),
+      quranRangeColumn('revision', 'المراجعة'),
       standardColumn('attendance', 'الحضور', 18),
     ],
   },
@@ -108,16 +121,41 @@ export function configuredExcelExportTemplates(value?: Partial<ExcelExportTempla
     (Object.keys(DEFAULT_EXCEL_EXPORT_TEMPLATES) as ExcelTemplateKey[]).map((key) => {
       const storedColumns = value?.[key]?.columns
       const legacyStatisticsIds = new Set(['present', 'excused', 'absent', 'notApplicable'])
-      const configured = key === 'statistics'
+      const filteredColumns = key === 'statistics'
         && Array.isArray(storedColumns)
         ? storedColumns.filter((column) => !legacyStatisticsIds.has(column.id))
         : storedColumns
+      const configured = Array.isArray(filteredColumns)
+        ? filteredColumns.map((column) => ({
+            ...column,
+            subcolumns: Array.isArray(column.subcolumns)
+              ? column.subcolumns.map((subcolumn) => ({ ...subcolumn }))
+              : [],
+          }))
+        : filteredColumns
+      if (key === 'attendance' && Array.isArray(configured)) {
+        const semanticLabels: Record<string, 'memorization' | 'revision'> = { 'الحفظ': 'memorization', 'المراجعة': 'revision' }
+        configured.forEach((column) => {
+          const semanticId = semanticLabels[column.label?.trim()]
+          const labels = column.subcolumns?.map((item) => item.label.trim().replace('الي', 'إلى'))
+          if (!semanticId || !column.custom || labels?.length !== 2 || labels[0] !== 'من' || labels[1] !== 'إلى') return
+          column.id = semanticId
+          column.custom = false
+          column.subcolumns = [
+            { ...column.subcolumns[0], id: 'from', label: 'من' },
+            { ...column.subcolumns[1], id: 'to', label: 'إلى' },
+          ]
+        })
+      }
       const configuredIds = new Set(
         Array.isArray(configured) ? configured.map((column) => column.id) : []
       )
       const missingColumns = DEFAULT_EXCEL_EXPORT_TEMPLATES[key].columns
         .filter((column) => !configuredIds.has(column.id))
-        .map((column) => ({ ...column, subcolumns: [] }))
+        .map((column) => ({
+          ...column,
+          subcolumns: column.subcolumns.map((subcolumn) => ({ ...subcolumn })),
+        }))
       return [
         key,
         {
@@ -141,6 +179,7 @@ export function configuredExcelExportTemplates(value?: Partial<ExcelExportTempla
                 ...configured.map((column) => ({
                   ...column,
                   width: column.width ?? 18,
+                  header_font_family: column.header_font_family?.trim() || value?.[key]?.header_font_family?.trim() || DEFAULT_TEMPLATE_STYLE.header_font_family,
                   show_header: column.show_header ?? true,
                   subcolumns: Array.isArray(column.subcolumns)
                     ? column.subcolumns.map((subcolumn) => ({ ...subcolumn, width: subcolumn.width ?? 18 }))
@@ -149,8 +188,9 @@ export function configuredExcelExportTemplates(value?: Partial<ExcelExportTempla
               ]
             : DEFAULT_EXCEL_EXPORT_TEMPLATES[key].columns.map((column) => ({
                 ...column,
+                header_font_family: column.header_font_family || DEFAULT_TEMPLATE_STYLE.header_font_family,
                 show_header: true,
-                subcolumns: [],
+                subcolumns: column.subcolumns.map((subcolumn) => ({ ...subcolumn })),
               })),
         },
       ]
@@ -188,6 +228,7 @@ export function applyExcelTemplate(
               ? formatAttendanceDate(sourceColumn.dateValue, template.attendance_date_format)
               : '',
             width: column.width,
+            headerFontFamily: column.header_font_family,
             groupId: column.id,
             groupLabel: column.label,
           }))
@@ -198,6 +239,7 @@ export function applyExcelTemplate(
           .map((sourceColumn) => ({
             ...sourceColumn,
             width: column.width,
+            headerFontFamily: column.header_font_family,
             groupId: column.id,
             groupLabel: column.label,
           }))
@@ -207,6 +249,7 @@ export function applyExcelTemplate(
           id: `${column.id}__${subcolumn.id}`,
           label: subcolumn.label,
           width: subcolumn.width,
+          headerFontFamily: column.header_font_family,
           groupId: column.id,
           groupLabel: column.label,
         }))
@@ -216,6 +259,7 @@ export function applyExcelTemplate(
         id: column.id,
         label: column.label || sourceColumn?.label || 'عمود',
         width: column.width,
+        headerFontFamily: column.header_font_family,
       }]
     })
   return {

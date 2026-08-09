@@ -481,6 +481,10 @@ export interface AttendanceGridStudent {
   next_warning_number: number
   remaining_warnings: number
   subscription_amount_minor?: number | null
+  quran_progress_ranges?: Partial<Record<WardCategory, {
+    first: QuranRangeSnapshot
+    last: QuranRangeSnapshot
+  }>>
   records: Record<string, string | null>
 }
 
@@ -515,6 +519,16 @@ export type ProgressCategory = 'new_memorization' | 'recent_revision' | 'old_rev
 export type QuranRangeType = 'surah_ayah' | 'page'
 export type WardCategory = Exclude<ProgressCategory, 'test'>
 export type WardIncrementUnit = 'ayahs' | 'lines' | 'pages'
+
+export interface QuranRangeSnapshot {
+  range_type: QuranRangeType
+  from_surah: number | null
+  from_ayah: number | null
+  to_surah: number | null
+  to_ayah: number | null
+  from_page: number | null
+  to_page: number | null
+}
 
 export interface StudentQuranPlan {
   id?: number

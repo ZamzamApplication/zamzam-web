@@ -103,6 +103,7 @@ export default function ExcelTemplateSettings({
         enabled: true,
         custom: true,
         width: 18,
+        header_font_family: value[key].header_font_family,
         show_header: true,
         subcolumns: [],
       },
@@ -150,25 +151,13 @@ export default function ExcelTemplateSettings({
               <p className="mt-1 text-xs text-deep-500">{TEMPLATE_LABELS[key].description}</p>
             </div>
             <div className="mt-3 grid gap-3 rounded-xl border border-water-200/70 bg-white/45 p-3 sm:grid-cols-2 lg:grid-cols-5 dark:bg-slate-900/30">
-              <label className="grid gap-1 text-xs text-deep-600 sm:col-span-2">
-                خط العناوين
-                <input
-                  list={`excel-fonts-${key}`}
-                  value={template.header_font_family}
-                  onChange={(event) => updateTemplate(key, { header_font_family: event.target.value })}
-                  maxLength={80}
-                  required
-                  placeholder="Arial"
-                  className="surface-field rounded-lg px-3 py-1.5 text-sm"
-                />
-                <datalist id={`excel-fonts-${key}`}>
-                  <option value="Arial" />
-                  <option value="Calibri" />
-                  <option value="Tahoma" />
-                  <option value="Traditional Arabic" />
-                  <option value="Amiri" />
-                </datalist>
-              </label>
+              <datalist id={`excel-fonts-${key}`}>
+                <option value="Arial" />
+                <option value="Calibri" />
+                <option value="Tahoma" />
+                <option value="Traditional Arabic" />
+                <option value="Amiri" />
+              </datalist>
               <label className="grid gap-1 text-xs text-deep-600">
                 حجم الخط
                 <NumberSettingInput
@@ -328,6 +317,18 @@ export default function ExcelTemplateSettings({
                     aria-label={`اسم عمود ${column.label}`}
                     className="surface-field min-w-40 flex-1 rounded-lg px-3 py-1.5 text-sm"
                   />
+                  <label className="flex items-center gap-1 text-[11px] text-deep-500">
+                    خط العنوان
+                    <input
+                      list={`excel-fonts-${key}`}
+                      value={column.header_font_family}
+                      onChange={(event) => updateColumn(key, column.id, { header_font_family: event.target.value })}
+                      maxLength={80}
+                      required
+                      className="surface-field w-32 rounded-lg px-2 py-1.5 text-xs"
+                      aria-label={`خط عنوان ${column.label}`}
+                    />
+                  </label>
                   <label className="flex items-center gap-1 text-[11px] text-deep-500">
                     العرض
                     <input

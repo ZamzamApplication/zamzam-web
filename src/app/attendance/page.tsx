@@ -13,6 +13,8 @@ import MonthSwitcher from '@/components/MonthSwitcher'
 import ScrollableTable from '@/components/ScrollableTable'
 import ConfirmDialog from '@/components/ConfirmDialog'
 import { attendanceStatusColorClass } from '@/components/AttendanceStatusControl'
+import { surahInfo } from '@/lib/quran'
+import type { QuranRangeSnapshot } from '@/lib/types'
 
 interface SavedFilter {
   id: number
@@ -20,6 +22,29 @@ interface SavedFilter {
   groups: FilterGroup[]
   can_edit?: boolean
   can_delete?: boolean
+}
+
+function progressBoundary(range: QuranRangeSnapshot | undefined, boundary: 'from' | 'to'): string {
+  if (!range) return ''
+  if (range.range_type === 'page') {
+    const page = boundary === 'from' ? range.from_page : range.to_page
+    return page ? `ص ${page}` : ''
+  }
+  const surah = boundary === 'from' ? range.from_surah : range.to_surah
+  const ayah = boundary === 'from' ? range.from_ayah : range.to_ayah
+  return surah && ayah ? `${surahInfo(surah).name} ${ayah}` : ''
+}
+
+function revisionBoundary(student: AttendanceGridStudent, boundary: 'from' | 'to'): string {
+  const ranges = student.quran_progress_ranges || {}
+  return [
+    ['قريبة', ranges.recent_revision],
+    ['بعيدة', ranges.old_revision],
+  ].map(([label, range]) => {
+    const periodRange = range as { first: QuranRangeSnapshot; last: QuranRangeSnapshot } | undefined
+    const value = progressBoundary(boundary === 'from' ? periodRange?.first : periodRange?.last, boundary)
+    return value ? `${label}: ${value}` : ''
+  }).filter(Boolean).join(' · ')
 }
 
 function parseSavedFilter(f: any): SavedFilter {
@@ -392,6 +417,7 @@ export default function AttendancePage() {
 
   const openExcelPreview = () => {
     const canViewFinance = user?.role === 'admin' || user?.role === 'super_admin'
+    const templates = configuredExcelExportTemplates(user?.tahfiz?.excel_export_templates)
     const sessionColumns = displaySessions.map((session) => ({
       id: `session_${session.id}`,
       label: formatDateWithWeekday(session.date),
@@ -410,6 +436,10 @@ export default function AttendancePage() {
           student: student.name,
           sheikh: student.sheikh_name || 'بدون شيخ',
           ...(canViewFinance ? { subscription_amount: student.subscription_amount_minor == null ? null : student.subscription_amount_minor / 100 } : {}),
+          memorization__from: progressBoundary(student.quran_progress_ranges?.new_memorization?.first, 'from'),
+          memorization__to: progressBoundary(student.quran_progress_ranges?.new_memorization?.last, 'to'),
+          revision__from: revisionBoundary(student, 'from'),
+          revision__to: revisionBoundary(student, 'to'),
         }
         displaySessions.forEach((session) => {
           row[`session_${session.id}`] = student.records[String(session.id)]
@@ -417,7 +447,6 @@ export default function AttendancePage() {
         return row
       }),
     }
-    const templates = configuredExcelExportTemplates(user?.tahfiz?.excel_export_templates)
     const attendanceTemplate = canViewFinance ? templates.attendance : {
       ...templates.attendance,
       columns: templates.attendance.columns.filter(column => column.id !== 'subscription_amount'),
