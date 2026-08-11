@@ -27,6 +27,7 @@ export interface User {
     attendance_streak_limit?: number
     attendance_streak_reset_statuses?: string[]
     present_status?: string
+    absent_status?: string
     whatsend_enabled?: boolean
     progress_tracking_enabled?: boolean
   } | null
@@ -126,6 +127,7 @@ export interface Circle {
   attendance_streak_limit?: number
   attendance_streak_reset_statuses?: string[]
   present_status?: string
+  absent_status?: string
   contact_phone?: string
   whatsend_api_url?: string
   whatsend_groups_url?: string

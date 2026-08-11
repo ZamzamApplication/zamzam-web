@@ -1,8 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { api } from '@/lib/api'
-import { configuredAttendanceStatuses, DEFAULT_ATTENDANCE_STATUSES } from '@/lib/attendance'
 
 function todayLocalDate(): string {
   const today = new Date()
@@ -20,18 +19,8 @@ export default function CreateSessionModal({
   onCreated: (sessionId: number) => void
 }) {
   const [sessionDate, setSessionDate] = useState(todayLocalDate)
-  const [defaultStatus, setDefaultStatus] = useState('غياب')
-  const [attendanceStatuses, setAttendanceStatuses] = useState<string[]>(DEFAULT_ATTENDANCE_STATUSES)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    api.getMe().then((user) => {
-      const statuses = configuredAttendanceStatuses(user.tahfiz?.attendance_statuses)
-      setAttendanceStatuses(statuses)
-      setDefaultStatus((current) => statuses.includes(current) ? current : statuses[0])
-    }).catch(() => {})
-  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -39,7 +28,7 @@ export default function CreateSessionModal({
     setError('')
     setLoading(true)
     try {
-      const res = await api.createSession(sessionDate, undefined, defaultStatus)
+      const res = await api.createSession(sessionDate)
       onCreated(res.id)
     } catch (err: any) {
       setError(err.message || 'فشل إنشاء الحلقة')
@@ -70,17 +59,6 @@ export default function CreateSessionModal({
               required
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-deep-700 mb-1">الحالة الافتراضية</label>
-            <select
-              value={defaultStatus}
-              onChange={(e) => setDefaultStatus(e.target.value)}
-              className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400"
-            >
-              {attendanceStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
-            </select>
-          </div>
-
           <div className="flex gap-3 pt-2">
             <button
               type="button"
