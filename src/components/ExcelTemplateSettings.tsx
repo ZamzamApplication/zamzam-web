@@ -73,6 +73,8 @@ export default function ExcelTemplateSettings({
   value: ExcelExportTemplates
   onChange(value: ExcelExportTemplates): void
 }) {
+  const [openTemplate, setOpenTemplate] = useState<ExcelTemplateKey | null>('attendance')
+
   const updateColumns = (key: ExcelTemplateKey, columns: ExcelTemplateColumn[]) => {
     onChange({ ...value, [key]: { ...value[key], columns } })
   }
@@ -145,11 +147,21 @@ export default function ExcelTemplateSettings({
         const template = value[key]
         const enabledCount = template.columns.filter((column) => column.enabled).length
         return (
-          <section key={key} className="rounded-2xl border border-water-200 bg-white/40 p-4 dark:bg-slate-800/40">
-            <div>
-              <h3 className="text-sm font-bold text-deep-800">{TEMPLATE_LABELS[key].title}</h3>
-              <p className="mt-1 text-xs text-deep-500">{TEMPLATE_LABELS[key].description}</p>
-            </div>
+          <section key={key} className="overflow-hidden rounded-2xl border border-water-200 bg-white/40 dark:bg-slate-800/40">
+            <button
+              type="button"
+              onClick={() => setOpenTemplate((current) => current === key ? null : key)}
+              aria-expanded={openTemplate === key}
+              aria-controls={`excel-template-${key}`}
+              className="flex w-full items-center justify-between gap-4 p-4 text-right transition hover:bg-water-50/60 dark:hover:bg-slate-700/30"
+            >
+              <span className="min-w-0">
+                <span className="block text-sm font-bold text-deep-800">{TEMPLATE_LABELS[key].title}</span>
+                <span className="mt-1 block text-xs text-deep-500">{TEMPLATE_LABELS[key].description}</span>
+              </span>
+              <span className={`shrink-0 text-lg text-cyan-700 transition-transform ${openTemplate === key ? 'rotate-180' : ''}`} aria-hidden="true">⌄</span>
+            </button>
+            {openTemplate === key && <div id={`excel-template-${key}`} className="border-t border-water-200/70 p-4">
             <div className="mt-3 grid gap-3 rounded-xl border border-water-200/70 bg-white/45 p-3 sm:grid-cols-2 lg:grid-cols-3 dark:bg-slate-900/30">
               <label className="grid gap-1 text-xs text-deep-600">
                 لون الخلفية
@@ -427,6 +439,7 @@ export default function ExcelTemplateSettings({
             <button type="button" onClick={() => addCustomColumn(key)} className="water-btn-outline mt-3 rounded-xl px-4 py-2 text-xs font-semibold">
               + إضافة عمود مخصص
             </button>
+            </div>}
           </section>
         )
       })}
