@@ -11,7 +11,7 @@ export interface SpreadsheetColumn {
   groupId?: string
   groupLabel?: string
   dateValue?: string
-  headerFontFamily?: string
+  headerFontSize?: number
 }
 
 export interface SpreadsheetSheet {
@@ -74,7 +74,7 @@ export default function ExcelPreviewModal({
   }
   const columnHeaderStyle = (column: SpreadsheetColumn) => ({
     ...headerStyle,
-    fontFamily: column.headerFontFamily || activeSheet.headerFontFamily || 'Arial',
+    fontSize: `${column.headerFontSize || activeSheet.headerFontSize || 12}pt`,
   })
 
   const exportWorkbook = async () => {
@@ -163,7 +163,7 @@ export default function ExcelPreviewModal({
             const cell = worksheet.getCell(rowNumber, columnIndex + 1)
             cell.font = {
               ...cell.font,
-              name: column.headerFontFamily || sheet.headerFontFamily || 'Arial',
+              size: column.headerFontSize || sheet.headerFontSize || 12,
             }
           }
         })

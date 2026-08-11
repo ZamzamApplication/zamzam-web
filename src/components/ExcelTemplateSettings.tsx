@@ -103,7 +103,7 @@ export default function ExcelTemplateSettings({
         enabled: true,
         custom: true,
         width: 18,
-        header_font_family: value[key].header_font_family,
+        header_font_size: value[key].header_font_size,
         show_header: true,
         subcolumns: [],
       },
@@ -150,24 +150,7 @@ export default function ExcelTemplateSettings({
               <h3 className="text-sm font-bold text-deep-800">{TEMPLATE_LABELS[key].title}</h3>
               <p className="mt-1 text-xs text-deep-500">{TEMPLATE_LABELS[key].description}</p>
             </div>
-            <div className="mt-3 grid gap-3 rounded-xl border border-water-200/70 bg-white/45 p-3 sm:grid-cols-2 lg:grid-cols-5 dark:bg-slate-900/30">
-              <datalist id={`excel-fonts-${key}`}>
-                <option value="Arial" />
-                <option value="Calibri" />
-                <option value="Tahoma" />
-                <option value="Traditional Arabic" />
-                <option value="Amiri" />
-              </datalist>
-              <label className="grid gap-1 text-xs text-deep-600">
-                حجم الخط
-                <NumberSettingInput
-                  min={6}
-                  max={72}
-                  value={template.header_font_size}
-                  onChange={(header_font_size) => updateTemplate(key, { header_font_size })}
-                  className="surface-field rounded-lg px-2 py-1.5 text-center text-sm"
-                />
-              </label>
+            <div className="mt-3 grid gap-3 rounded-xl border border-water-200/70 bg-white/45 p-3 sm:grid-cols-2 lg:grid-cols-3 dark:bg-slate-900/30">
               <label className="grid gap-1 text-xs text-deep-600">
                 لون الخلفية
                 <input
@@ -298,8 +281,8 @@ export default function ExcelTemplateSettings({
             )}
             <div className="mt-3 grid gap-2">
               {template.columns.map((column, index) => (
-                <div key={column.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-water-200/80 bg-white/55 px-3 py-2 dark:bg-slate-900/35">
-                  <label className="flex shrink-0 items-center gap-2 text-xs font-semibold text-deep-700">
+                <div key={column.id} className="grid grid-cols-1 gap-3 rounded-xl border border-water-200/80 bg-white/55 p-3 dark:bg-slate-900/35 sm:grid-cols-[auto_minmax(12rem,1fr)_7rem_6rem_auto] sm:items-end">
+                  <label className="flex min-h-9 items-center gap-2 text-xs font-semibold text-deep-700 sm:self-end">
                     <input
                       type="checkbox"
                       checked={column.enabled}
@@ -309,27 +292,28 @@ export default function ExcelTemplateSettings({
                     />
                     تضمين
                   </label>
-                  <input
-                    value={column.label}
-                    onChange={(event) => updateColumn(key, column.id, { label: event.target.value })}
-                    maxLength={80}
-                    required
-                    aria-label={`اسم عمود ${column.label}`}
-                    className="surface-field min-w-40 flex-1 rounded-lg px-3 py-1.5 text-sm"
-                  />
-                  <label className="flex items-center gap-1 text-[11px] text-deep-500">
-                    خط العنوان
+                  <label className="grid min-w-0 gap-1 text-[11px] text-deep-500">
+                    اسم العمود
                     <input
-                      list={`excel-fonts-${key}`}
-                      value={column.header_font_family}
-                      onChange={(event) => updateColumn(key, column.id, { header_font_family: event.target.value })}
+                      value={column.label}
+                      onChange={(event) => updateColumn(key, column.id, { label: event.target.value })}
                       maxLength={80}
                       required
-                      className="surface-field w-32 rounded-lg px-2 py-1.5 text-xs"
-                      aria-label={`خط عنوان ${column.label}`}
+                      aria-label={`اسم عمود ${column.label}`}
+                      className="surface-field w-full min-w-0 rounded-lg px-3 py-1.5 text-sm"
                     />
                   </label>
-                  <label className="flex items-center gap-1 text-[11px] text-deep-500">
+                  <label className="grid gap-1 text-[11px] text-deep-500">
+                    حجم العنوان
+                    <NumberSettingInput
+                      min={6}
+                      max={72}
+                      value={column.header_font_size}
+                      onChange={(header_font_size) => updateColumn(key, column.id, { header_font_size })}
+                      className="surface-field w-full rounded-lg px-2 py-1.5 text-center text-xs"
+                    />
+                  </label>
+                  <label className="grid gap-1 text-[11px] text-deep-500">
                     العرض
                     <input
                       type="number"
@@ -339,15 +323,17 @@ export default function ExcelTemplateSettings({
                       onChange={(event) => updateColumn(key, column.id, {
                         width: Math.min(60, Math.max(1, Number(event.target.value) || 1)),
                       })}
-                      className="surface-field w-16 rounded-lg px-2 py-1.5 text-center text-xs"
+                      className="surface-field w-full rounded-lg px-2 py-1.5 text-center text-xs"
                       aria-label={`عرض عمود ${column.label}`}
                     />
                   </label>
-                  {column.id === 'attendance' && <span className="text-[11px] text-deep-500">يتوسع إلى تواريخ الحلقات</span>}
-                  <button type="button" disabled={index === 0} onClick={() => moveColumn(key, index, -1)} aria-label={`تحريك ${column.label} لأعلى`} className="rounded-lg border border-water-200 px-2 py-1 text-xs disabled:opacity-30">↑</button>
-                  <button type="button" disabled={index === template.columns.length - 1} onClick={() => moveColumn(key, index, 1)} aria-label={`تحريك ${column.label} لأسفل`} className="rounded-lg border border-water-200 px-2 py-1 text-xs disabled:opacity-30">↓</button>
+                  <div className="flex min-h-9 items-center justify-end gap-1 sm:justify-center">
+                    <button type="button" disabled={index === 0} onClick={() => moveColumn(key, index, -1)} aria-label={`تحريك ${column.label} لأعلى`} className="rounded-lg border border-water-200 px-2 py-1 text-xs disabled:opacity-30">↑</button>
+                    <button type="button" disabled={index === template.columns.length - 1} onClick={() => moveColumn(key, index, 1)} aria-label={`تحريك ${column.label} لأسفل`} className="rounded-lg border border-water-200 px-2 py-1 text-xs disabled:opacity-30">↓</button>
+                  </div>
+                  {column.id === 'attendance' && <span className="text-[11px] text-deep-500 sm:col-start-2 sm:col-span-3">يتوسع إلى تواريخ الحلقات</span>}
                   {column.custom && (
-                    <>
+                    <div className="flex flex-wrap items-center gap-3 sm:col-start-2 sm:col-span-4">
                       <button type="button" onClick={() => addSubcolumns(key, column)} disabled={column.subcolumns.length >= 10} className="text-xs font-semibold text-cyan-700 disabled:opacity-40 dark:text-cyan-300">
                         {column.subcolumns.length >= 2 ? '+ فرع' : 'تقسيم لفرعين'}
                       </button>
@@ -359,10 +345,10 @@ export default function ExcelTemplateSettings({
                       <button type="button" onClick={() => removeCustomColumn(key, column.id)} className="text-xs font-semibold text-red-500">
                         حذف
                       </button>
-                    </>
+                    </div>
                   )}
                   {column.id === 'attendance' && (
-                    <div className="flex w-full flex-wrap items-center gap-3 border-t border-water-200/60 pt-2">
+                    <div className="flex flex-wrap items-center gap-3 border-t border-water-200/60 pt-2 sm:col-span-5">
                       <label className="flex items-center gap-2 text-xs text-deep-600">
                         <input
                           type="checkbox"
@@ -395,7 +381,7 @@ export default function ExcelTemplateSettings({
                     </div>
                   )}
                   {column.subcolumns.length >= 2 && (
-                    <div className="grid w-full gap-2 border-t border-water-200/60 pt-2 sm:grid-cols-2">
+                    <div className="grid gap-2 border-t border-water-200/60 pt-2 sm:col-span-5 sm:grid-cols-2">
                       {column.subcolumns.map((child) => (
                         <div key={child.id} className="flex items-center gap-2 rounded-lg bg-water-50/60 p-2 dark:bg-slate-800/60">
                           <input

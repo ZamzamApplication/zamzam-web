@@ -17,7 +17,7 @@ export interface ExcelTemplateColumn {
   enabled: boolean
   custom: boolean
   width: number
-  header_font_family: string
+  header_font_size: number
   show_header: boolean
   subcolumns: ExcelTemplateSubcolumn[]
 }
@@ -49,7 +49,7 @@ export interface ExcelExportTemplate {
 export type ExcelExportTemplates = Record<ExcelTemplateKey, ExcelExportTemplate>
 
 function standardColumn(id: string, label: string, width: number, enabled = true): ExcelTemplateColumn {
-  return { id, label, enabled, custom: false, width, header_font_family: 'Arial', show_header: true, subcolumns: [] }
+  return { id, label, enabled, custom: false, width, header_font_size: 12, show_header: true, subcolumns: [] }
 }
 
 function quranRangeColumn(id: 'memorization' | 'revision', label: string): ExcelTemplateColumn {
@@ -179,7 +179,7 @@ export function configuredExcelExportTemplates(value?: Partial<ExcelExportTempla
                 ...configured.map((column) => ({
                   ...column,
                   width: column.width ?? 18,
-                  header_font_family: column.header_font_family?.trim() || value?.[key]?.header_font_family?.trim() || DEFAULT_TEMPLATE_STYLE.header_font_family,
+                  header_font_size: column.header_font_size ?? value?.[key]?.header_font_size ?? DEFAULT_TEMPLATE_STYLE.header_font_size,
                   show_header: column.show_header ?? true,
                   subcolumns: Array.isArray(column.subcolumns)
                     ? column.subcolumns.map((subcolumn) => ({ ...subcolumn, width: subcolumn.width ?? 18 }))
@@ -188,7 +188,7 @@ export function configuredExcelExportTemplates(value?: Partial<ExcelExportTempla
               ]
             : DEFAULT_EXCEL_EXPORT_TEMPLATES[key].columns.map((column) => ({
                 ...column,
-                header_font_family: column.header_font_family || DEFAULT_TEMPLATE_STYLE.header_font_family,
+                header_font_size: column.header_font_size ?? DEFAULT_TEMPLATE_STYLE.header_font_size,
                 show_header: true,
                 subcolumns: column.subcolumns.map((subcolumn) => ({ ...subcolumn })),
               })),
@@ -228,7 +228,7 @@ export function applyExcelTemplate(
               ? formatAttendanceDate(sourceColumn.dateValue, template.attendance_date_format)
               : '',
             width: column.width,
-            headerFontFamily: column.header_font_family,
+            headerFontSize: column.header_font_size,
             groupId: column.id,
             groupLabel: column.label,
           }))
@@ -239,7 +239,7 @@ export function applyExcelTemplate(
           .map((sourceColumn) => ({
             ...sourceColumn,
             width: column.width,
-            headerFontFamily: column.header_font_family,
+            headerFontSize: column.header_font_size,
             groupId: column.id,
             groupLabel: column.label,
           }))
@@ -249,7 +249,7 @@ export function applyExcelTemplate(
           id: `${column.id}__${subcolumn.id}`,
           label: subcolumn.label,
           width: subcolumn.width,
-          headerFontFamily: column.header_font_family,
+          headerFontSize: column.header_font_size,
           groupId: column.id,
           groupLabel: column.label,
         }))
@@ -259,7 +259,7 @@ export function applyExcelTemplate(
         id: column.id,
         label: column.label || sourceColumn?.label || 'عمود',
         width: column.width,
-        headerFontFamily: column.header_font_family,
+        headerFontSize: column.header_font_size,
       }]
     })
   return {
