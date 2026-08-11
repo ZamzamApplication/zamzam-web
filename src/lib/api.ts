@@ -329,6 +329,13 @@ export const api = {
     })
   },
 
+  updateSessionProgressTracking(sessionId: number, enabled: boolean, expectedVersion?: number) {
+    return request<{ session_id: number; quran_progress_enabled: boolean; version: number }>(`/sessions/${sessionId}/progress-tracking`, {
+      method: 'PUT',
+      body: JSON.stringify({ enabled, expected_version: expectedVersion ?? null }),
+    })
+  },
+
   deleteSession(sessionId: number) {
     return request(`/sessions/${sessionId}`, { method: 'DELETE' })
   },

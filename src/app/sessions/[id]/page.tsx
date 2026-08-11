@@ -284,6 +284,8 @@ export default function SessionAttendancePage() {
   const [saveState, setSaveState] = useState<'idle' | 'pending' | 'saving' | 'saved' | 'error'>('idle')
   const [saveError, setSaveError] = useState('')
   const [progressEnabled, setProgressEnabled] = useState(false)
+  const [tahfizProgressEnabled, setTahfizProgressEnabled] = useState(false)
+  const [progressToggleSaving, setProgressToggleSaving] = useState(false)
   const [attendanceStatuses, setAttendanceStatuses] = useState<string[]>(DEFAULT_ATTENDANCE_STATUSES)
   const [attendanceStatusColors, setAttendanceStatusColors] = useState<Record<string, string>>({
     'حاضر': 'green', 'غياب': 'slate', 'غياب بعذر': 'amber', 'لا ينطبق': 'sky',
@@ -347,7 +349,8 @@ export default function SessionAttendancePage() {
       dataRef.current = sessionData
       setAllSessions(sessions)
       setUserRole(currentUser.role || '')
-      const enabled = Boolean(currentUser.tahfiz?.progress_tracking_enabled)
+      const enabled = Boolean(progress.enabled)
+      setTahfizProgressEnabled(Boolean(currentUser.tahfiz?.progress_tracking_enabled))
       setProgressEnabled(enabled)
       setAttendanceStatuses(configuredAttendanceStatuses(currentUser.tahfiz?.attendance_statuses))
       const effectivePresentStatus = configuredPresentStatus(currentUser.tahfiz?.present_status, currentUser.tahfiz?.attendance_statuses)
@@ -637,6 +640,46 @@ export default function SessionAttendancePage() {
     }
   }
 
+  const handleProgressToggle = async () => {
+    if (!data || data.is_confirmed || progressToggleSaving) return
+    const nextEnabled = !data.quran_progress_enabled
+    setProgressToggleSaving(true)
+    setSaveError('')
+    try {
+      if (flushTimer.current) clearTimeout(flushTimer.current)
+      if (!(await flushUpdates()) || pendingUpdates.current.size > 0) return
+      const result = await api.updateSessionProgressTracking(data.session_id, nextEnabled, dataRef.current?.version ?? data.version)
+      setData((current) => current ? {
+        ...current,
+        quran_progress_enabled: result.quran_progress_enabled,
+        version: result.version,
+      } : current)
+      if (dataRef.current) dataRef.current = {
+        ...dataRef.current,
+        quran_progress_enabled: result.quran_progress_enabled,
+        version: result.version,
+      }
+      if (nextEnabled) {
+        globalThis.location.reload()
+        return
+      }
+      setProgressEnabled(false)
+      setProgressDrafts({})
+      setPersistedProgressDrafts({})
+      setPreviousProgressDrafts({})
+      setSuggestedProgressDrafts({})
+      setSavedProgressKeys(new Set())
+      setDirtyProgressKeys(new Set())
+      setSaveState('saved')
+    } catch (err: any) {
+      const detail = typeof err.message === 'string' ? err.message : ''
+      setSaveError(detail || 'تعذر تغيير متابعة القرآن لهذه الحلقة')
+      setSaveState('error')
+    } finally {
+      setProgressToggleSaving(false)
+    }
+  }
+
   const navigateAfterSave = async (href: string) => {
     if (flushTimer.current) clearTimeout(flushTimer.current)
     const attendanceSaved = await flushUpdates()
@@ -818,6 +861,31 @@ export default function SessionAttendancePage() {
           )}
         </div>
       </div>
+
+      {tahfizProgressEnabled && (userRole === 'admin' || userRole === 'super_admin') && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-water-200 bg-white/55 px-4 py-3 dark:bg-slate-800/55">
+          <div>
+            <p className="text-sm font-bold text-deep-800">متابعة القرآن لهذه الحلقة</p>
+            <p className="mt-0.5 text-xs text-deep-500">
+              {data.quran_progress_enabled
+                ? 'الحفظ والمراجعتان مطلوبان للحاضرين في هذه الحلقة.'
+                : 'حلقة استثنائية: لن تظهر حقول الحفظ والمراجعة ولن تكون مطلوبة.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={data.quran_progress_enabled}
+            onClick={handleProgressToggle}
+            disabled={data.is_confirmed || progressToggleSaving}
+            className={`relative h-8 w-14 shrink-0 rounded-full transition disabled:cursor-not-allowed disabled:opacity-50 ${data.quran_progress_enabled ? 'bg-cyan-600' : 'bg-slate-300 dark:bg-slate-600'}`}
+            title={data.is_confirmed ? 'أعد فتح الحلقة لتغيير هذا الخيار' : undefined}
+          >
+            <span className={`absolute top-1 h-6 w-6 rounded-full bg-white shadow transition-all ${data.quran_progress_enabled ? 'right-7' : 'right-1'}`} />
+            <span className="sr-only">{data.quran_progress_enabled ? 'إيقاف متابعة القرآن' : 'تشغيل متابعة القرآن'}</span>
+          </button>
+        </div>
+      )}
 
       <div aria-live="polite" className="mb-4 min-h-6 text-center text-sm">
         {saveState === 'pending' && <span className="text-amber-600">تغييرات بانتظار الحفظ...</span>}

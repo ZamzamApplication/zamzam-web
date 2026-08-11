@@ -142,6 +142,7 @@ export interface Session {
   id: number
   date: string
   is_confirmed: boolean
+  quran_progress_enabled: boolean
   status?: 'draft' | 'confirmed' | 'reopened'
   version?: number
   circle_id: number
@@ -168,6 +169,7 @@ export interface SessionAttendance {
   session_id: number
   date: string
   is_confirmed: boolean
+  quran_progress_enabled: boolean
   status?: 'draft' | 'confirmed' | 'reopened'
   version: number
   circle_id: number
