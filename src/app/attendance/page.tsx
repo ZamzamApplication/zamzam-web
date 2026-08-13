@@ -15,6 +15,7 @@ import ConfirmDialog from '@/components/ConfirmDialog'
 import { attendanceStatusColorClass } from '@/components/AttendanceStatusControl'
 import { surahInfo } from '@/lib/quran'
 import type { QuranRangeSnapshot } from '@/lib/types'
+import { sessionDateLabel } from '@/lib/session-label'
 
 interface SavedFilter {
   id: number
@@ -290,10 +291,12 @@ export default function AttendancePage() {
   useEffect(() => {
     api.getSheikhs().then(setSheikhs).catch(console.error)
     api.getPastSessions()
-      .then((sessions: { id: number; date: string; circle_id: number }[]) => {
+      .then((sessions: { id: number; date: string; name?: string | null; daily_sequence?: number; circle_id: number }[]) => {
         setAllSessions(sessions.map((session) => ({
           id: session.id,
           date: session.date,
+          name: session.name,
+          daily_sequence: session.daily_sequence,
           circle_id: session.circle_id,
         })))
       })
@@ -420,7 +423,7 @@ export default function AttendancePage() {
     const templates = configuredExcelExportTemplates(user?.tahfiz?.excel_export_templates)
     const sessionColumns = displaySessions.map((session) => ({
       id: `session_${session.id}`,
-      label: formatDateWithWeekday(session.date),
+      label: sessionDateLabel(session, formatDateWithWeekday),
       dateValue: session.date,
     }))
     const sourceSheet: SpreadsheetSheet = {
@@ -696,7 +699,7 @@ export default function AttendancePage() {
                     const status = student.records[String(s.id)]!
                     return (
                       <div key={s.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
-                        <span className="text-xs text-deep-600 truncate">{formatDateWithWeekday(s.date)}</span>
+                        <span className="text-xs text-deep-600 truncate">{sessionDateLabel(s, formatDateWithWeekday)}</span>
                         <span className={`shrink-0 inline-block rounded-lg border px-2 py-1 text-xs font-medium ${statusColorClass(status)}`}>
                           {status}
                         </span>
@@ -714,7 +717,7 @@ export default function AttendancePage() {
               <tr className="border-b border-water-200/30">
                 <th className="data-table-header text-right py-3 px-3 text-deep-800 sticky right-0 z-10 min-w-[240px]">الطالب</th>
                 {displaySessions.map((s) => (
-                  <th key={s.id} className="data-table-header text-center py-3 px-2 text-deep-700 text-xs whitespace-nowrap min-w-[96px]">{formatDateWithWeekday(s.date)}</th>
+                  <th key={s.id} className="data-table-header text-center py-3 px-2 text-deep-700 text-xs whitespace-nowrap min-w-[96px]">{sessionDateLabel(s, formatDateWithWeekday)}</th>
                 ))}
               </tr>
             </thead>
@@ -853,7 +856,7 @@ function WarningModal({
 
   const selectedLabels = sessions
     .filter((s) => selectedIds.includes(s.id))
-    .map((s) => formatDateWithWeekday(s.date))
+    .map((s) => sessionDateLabel(s, formatDateWithWeekday))
 
   const previewMessage = `انذار رقم ${previewNumbers.next ?? '...'} الى الطالب "${student.name}"
  بسبب غيابه بدون اعتذار عن حلقات:
@@ -940,7 +943,7 @@ ${selectedLabels.map((label) => `* ${label}`).join('\n') || '* ...'}
                         onChange={() => toggleSession(session.id)}
                         className="rounded"
                       />
-                      <span className="text-sm text-deep-800">{formatDateWithWeekday(session.date)}</span>
+                      <span className="text-sm text-deep-800">{sessionDateLabel(session, formatDateWithWeekday)}</span>
                     </span>
                     <span className={`rounded-lg border px-2 py-1 text-xs font-medium ${attendanceStatusColorClass(statusColors[status])}`}>
                       {status}

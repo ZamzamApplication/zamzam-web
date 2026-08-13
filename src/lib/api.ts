@@ -11,6 +11,8 @@ import type {
   SheikhInfo,
   MoveStudentResult,
   StudentProfile,
+  StudentInfo,
+  StudentCategory,
   SubscriptionMonthRecord,
   SubscriptionMonthsResponse,
   SubscriptionPaymentMethod,
@@ -322,10 +324,10 @@ export const api = {
     })
   },
 
-  updateSessionDate(sessionId: number, sessionDate: string) {
+  updateSessionDate(sessionId: number, sessionDate: string, name?: string | null) {
     return request(`/sessions/${sessionId}`, {
       method: 'PUT',
-      body: JSON.stringify({ session_date: sessionDate }),
+      body: JSON.stringify({ session_date: sessionDate, name: name ?? null }),
     })
   },
 
@@ -340,11 +342,38 @@ export const api = {
     return request(`/sessions/${sessionId}`, { method: 'DELETE' })
   },
 
-  createSession(sessionDate: string) {
+  createSession(sessionDate: string, options?: { name?: string | null; studentIds?: number[] }) {
     return request('/sessions/', {
       method: 'POST',
-      body: JSON.stringify({ session_date: sessionDate }),
+      body: JSON.stringify({
+        session_date: sessionDate,
+        name: options?.name || null,
+        ...(options?.studentIds ? { student_ids: options.studentIds } : {}),
+      }),
     })
+  },
+
+  updateSessionMembership(sessionId: number, studentIds: number[], expectedVersion?: number) {
+    return request<{ session_id: number; student_ids: number[]; student_count: number; version: number }>(`/sessions/${sessionId}/membership`, {
+      method: 'PUT',
+      body: JSON.stringify({ student_ids: studentIds, expected_version: expectedVersion ?? null }),
+    })
+  },
+
+  getStudentCategories() {
+    return request<StudentCategory[]>('/student-categories')
+  },
+
+  createStudentCategory(name: string) {
+    return request<StudentCategory>('/student-categories', { method: 'POST', body: JSON.stringify({ name }) })
+  },
+
+  updateStudentCategory(id: number, name: string) {
+    return request<StudentCategory>(`/student-categories/${id}`, { method: 'PUT', body: JSON.stringify({ name }) })
+  },
+
+  deleteStudentCategory(id: number) {
+    return request(`/student-categories/${id}`, { method: 'DELETE' })
   },
 
   getSheikhs() {
@@ -582,14 +611,14 @@ export const api = {
   },
 
   getStudents() {
-    return request('/students')
+    return request<StudentInfo[]>('/students')
   },
 
   getStudentProfile(studentId: number) {
     return request<StudentProfile>(`/students/${studentId}/profile`)
   },
 
-  createStudent(name: string, sheikhId: number, phone?: string, birthday?: string, customStudentId?: string, status?: string, parentPhones?: { phone_number: string; parent_type: string }[], registrationDate?: string) {
+  createStudent(name: string, sheikhId: number, phone?: string, birthday?: string, customStudentId?: string, status?: string, parentPhones?: { phone_number: string; parent_type: string }[], registrationDate?: string, categoryIds?: number[]) {
     return request('/students', {
       method: 'POST',
       body: JSON.stringify({
@@ -601,6 +630,7 @@ export const api = {
         status: status || 'مقيد',
         registration_date: registrationDate || null,
         parent_phones: parentPhones || [],
+        category_ids: categoryIds || [],
       }),
     })
   },
@@ -654,7 +684,7 @@ export const api = {
     })
   },
 
-  updateStudent(id: number, name?: string, phone?: string, birthday?: string, customStudentId?: string, profilePic?: string, status?: string, parentPhones?: { phone_number?: string; parent_type?: string }[], registrationDate?: string) {
+  updateStudent(id: number, name?: string, phone?: string, birthday?: string, customStudentId?: string, profilePic?: string, status?: string, parentPhones?: { phone_number?: string; parent_type?: string }[], registrationDate?: string, categoryIds?: number[]) {
     const body: Record<string, unknown> = {}
     if (name !== undefined) body.name = name
     if (phone !== undefined) body.phone = phone ?? null
@@ -664,6 +694,7 @@ export const api = {
     if (status !== undefined) body.status = status
     if (registrationDate !== undefined) body.registration_date = registrationDate ?? null
     if (parentPhones !== undefined) body.parent_phones = parentPhones
+    if (categoryIds !== undefined) body.category_ids = categoryIds
     return request(`/students/${id}`, {
       method: 'PUT',
       body: JSON.stringify(body),

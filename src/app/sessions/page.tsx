@@ -10,6 +10,7 @@ import CreateSessionModal from '@/components/CreateSessionModal'
 import AsyncState from '@/components/AsyncState'
 import ConfirmDialog from '@/components/ConfirmDialog'
 import { canPermanentlyDeleteSession, sessionDeletionConfirmation } from '@/lib/session-lifecycle'
+import { sessionDescriptor } from '@/lib/session-label'
 
 export default function SessionsPage() {
   const [allSessions, setAllSessions] = useState<Session[]>([])
@@ -46,7 +47,7 @@ export default function SessionsPage() {
     if (filter === 'upcoming') {
       return allSessions
         .filter((session) => !session.is_confirmed)
-        .sort((a, b) => a.date.localeCompare(b.date))
+        .sort((a, b) => a.date.localeCompare(b.date) || (a.daily_sequence || 1) - (b.daily_sequence || 1) || a.id - b.id)
     }
     if (filter === 'past') return allSessions.filter((session) => session.is_confirmed)
     return allSessions
@@ -134,8 +135,9 @@ export default function SessionsPage() {
             >
               <div className="flex justify-between items-start gap-3">
                 <div className="min-w-0">
-                  <h3 className="font-semibold text-base sm:text-lg text-deep-800 leading-7">حلقة {formatDateWithWeekday(s.date)}</h3>
+                  <h3 className="font-semibold text-base sm:text-lg text-deep-800 leading-7">{formatDateWithWeekday(s.date)} — {sessionDescriptor(s)}</h3>
                   {s.circle_name && <p className="text-xs text-deep-500 mt-0.5">{s.circle_name}</p>}
+                  {s.student_count != null && <p className="text-xs text-deep-500 mt-0.5">{s.student_count} طالب</p>}
                 </div>
                 <div className="flex flex-col-reverse sm:flex-row items-end sm:items-center gap-2 shrink-0">
                   {canManage && (canPermanentlyDeleteSession(s) ? <button

@@ -28,6 +28,7 @@ export interface User {
     attendance_streak_reset_statuses?: string[]
     present_status?: string
     absent_status?: string
+    multiple_sessions_per_day_enabled?: boolean
     whatsend_enabled?: boolean
     progress_tracking_enabled?: boolean
   } | null
@@ -128,6 +129,7 @@ export interface Circle {
   attendance_streak_reset_statuses?: string[]
   present_status?: string
   absent_status?: string
+  multiple_sessions_per_day_enabled?: boolean
   contact_phone?: string
   whatsend_api_url?: string
   whatsend_groups_url?: string
@@ -143,6 +145,10 @@ export interface Circle {
 export interface Session {
   id: number
   date: string
+  name?: string | null
+  daily_sequence?: number
+  explicit_membership?: boolean
+  student_count?: number
   is_confirmed: boolean
   quran_progress_enabled: boolean
   status?: 'draft' | 'confirmed' | 'reopened'
@@ -170,6 +176,10 @@ export interface SheikhGroup {
 export interface SessionAttendance {
   session_id: number
   date: string
+  name?: string | null
+  daily_sequence?: number
+  explicit_membership?: boolean
+  student_count?: number
   is_confirmed: boolean
   quran_progress_enabled: boolean
   status?: 'draft' | 'confirmed' | 'reopened'
@@ -391,6 +401,14 @@ export interface StudentInfo {
   parent_phones?: ParentPhone[]
   excused_weekdays?: ExcusedWeekdayInfo[]
   excused_periods?: ExcusedPeriodInfo[]
+  categories?: StudentCategory[]
+  category_ids?: number[]
+}
+
+export interface StudentCategory {
+  id: number
+  name: string
+  student_count?: number
 }
 
 export interface AttendanceThresholdAlert {
@@ -458,6 +476,8 @@ export interface StudentStreak {
 export interface AttendanceGridSession {
   id: number
   date: string
+  name?: string | null
+  daily_sequence?: number
   circle_id: number
 }
 

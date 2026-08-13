@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { api } from '@/lib/api'
 import { configuredAbsentStatus, configuredAttendanceStatuses, configuredPresentStatus } from '@/lib/attendance'
 import { configuredExcelExportTemplates, DEFAULT_EXCEL_EXPORT_TEMPLATES, type ExcelExportTemplates } from '@/lib/excel-templates'
-import type { Circle, SheikhInfo, TahfizInvitation } from '@/lib/types'
+import type { Circle, SheikhInfo, StudentCategory, TahfizInvitation } from '@/lib/types'
 import AsyncState from '@/components/AsyncState'
 import ExcelTemplateSettings from '@/components/ExcelTemplateSettings'
 
@@ -49,6 +49,10 @@ export default function TahfizSettingsPage() {
   const [streakStatus, setStreakStatus] = useState('غياب بعذر')
   const [presentStatus, setPresentStatus] = useState('حاضر')
   const [absentStatus, setAbsentStatus] = useState('غياب')
+  const [multipleSessionsEnabled, setMultipleSessionsEnabled] = useState(false)
+  const [studentCategories, setStudentCategories] = useState<StudentCategory[]>([])
+  const [newStudentCategory, setNewStudentCategory] = useState('')
+  const [categoryBusy, setCategoryBusy] = useState(false)
   const [newAttendanceStatus, setNewAttendanceStatus] = useState('')
   const [editingAttendanceStatus, setEditingAttendanceStatus] = useState<string | null>(null)
   const [editedAttendanceStatusName, setEditedAttendanceStatusName] = useState('')
@@ -91,6 +95,7 @@ export default function TahfizSettingsPage() {
         setAttendanceStatuses(configuredAttendanceStatuses(data.attendance_statuses))
         setPresentStatus(configuredPresentStatus(data.present_status, data.attendance_statuses))
         setAbsentStatus(configuredAbsentStatus(data.absent_status, data.attendance_statuses))
+        setMultipleSessionsEnabled(Boolean(data.multiple_sessions_per_day_enabled))
         setAttendanceStatusColors(data.attendance_status_colors || {
           'حاضر': 'green', 'غياب': 'slate', 'غياب بعذر': 'amber', 'لا ينطبق': 'sky',
         })
@@ -106,6 +111,55 @@ export default function TahfizSettingsPage() {
       .catch((err: any) => setError(err.message || 'تعذر تحميل إعدادات التحفيظ'))
       .finally(() => setLoading(false))
   }, [router])
+
+  useEffect(() => {
+    api.getStudentCategories()
+      .then(setStudentCategories)
+      .catch(() => {})
+  }, [])
+
+  const createStudentCategory = async () => {
+    const categoryName = newStudentCategory.trim()
+    if (!categoryName) return
+    setCategoryBusy(true)
+    setError('')
+    try {
+      const created = await api.createStudentCategory(categoryName)
+      setStudentCategories(current => [...current, created].sort((a, b) => a.name.localeCompare(b.name, 'ar')))
+      setNewStudentCategory('')
+    } catch (reason: any) {
+      setError(reason.message || 'تعذر إنشاء تصنيف الطلاب')
+    } finally {
+      setCategoryBusy(false)
+    }
+  }
+
+  const renameStudentCategory = async (category: StudentCategory) => {
+    const nextName = window.prompt('اسم التصنيف الجديد', category.name)?.trim()
+    if (!nextName || nextName === category.name) return
+    setCategoryBusy(true)
+    try {
+      const updated = await api.updateStudentCategory(category.id, nextName)
+      setStudentCategories(current => current.map(item => item.id === category.id ? { ...item, name: updated.name } : item))
+    } catch (reason: any) {
+      setError(reason.message || 'تعذر تعديل التصنيف')
+    } finally {
+      setCategoryBusy(false)
+    }
+  }
+
+  const deleteStudentCategory = async (category: StudentCategory) => {
+    if (!window.confirm(`حذف تصنيف «${category.name}»؟ لن تتغير الحلقات السابقة.`)) return
+    setCategoryBusy(true)
+    try {
+      await api.deleteStudentCategory(category.id)
+      setStudentCategories(current => current.filter(item => item.id !== category.id))
+    } catch (reason: any) {
+      setError(reason.message || 'تعذر حذف التصنيف')
+    } finally {
+      setCategoryBusy(false)
+    }
+  }
 
   const loadInvitations = async () => {
     const [invitationRows, sheikhRows] = await Promise.all([
@@ -285,6 +339,7 @@ export default function TahfizSettingsPage() {
           absent_status: absentStatus,
           attendance_sheikh_selection_enabled: sheikhSelectionEnabled,
           restrict_sheikh_student_access: restrictSheikhStudentAccess,
+          multiple_sessions_per_day_enabled: multipleSessionsEnabled,
         },
         progress: { progress_tracking_enabled: progressTrackingEnabled },
         excel: { excel_export_templates: excelExportTemplates },
@@ -355,7 +410,7 @@ export default function TahfizSettingsPage() {
       {error && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/25 dark:text-red-200">{error}</div>}
       {notice && <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/25 dark:text-emerald-200">{notice}</div>}
 
-      <form onSubmit={event => void save(event, section)} onChangeCapture={() => setDirty(true)} onClickCapture={event => { if ((event.target as HTMLElement).closest('button:not([type="submit"])')) setDirty(true) }} className="space-y-5">
+      <form onSubmit={event => void save(event, section)} onChangeCapture={event => { if (!(event.target as HTMLElement).closest('[data-immediate-action]')) setDirty(true) }} onClickCapture={event => { const button = (event.target as HTMLElement).closest('button:not([type="submit"])'); if (button && !button.closest('[data-immediate-action]')) setDirty(true) }} className="space-y-5">
         {section === 'general' && <>
         <SettingsSection title="بيانات التحفيظ" description="الاسم وبيانات التواصل الظاهرة للمستخدمين.">
           <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -419,6 +474,30 @@ export default function TahfizSettingsPage() {
               title="اختيار الشيخ أثناء تسجيل الحضور"
               description="عند إيقافه يُخفى عمود الشيخ ويُستخدم الشيخ المرتبط بالطالب تلقائياً."
             />
+          </div>
+          <div className="mt-3">
+            <FeatureToggle
+              enabled={multipleSessionsEnabled}
+              onChange={setMultipleSessionsEnabled}
+              title="السماح بأكثر من حلقة في اليوم"
+              description="عند التفعيل يمكنك إنشاء حلقات متعددة في التاريخ نفسه واختيار طلاب كل حلقة بالتصنيفات والاستثناءات."
+            />
+          </div>
+          <div className="mt-5 rounded-xl border border-water-200/70 bg-white/35 p-4 dark:bg-slate-800/35">
+            <h3 className="text-sm font-bold text-deep-800">تصنيفات الطلاب</h3>
+            <p className="mt-1 text-xs text-deep-500">مثل صباحي أو مسائي. يمكن إسناد الطالب لأكثر من تصنيف من صفحة تعديله.</p>
+            <div className="mt-3 flex gap-2" data-immediate-action>
+              <input value={newStudentCategory} onChange={event => setNewStudentCategory(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); void createStudentCategory() } }} maxLength={50} placeholder="اسم التصنيف" className="surface-field min-w-0 flex-1 rounded-xl px-3 py-2 text-sm" />
+              <button type="button" onClick={() => void createStudentCategory()} disabled={categoryBusy || !newStudentCategory.trim()} className="water-btn rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">إضافة</button>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2" data-immediate-action>
+              {studentCategories.length === 0 && <span className="text-xs text-deep-500">لا توجد تصنيفات بعد.</span>}
+              {studentCategories.map(category => <span key={category.id} className="inline-flex items-center gap-2 rounded-full border border-water-200 bg-white/60 px-3 py-1.5 text-xs text-deep-700 dark:bg-slate-800/60">
+                <span>{category.name} ({category.student_count || 0})</span>
+                <button type="button" disabled={categoryBusy} onClick={() => void renameStudentCategory(category)} aria-label={`تعديل ${category.name}`} className="font-bold text-cyan-700">✎</button>
+                <button type="button" disabled={categoryBusy} onClick={() => void deleteStudentCategory(category)} aria-label={`حذف ${category.name}`} className="font-bold text-red-500">×</button>
+              </span>)}
+            </div>
           </div>
           <div className="mt-5">
             <h3 className="text-sm font-bold text-deep-800">خيارات حالة الحضور</h3>

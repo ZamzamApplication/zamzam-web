@@ -9,7 +9,7 @@ import { compressProfileImage } from '@/lib/image'
 import { configuredAttendanceStatuses } from '@/lib/attendance'
 import { formatQuranRange, SURAHS, surahInfo } from '@/lib/quran'
 import { filterDestinationSheikhs, filterMoveStudents } from '@/lib/move-student'
-import type { Circle, ExcusedPeriodInfo, ExcusedWeekdayInfo, QuranProgressEntry, QuranProgressRevision, QuranProgressTrendPoint, QuranRangeType, SheikhDeletionPreview, SheikhInfo, SheikhStudentDeletionResolution, StudentGoal, StudentInfo, StudentQuranPlan, TahfizInvitation, UserInfo, WardCategory, WarningInfo, WarningRow, WhatsAppGroup } from '@/lib/types'
+import type { Circle, ExcusedPeriodInfo, ExcusedWeekdayInfo, QuranProgressEntry, QuranProgressRevision, QuranProgressTrendPoint, QuranRangeType, SheikhDeletionPreview, SheikhInfo, SheikhStudentDeletionResolution, StudentCategory, StudentGoal, StudentInfo, StudentQuranPlan, TahfizInvitation, UserInfo, WardCategory, WarningInfo, WarningRow, WhatsAppGroup } from '@/lib/types'
 import AsyncState from '@/components/AsyncState'
 
 const WEEKDAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
@@ -58,6 +58,28 @@ function Modal({ title, onClose, children, wide = false }: { title: string; onCl
 function ErrorMsg({ error }: { error: string }) {
   if (!error) return null
   return <div className="bg-red-50/80 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-4 py-2 rounded-xl mb-4 text-sm text-center border border-red-200 dark:border-red-800">{error}</div>
+}
+
+function StudentCategoryPicker({ selected, onChange }: { selected: number[]; onChange(ids: number[]): void }) {
+  const [categories, setCategories] = useState<StudentCategory[]>([])
+
+  useEffect(() => {
+    api.getStudentCategories().then(setCategories).catch(() => {})
+  }, [])
+
+  if (categories.length === 0) return null
+  return <div>
+    <span className="block text-sm text-deep-600 mb-2">تصنيفات الطالب</span>
+    <div className="flex flex-wrap gap-2">
+      {categories.map(category => {
+        const checked = selected.includes(category.id)
+        return <label key={category.id} className={`flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-xs ${checked ? 'border-cyan-500 bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-200' : 'border-water-200 text-deep-600'}`}>
+          <input type="checkbox" checked={checked} onChange={() => onChange(checked ? selected.filter(id => id !== category.id) : [...selected, category.id])} className="rounded" />
+          {category.name}
+        </label>
+      })}
+    </div>
+  </div>
 }
 
 function WhatsAppGroupSelect({ value, onChange }: { value: string; onChange: (value: string) => void }) {
@@ -400,6 +422,7 @@ function AddStudentModal({ sheikhId, sheikhName, onClose, onCreated }: { sheikhI
   const [parentPhones, setParentPhones] = useState<{ phone_number: string; parent_type: string; name?: string }[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [categoryIds, setCategoryIds] = useState<number[]>([])
 
   const addParentPhone = () => {
     setParentPhones([...parentPhones, { phone_number: '', parent_type: 'أب', name: '' }])
@@ -430,7 +453,7 @@ function AddStudentModal({ sheikhId, sheikhName, onClose, onCreated }: { sheikhI
     setError('')
     try {
       const filteredPhones = parentPhones.filter((p) => p.phone_number)
-      const result = await api.createStudent(name, sheikhId, phone || undefined, birthday || undefined, studentId || undefined, status, filteredPhones.length ? filteredPhones : undefined, registrationDate || undefined)
+      const result = await api.createStudent(name, sheikhId, phone || undefined, birthday || undefined, studentId || undefined, status, filteredPhones.length ? filteredPhones : undefined, registrationDate || undefined, categoryIds)
       if (profilePicFile) {
         await api.uploadStudentPic(result.id, profilePicFile)
       }
@@ -476,6 +499,7 @@ function AddStudentModal({ sheikhId, sheikhName, onClose, onCreated }: { sheikhI
             <option value="غير مقيد">غير مقيد</option>
           </select>
         </div>
+        <StudentCategoryPicker selected={categoryIds} onChange={setCategoryIds} />
         <div className="border-t border-water-200/30 pt-3">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-deep-700">أرقام ولي الأمر</span>
@@ -540,6 +564,7 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
   const [quranPlansLoaded, setQuranPlansLoaded] = useState(false)
   const [quranPlansLoading, setQuranPlansLoading] = useState(true)
   const [quranPlansError, setQuranPlansError] = useState('')
+  const [categoryIds, setCategoryIds] = useState<number[]>(student.category_ids || student.categories?.map(category => category.id) || [])
 
   useEffect(() => {
     if (!student.excused_weekdays) {
@@ -748,7 +773,7 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
     setError('')
     try {
       await Promise.all([
-        api.updateStudent(student.id, name, phone || undefined, birthday || undefined, studentId || undefined, profilePic || undefined, status, parentPhones, registrationDate || undefined),
+        api.updateStudent(student.id, name, phone || undefined, birthday || undefined, studentId || undefined, profilePic || undefined, status, parentPhones, registrationDate || undefined, categoryIds),
         api.updateExcusedWeekdays(student.id, excusedWeekdays),
         ...(quranPlansLoaded ? [api.updateStudentQuranPlans(student.id, quranPlans)] : []),
       ])
@@ -829,6 +854,7 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
             <option value="غير مقيد">غير مقيد</option>
           </select>
         </div>
+        <StudentCategoryPicker selected={categoryIds} onChange={setCategoryIds} />
         <div className="border-t border-water-200/30 pt-3">
           <div className="mb-3">
             <span className="block text-sm font-bold text-deep-700">خطة الورد</span>

@@ -8,6 +8,8 @@ import type { AttendanceThresholdAlert, ProgressCategory, QuranProgressInput, Se
 import InlineQuranProgress, { createRequiredProgressDraft, INLINE_PROGRESS_CATEGORIES, isSurahAyahRangeComplete, type ProgressDraftMap, progressDraftKey, progressEntryToInput } from '@/components/InlineQuranProgress'
 import AttendanceStatusControl, { attendanceStatusColorClass } from '@/components/AttendanceStatusControl'
 import { configuredAttendanceStatuses, configuredPresentStatus, DEFAULT_ATTENDANCE_STATUSES } from '@/lib/attendance'
+import { sessionDescriptor } from '@/lib/session-label'
+import SessionMembershipModal from '@/components/SessionMembershipModal'
 
 function isProgressDraftComplete(draft?: QuranProgressInput) {
   return isSurahAyahRangeComplete(draft)
@@ -273,6 +275,7 @@ export default function SessionAttendancePage() {
   const [loading, setLoading] = useState(true)
   const [editingDate, setEditingDate] = useState(false)
   const [editDateVal, setEditDateVal] = useState('')
+  const [editNameVal, setEditNameVal] = useState('')
   const pendingUpdates = useRef<Map<number, { status?: string; notes?: string; sheikh_id?: number }>>(new Map())
   const flushTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const flushInFlight = useRef(false)
@@ -305,6 +308,7 @@ export default function SessionAttendancePage() {
   const [reopening, setReopening] = useState(false)
   const [studentSearch, setStudentSearch] = useState('')
   const [thresholdAlerts, setThresholdAlerts] = useState<AttendanceThresholdAlert[]>([])
+  const [showMembership, setShowMembership] = useState(false)
 
   const showThresholdAlerts = useCallback((alerts: AttendanceThresholdAlert[]) => {
     if (!alerts.length) return
@@ -399,7 +403,7 @@ export default function SessionAttendancePage() {
     if (!data) return []
     return allSessions
       .filter((s) => s.circle_id === data.circle_id)
-      .sort((a, b) => a.date.localeCompare(b.date))
+      .sort((a, b) => a.date.localeCompare(b.date) || (a.daily_sequence || 1) - (b.daily_sequence || 1) || a.id - b.id)
   }, [allSessions, data])
 
   const currentIndex = useMemo(() => {
@@ -631,13 +635,19 @@ export default function SessionAttendancePage() {
   const handleSaveDate = async () => {
     if (!data || !editDateVal) return
     try {
-      const result = await api.updateSessionDate(data.session_id, editDateVal)
-      setData((prev) => prev ? { ...prev, date: result.date, version: result.version } : prev)
+      const result = await api.updateSessionDate(data.session_id, editDateVal, editNameVal)
+      setData((prev) => prev ? { ...prev, date: result.date, name: result.name, daily_sequence: result.daily_sequence, version: result.version } : prev)
       setEditingDate(false)
     } catch (err: any) {
       setSaveError(err.message || 'تعذر تعديل تاريخ الحلقة')
       setSaveState('error')
     }
+  }
+
+  const openMembershipEditor = async () => {
+    if (flushTimer.current) clearTimeout(flushTimer.current)
+    if (!(await flushUpdates()) || pendingUpdates.current.size > 0) return
+    setShowMembership(true)
   }
 
   const handleProgressToggle = async () => {
@@ -808,15 +818,23 @@ export default function SessionAttendancePage() {
                       className="px-2 py-1 text-xs bg-white/50 dark:bg-slate-800/50 border border-water-300 rounded-xl"
                       autoFocus
                     />
+                    <input
+                      value={editNameVal}
+                      onChange={(e) => setEditNameVal(e.target.value)}
+                      maxLength={100}
+                      placeholder="اسم الحلقة (اختياري)"
+                      className="px-2 py-1 text-xs bg-white/50 dark:bg-slate-800/50 border border-water-300 rounded-xl"
+                    />
                     <button onClick={handleSaveDate} className="text-xs water-btn text-white px-2 py-1 rounded-lg">حفظ</button>
                     <button onClick={() => setEditingDate(false)} className="text-xs text-deep-400 px-2 py-1">إلغاء</button>
                   </span>
                 ) : (
-                  <button disabled={data.is_confirmed || (userRole !== 'admin' && userRole !== 'super_admin')} onClick={() => { setEditDateVal(data.date); setEditingDate(true) }} className="hover:text-cyan-600 transition cursor-pointer disabled:cursor-default">
+                  <button disabled={data.is_confirmed || (userRole !== 'admin' && userRole !== 'super_admin')} onClick={() => { setEditDateVal(data.date); setEditNameVal(data.name || ''); setEditingDate(true) }} className="hover:text-cyan-600 transition cursor-pointer disabled:cursor-default">
                     {getArabicDay(data.date)} — {data.date}
                   </button>
                 )}
                 <span>{data.circle_name || 'التحفيظ'}</span>
+                <span>— {sessionDescriptor(data)}</span>
               </div>
             </div>
             <button
@@ -845,6 +863,15 @@ export default function SessionAttendancePage() {
           >
             رجوع
           </button>
+          {!data.is_confirmed && (userRole === 'admin' || userRole === 'super_admin') && (
+            data.explicit_membership && <button
+              type="button"
+              onClick={() => void openMembershipEditor()}
+              className="water-btn-outline px-4 py-2 rounded-xl text-sm flex-1 md:flex-none"
+            >
+              تعديل طلاب الحلقة
+            </button>
+          )}
           {!data.is_confirmed && (userRole === 'admin' || userRole === 'super_admin') && (
             <button
               onClick={handleConfirm}
@@ -984,6 +1011,13 @@ export default function SessionAttendancePage() {
           </div>
         </div>
       )}
+      {showMembership && data.explicit_membership && <SessionMembershipModal
+        sessionId={data.session_id}
+        expectedVersion={data.version}
+        initialStudentIds={allStudents.map(student => student.id)}
+        onClose={() => setShowMembership(false)}
+        onSaved={() => globalThis.location.reload()}
+      />}
 
       {previewPic && <ImagePreviewModal src={previewPic} onClose={() => setPreviewPic(null)} />}
       <div className="fixed right-4 top-4 z-[80] grid w-[min(22rem,calc(100vw-2rem))] gap-2" aria-live="polite">
