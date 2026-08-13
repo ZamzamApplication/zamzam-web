@@ -4,23 +4,30 @@ import { QURAN_LINE_END_OFFSETS_BASE64 } from './quran-line-data'
 export type QuranPoint = { surah: number; ayah: number }
 export type QuranPlanUnit = 'ayahs' | 'lines'
 export type QuranPlanTrack = {
+  id: string
+  name: string
   enabled: boolean
+  kind: 'quran' | 'quantity'
   start: QuranPoint
   unit: QuranPlanUnit
+  subject: string
+  quantityUnit: string
+  startNumber: number
   dailyAmount: number
 }
 export type QuranPlanInput = {
   startDate: string
   endDate: string
   weekdays: number[]
-  memorization: QuranPlanTrack
-  revision: QuranPlanTrack
+  tracks: QuranPlanTrack[]
 }
 export type QuranAssignment = {
-  from: QuranPoint
-  to: QuranPoint
+  from: QuranPoint | null
+  to: QuranPoint | null
+  fromNumber: number | null
+  toNumber: number | null
   ayahCount: number
-  unit: QuranPlanUnit
+  unit: QuranPlanUnit | 'quantity'
   unitAmount: number
   text: string
   completedMushaf: boolean
@@ -29,18 +36,19 @@ export type QuranPlanDay = {
   date: string
   weekday: number
   isStudyDay: boolean
-  memorization: QuranAssignment | null
-  revision: QuranAssignment | null
+  assignments: Record<string, QuranAssignment | null>
+}
+export type QuranPlanTrackTotal = {
+  ayahs: number
+  amount: number
+  end: QuranPoint | null
+  endNumber: number | null
 }
 export type GeneratedQuranPlan = {
+  tracks: QuranPlanTrack[]
   days: QuranPlanDay[]
   studyDays: number
-  memorizationAyahs: number
-  revisionAyahs: number
-  memorizationAmount: number
-  revisionAmount: number
-  memorizationEnd: QuranPoint | null
-  revisionEnd: QuranPoint | null
+  totals: Record<string, QuranPlanTrackTotal>
 }
 
 const LAST_POINT: QuranPoint = { surah: 114, ayah: surahInfo(114).ayahs }
@@ -115,6 +123,8 @@ function allocateAyahs(start: QuranPoint, requestedAyahs: number): { assignment:
     assignment: {
       from: start,
       to: end,
+      fromNumber: null,
+      toNumber: null,
       ayahCount: count,
       unit: 'ayahs',
       unitAmount: count,
@@ -143,6 +153,8 @@ function allocateLines(start: QuranPoint, requestedLines: number): { assignment:
     assignment: {
       from: start,
       to: end,
+      fromNumber: null,
+      toNumber: null,
       ayahCount: globalOffset(end) - startOffset + 1,
       unit: 'lines',
       unitAmount: lastLine - firstLine + 1,
@@ -159,6 +171,28 @@ function allocate(start: QuranPoint, track: QuranPlanTrack) {
     : allocateAyahs(start, track.dailyAmount)
 }
 
+function allocateQuantity(start: number, track: QuranPlanTrack): { assignment: QuranAssignment; next: number } {
+  const end = start + track.dailyAmount - 1
+  const subject = track.subject.trim()
+  const unit = track.quantityUnit.trim()
+  return {
+    assignment: {
+      from: null,
+      to: null,
+      fromNumber: start,
+      toNumber: end,
+      ayahCount: 0,
+      unit: 'quantity',
+      unitAmount: track.dailyAmount,
+      text: track.dailyAmount === 1
+        ? `${subject} — ${unit} ${start}`
+        : `${subject} — من ${unit} ${start} إلى ${end}`,
+      completedMushaf: false,
+    },
+    next: end + 1,
+  }
+}
+
 export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
   const start = parseDate(input.startDate)
   const end = parseDate(input.endDate)
@@ -169,21 +203,23 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
   if (calendarDays > 730) throw new Error('plan_period_too_long')
   if (input.weekdays.length === 0) throw new Error('study_days_required')
 
-  for (const track of [input.memorization, input.revision]) {
-    if (track.enabled && (!isValidQuranPoint(track.start) || !['ayahs', 'lines'].includes(track.unit) || !Number.isInteger(track.dailyAmount) || track.dailyAmount < 1)) {
+  const enabledTracks = input.tracks.filter(track => track.enabled)
+  const ids = new Set<string>()
+  for (const track of enabledTracks) {
+    const invalidQuran = track.kind === 'quran' && (!isValidQuranPoint(track.start) || !['ayahs', 'lines'].includes(track.unit))
+    const invalidQuantity = track.kind === 'quantity' && (!track.subject.trim() || !track.quantityUnit.trim() || !Number.isInteger(track.startNumber) || track.startNumber < 1)
+    if (!track.id.trim() || ids.has(track.id) || !track.name.trim() || invalidQuran || invalidQuantity || !Number.isInteger(track.dailyAmount) || track.dailyAmount < 1) {
       throw new Error('invalid_track')
     }
+    ids.add(track.id)
   }
-  if (!input.memorization.enabled && !input.revision.enabled) throw new Error('track_required')
+  if (enabledTracks.length === 0) throw new Error('track_required')
 
-  let memorizationNext: QuranPoint | null = input.memorization.enabled ? input.memorization.start : null
-  let revisionNext: QuranPoint | null = input.revision.enabled ? input.revision.start : null
-  let memorizationEnd: QuranPoint | null = null
-  let revisionEnd: QuranPoint | null = null
-  let memorizationAyahs = 0
-  let revisionAyahs = 0
-  let memorizationAmount = 0
-  let revisionAmount = 0
+  const nextPoints = new Map(enabledTracks.filter(track => track.kind === 'quran').map(track => [track.id, track.start as QuranPoint | null]))
+  const nextNumbers = new Map(enabledTracks.filter(track => track.kind === 'quantity').map(track => [track.id, track.startNumber]))
+  const totals: Record<string, QuranPlanTrackTotal> = Object.fromEntries(
+    enabledTracks.map(track => [track.id, { ayahs: 0, amount: 0, end: null, endNumber: null }]),
+  )
   let studyDays = 0
   const selectedDays = new Set(input.weekdays)
   const days: QuranPlanDay[] = []
@@ -192,31 +228,36 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
     const date = new Date(start)
     date.setDate(start.getDate() + index)
     const isStudyDay = selectedDays.has(date.getDay())
-    let memorization: QuranAssignment | null = null
-    let revision: QuranAssignment | null = null
+    const assignments: Record<string, QuranAssignment | null> = Object.fromEntries(
+      enabledTracks.map(track => [track.id, null]),
+    )
     if (isStudyDay) {
       studyDays += 1
-      if (memorizationNext) {
-        const result = allocate(memorizationNext, input.memorization)
-        memorization = result.assignment
-        memorizationNext = result.next
-        memorizationEnd = result.assignment.to
-        memorizationAyahs += result.assignment.ayahCount
-        memorizationAmount += result.assignment.unitAmount
-      }
-      if (revisionNext) {
-        const result = allocate(revisionNext, input.revision)
-        revision = result.assignment
-        revisionNext = result.next
-        revisionEnd = result.assignment.to
-        revisionAyahs += result.assignment.ayahCount
-        revisionAmount += result.assignment.unitAmount
+      for (const track of enabledTracks) {
+        if (track.kind === 'quantity') {
+          const next = nextNumbers.get(track.id)
+          if (next == null) continue
+          const result = allocateQuantity(next, track)
+          assignments[track.id] = result.assignment
+          nextNumbers.set(track.id, result.next)
+          totals[track.id].endNumber = result.assignment.toNumber
+          totals[track.id].amount += result.assignment.unitAmount
+        } else {
+          const next = nextPoints.get(track.id)
+          if (!next) continue
+          const result = allocate(next, track)
+          assignments[track.id] = result.assignment
+          nextPoints.set(track.id, result.next)
+          totals[track.id].end = result.assignment.to
+          totals[track.id].ayahs += result.assignment.ayahCount
+          totals[track.id].amount += result.assignment.unitAmount
+        }
       }
     }
-    days.push({ date: isoDate(date), weekday: date.getDay(), isStudyDay, memorization, revision })
+    days.push({ date: isoDate(date), weekday: date.getDay(), isStudyDay, assignments })
   }
 
-  return { days, studyDays, memorizationAyahs, revisionAyahs, memorizationAmount, revisionAmount, memorizationEnd, revisionEnd }
+  return { tracks: enabledTracks.map(track => ({ ...track, start: { ...track.start } })), days, studyDays, totals }
 }
 
 export function completedMushafText(point: QuranPoint | null): string {
