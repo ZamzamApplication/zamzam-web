@@ -50,6 +50,8 @@ export default function TahfizSettingsPage() {
   const [presentStatus, setPresentStatus] = useState('حاضر')
   const [absentStatus, setAbsentStatus] = useState('غياب')
   const [multipleSessionsEnabled, setMultipleSessionsEnabled] = useState(false)
+  const [sessionNameOptions, setSessionNameOptions] = useState<string[]>([])
+  const [newSessionNameOption, setNewSessionNameOption] = useState('')
   const [studentCategories, setStudentCategories] = useState<StudentCategory[]>([])
   const [newStudentCategory, setNewStudentCategory] = useState('')
   const [categoryBusy, setCategoryBusy] = useState(false)
@@ -96,6 +98,7 @@ export default function TahfizSettingsPage() {
         setPresentStatus(configuredPresentStatus(data.present_status, data.attendance_statuses))
         setAbsentStatus(configuredAbsentStatus(data.absent_status, data.attendance_statuses))
         setMultipleSessionsEnabled(Boolean(data.multiple_sessions_per_day_enabled))
+        setSessionNameOptions(data.session_name_options || ['الصباحية', 'المسائية'])
         setAttendanceStatusColors(data.attendance_status_colors || {
           'حاضر': 'green', 'غياب': 'slate', 'غياب بعذر': 'amber', 'لا ينطبق': 'sky',
         })
@@ -340,6 +343,7 @@ export default function TahfizSettingsPage() {
           attendance_sheikh_selection_enabled: sheikhSelectionEnabled,
           restrict_sheikh_student_access: restrictSheikhStudentAccess,
           multiple_sessions_per_day_enabled: multipleSessionsEnabled,
+          session_name_options: sessionNameOptions,
         },
         progress: { progress_tracking_enabled: progressTrackingEnabled },
         excel: { excel_export_templates: excelExportTemplates },
@@ -483,6 +487,31 @@ export default function TahfizSettingsPage() {
               description="عند التفعيل يمكنك إنشاء حلقات متعددة في التاريخ نفسه واختيار طلاب كل حلقة بالتصنيفات والاستثناءات."
             />
           </div>
+          {multipleSessionsEnabled && <div className="mt-5 rounded-xl border border-water-200/70 bg-white/35 p-4 dark:bg-slate-800/35">
+            <h3 className="text-sm font-bold text-deep-800">أسماء الحلقات</h3>
+            <p className="mt-1 text-xs text-deep-500">تظهر هذه الأسماء في القائمة عند إنشاء حلقة جديدة، ويظهر تاريخ الحلقة بجانب الاسم تلقائياً.</p>
+            <div className="mt-3 flex gap-2">
+              <input value={newSessionNameOption} onChange={event => setNewSessionNameOption(event.target.value)} onKeyDown={event => {
+                if (event.key !== 'Enter') return
+                event.preventDefault()
+                const value = newSessionNameOption.trim()
+                if (value && !sessionNameOptions.includes(value)) setSessionNameOptions(current => [...current, value])
+                setNewSessionNameOption('')
+              }} maxLength={100} placeholder="مثال: الصباحية" className="surface-field min-w-0 flex-1 rounded-xl px-3 py-2 text-sm" />
+              <button type="button" onClick={() => {
+                const value = newSessionNameOption.trim()
+                if (value && !sessionNameOptions.includes(value)) setSessionNameOptions(current => [...current, value])
+                setNewSessionNameOption('')
+              }} disabled={!newSessionNameOption.trim()} className="water-btn rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">إضافة</button>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {sessionNameOptions.length === 0 && <span className="text-xs text-amber-700">أضف اسماً واحداً على الأقل لتتمكن من إنشاء حلقة.</span>}
+              {sessionNameOptions.map(option => <span key={option} className="inline-flex items-center gap-2 rounded-full border border-water-200 bg-white/60 px-3 py-1.5 text-xs text-deep-700 dark:bg-slate-800/60">
+                <span>{option}</span>
+                <button type="button" onClick={() => setSessionNameOptions(current => current.filter(item => item !== option))} aria-label={`حذف ${option}`} className="font-bold text-red-500">×</button>
+              </span>)}
+            </div>
+          </div>}
           <div className="mt-5 rounded-xl border border-water-200/70 bg-white/35 p-4 dark:bg-slate-800/35">
             <h3 className="text-sm font-bold text-deep-800">تصنيفات الطلاب</h3>
             <p className="mt-1 text-xs text-deep-500">مثل صباحي أو مسائي. يمكن إسناد الطالب لأكثر من تصنيف من صفحة تعديله.</p>

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '@/lib/api'
 import type { StudentCategory, StudentInfo } from '@/lib/types'
-import { toggleCategorySelection } from '@/lib/student-categories'
+import { toggleCategorySelection, toggleStudentGroupSelection } from '@/lib/student-categories'
 
 function todayLocalDate(): string {
   const today = new Date()
@@ -20,6 +20,7 @@ export default function CreateSessionModal({ onClose, onCreated }: {
   const [sessionDate, setSessionDate] = useState(todayLocalDate)
   const [sessionName, setSessionName] = useState('')
   const [multipleEnabled, setMultipleEnabled] = useState(false)
+  const [sessionNameOptions, setSessionNameOptions] = useState<string[]>([])
   const [categories, setCategories] = useState<StudentCategory[]>([])
   const [students, setStudents] = useState<StudentInfo[]>([])
   const [selectedCategories, setSelectedCategories] = useState<Set<number>>(new Set())
@@ -35,6 +36,9 @@ export default function CreateSessionModal({ onClose, onCreated }: {
       if (cancelled) return
       setMultipleEnabled(enabled)
       if (!enabled) return
+      const nameOptions = user.tahfiz?.session_name_options || []
+      setSessionNameOptions(nameOptions)
+      setSessionName(nameOptions[0] || '')
       const [categoryRows, studentRows] = await Promise.all([api.getStudentCategories(), api.getStudents()])
       if (cancelled) return
       setCategories(categoryRows)
@@ -56,6 +60,12 @@ export default function CreateSessionModal({ onClose, onCreated }: {
     return Array.from(groups.entries())
   }, [students])
 
+  const formattedSessionDate = useMemo(() => {
+    if (!sessionDate) return ''
+    const [year, month, day] = sessionDate.split('-')
+    return `${day}/${month}/${year}`
+  }, [sessionDate])
+
   const toggleCategory = (categoryId: number) => {
     const next = toggleCategorySelection(selectedCategories, selectedStudents, categoryId, students)
     setSelectedCategories(next.categories)
@@ -68,6 +78,10 @@ export default function CreateSessionModal({ onClose, onCreated }: {
     else next.add(studentId)
     return next
   })
+
+  const toggleSheikh = (studentIds: number[]) => {
+    setSelectedStudents(current => toggleStudentGroupSelection(current, studentIds))
+  }
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -97,8 +111,11 @@ export default function CreateSessionModal({ onClose, onCreated }: {
             <label className="block text-sm font-medium text-deep-700">التاريخ
               <input type="date" value={sessionDate} onChange={event => setSessionDate(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-4 py-2.5" required />
             </label>
-            {multipleEnabled && <label className="block text-sm font-medium text-deep-700">اسم الحلقة (اختياري)
-              <input value={sessionName} onChange={event => setSessionName(event.target.value)} maxLength={100} placeholder="مثال: المجموعة الصباحية" className="surface-field mt-1 w-full rounded-xl px-4 py-2.5" />
+            {multipleEnabled && <label className="block text-sm font-medium text-deep-700">اسم الحلقة
+              <select value={sessionName} onChange={event => setSessionName(event.target.value)} required className="surface-field mt-1 w-full rounded-xl px-4 py-2.5">
+                {sessionNameOptions.length === 0 && <option value="">أضف أسماء الحلقات من الإعدادات</option>}
+                {sessionNameOptions.map(option => <option key={option} value={option}>{option} — {formattedSessionDate}</option>)}
+              </select>
             </label>}
           </div>
 
@@ -120,22 +137,28 @@ export default function CreateSessionModal({ onClose, onCreated }: {
                 </button>
               </div>
               {loadingOptions ? <p className="py-5 text-center text-sm text-deep-500">جاري تحميل الطلاب...</p> : <div className="max-h-72 space-y-3 overflow-y-auto pl-1">
-                {studentsBySheikh.map(([sheikh, rows]) => <section key={sheikh}>
-                  <p className="mb-1 text-xs font-bold text-deep-500">{sheikh}</p>
+                {studentsBySheikh.map(([sheikh, rows]) => {
+                  const allSelected = rows.every(student => selectedStudents.has(student.id))
+                  return <section key={sheikh}>
+                  <label className="mb-1 flex w-fit cursor-pointer items-center gap-2 rounded-lg px-2 py-1 text-xs font-bold text-deep-500 hover:bg-water-100/40">
+                    <input type="checkbox" checked={allSelected} onChange={() => toggleSheikh(rows.map(student => student.id))} className="rounded" />
+                    <span>{sheikh}</span>
+                  </label>
                   <div className="grid gap-1 sm:grid-cols-2">
                     {rows.map(student => <label key={student.id} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-water-100/40">
                       <input type="checkbox" checked={selectedStudents.has(student.id)} onChange={() => toggleStudent(student.id)} className="rounded" />
                       <span className="min-w-0 truncate text-sm text-deep-800">{student.name}</span>
                     </label>)}
                   </div>
-                </section>)}
+                </section>
+                })}
               </div>}
             </div>
           </>}
 
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 water-btn-outline rounded-xl text-sm">إلغاء</button>
-            <button type="submit" disabled={loading || loadingOptions || (multipleEnabled && selectedStudents.size === 0)} className="flex-1 px-4 py-2.5 water-btn text-white rounded-xl text-sm font-medium disabled:opacity-50">{loading ? 'جاري...' : 'إضافة'}</button>
+            <button type="submit" disabled={loading || loadingOptions || (multipleEnabled && (!sessionName || selectedStudents.size === 0))} className="flex-1 px-4 py-2.5 water-btn text-white rounded-xl text-sm font-medium disabled:opacity-50">{loading ? 'جاري...' : 'إضافة'}</button>
           </div>
         </form>
       </div>

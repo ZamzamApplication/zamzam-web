@@ -29,6 +29,7 @@ export interface User {
     present_status?: string
     absent_status?: string
     multiple_sessions_per_day_enabled?: boolean
+    session_name_options?: string[]
     whatsend_enabled?: boolean
     progress_tracking_enabled?: boolean
   } | null
@@ -130,6 +131,7 @@ export interface Circle {
   present_status?: string
   absent_status?: string
   multiple_sessions_per_day_enabled?: boolean
+  session_name_options?: string[]
   contact_phone?: string
   whatsend_api_url?: string
   whatsend_groups_url?: string

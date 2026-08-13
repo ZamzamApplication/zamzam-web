@@ -16,3 +16,18 @@ export function toggleCategorySelection(
   })
   return { categories, students: nextStudents }
 }
+
+export function toggleStudentGroupSelection(
+  selectedStudents: Set<number>,
+  studentIds: number[],
+): Set<number> {
+  const nextStudents = new Set(selectedStudents)
+  const allSelected = studentIds.length > 0 && studentIds.every(id => nextStudents.has(id))
+
+  studentIds.forEach(id => {
+    if (allSelected) nextStudents.delete(id)
+    else nextStudents.add(id)
+  })
+
+  return nextStudents
+}

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '@/lib/api'
 import type { StudentCategory, StudentInfo } from '@/lib/types'
-import { toggleCategorySelection } from '@/lib/student-categories'
+import { toggleCategorySelection, toggleStudentGroupSelection } from '@/lib/student-categories'
 
 export default function SessionMembershipModal({ sessionId, expectedVersion, initialStudentIds, onClose, onSaved }: {
   sessionId: number
@@ -72,7 +72,16 @@ export default function SessionMembershipModal({ sessionId, expectedVersion, ini
       <div className="mt-4 rounded-xl border border-water-200/70 p-3">
         <div className="mb-3 flex items-center justify-between"><span className="text-sm font-bold text-deep-800">المحددون ({selected.size})</span><button type="button" onClick={() => setSelected(selected.size === students.length ? new Set() : new Set(students.map(student => student.id)))} className="text-xs font-semibold text-cyan-700">{selected.size === students.length ? 'إلغاء الكل' : 'اختيار الكل'}</button></div>
         {loading ? <p className="py-6 text-center text-sm text-deep-500">جاري التحميل...</p> : <div className="max-h-80 space-y-3 overflow-y-auto">
-          {groups.map(([sheikh, rows]) => <section key={sheikh}><p className="mb-1 text-xs font-bold text-deep-500">{sheikh}</p><div className="grid gap-1 sm:grid-cols-2">{rows.map(student => <label key={student.id} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-water-100/40"><input type="checkbox" checked={selected.has(student.id)} onChange={() => setSelected(current => { const next = new Set(current); if (next.has(student.id)) next.delete(student.id); else next.add(student.id); return next })} className="rounded"/><span className="truncate text-sm text-deep-800">{student.name}</span></label>)}</div></section>)}
+          {groups.map(([sheikh, rows]) => {
+            const allSelected = rows.every(student => selected.has(student.id))
+            return <section key={sheikh}>
+              <label className="mb-1 flex w-fit cursor-pointer items-center gap-2 rounded-lg px-2 py-1 text-xs font-bold text-deep-500 hover:bg-water-100/40">
+                <input type="checkbox" checked={allSelected} onChange={() => setSelected(current => toggleStudentGroupSelection(current, rows.map(student => student.id)))} className="rounded" />
+                <span>{sheikh}</span>
+              </label>
+              <div className="grid gap-1 sm:grid-cols-2">{rows.map(student => <label key={student.id} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-water-100/40"><input type="checkbox" checked={selected.has(student.id)} onChange={() => setSelected(current => { const next = new Set(current); if (next.has(student.id)) next.delete(student.id); else next.add(student.id); return next })} className="rounded"/><span className="truncate text-sm text-deep-800">{student.name}</span></label>)}</div>
+            </section>
+          })}
         </div>}
       </div>
       <div className="mt-5 flex gap-3"><button type="button" onClick={onClose} className="water-btn-outline flex-1 rounded-xl px-4 py-2.5">إلغاء</button><button type="button" onClick={() => void save()} disabled={saving || loading || selected.size === 0} className="water-btn flex-1 rounded-xl px-4 py-2.5 font-semibold text-white disabled:opacity-50">{saving ? 'جاري الحفظ...' : 'حفظ الطلاب'}</button></div>

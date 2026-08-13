@@ -9,6 +9,7 @@ import { compressProfileImage } from '@/lib/image'
 import { configuredAttendanceStatuses } from '@/lib/attendance'
 import { formatQuranRange, SURAHS, surahInfo } from '@/lib/quran'
 import { filterDestinationSheikhs, filterMoveStudents } from '@/lib/move-student'
+import { moveStudentWithinStatus, orderStudents } from '@/lib/student-order'
 import type { Circle, ExcusedPeriodInfo, ExcusedWeekdayInfo, QuranProgressEntry, QuranProgressRevision, QuranProgressTrendPoint, QuranRangeType, SheikhDeletionPreview, SheikhInfo, SheikhStudentDeletionResolution, StudentCategory, StudentGoal, StudentInfo, StudentQuranPlan, TahfizInvitation, UserInfo, WardCategory, WarningInfo, WarningRow, WhatsAppGroup } from '@/lib/types'
 import AsyncState from '@/components/AsyncState'
 
@@ -1871,8 +1872,7 @@ function StudentStatusTabs({
   onEditStudent,
   onMoveStudent,
   onDeleteStudent,
-  onDragStart,
-  onDropReorder,
+  onReorder,
   onZoomPic,
 }: {
   students: StudentInfo[]
@@ -1882,15 +1882,14 @@ function StudentStatusTabs({
   onEditStudent: (s: StudentInfo) => void
   onMoveStudent: (s: StudentInfo) => void
   onDeleteStudent: (id: number) => void
-  onDragStart: (studentId: number, fromSheikhId: number) => void
-  onDropReorder: (sheikhId: number, targetStudentId?: number) => void
+  onReorder: (sheikhId: number, studentId: number, direction: -1 | 1) => void
   onZoomPic?: (url: string) => void
 }) {
   const [openTab, setOpenTab] = useState('مقيد')
 
   const grouped = STATUS_ORDER.reduce(
     (acc, status) => {
-      acc[status] = students.filter((s) => s.status === status)
+      acc[status] = orderStudents(students.filter((s) => s.status === status))
       return acc
     },
     {} as Record<string, StudentInfo[]>,
@@ -1917,40 +1916,13 @@ function StudentStatusTabs({
         })}
       </div>
       {openTab && (
-        <div
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={async (e) => {
-            e.preventDefault()
-            const drag = (window as any).__dragData
-            if (!drag) return
-            if (drag.fromSheikhId === sheikhId) {
-              onDropReorder(sheikhId)
-            } else {
-              ;(window as any).__dragData = null
-            }
-          }}
-        >
+        <div>
           {grouped[openTab].length > 0 ? (
             <div className="divide-y divide-water-200/30">
-              {grouped[openTab].map((s) => (
+              {grouped[openTab].map((s, index, rows) => (
                 <div
                   key={s.id}
-                  draggable
-                  onDragStart={() => { (window as any).__dragData = { studentId: s.id, fromSheikhId: sheikhId }; onDragStart(s.id, sheikhId) }}
-                  onDragEnd={() => { (window as any).__dragData = null }}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={async (e) => {
-                    e.stopPropagation()
-                    e.preventDefault()
-                    const drag = (window as any).__dragData
-                    if (!drag) return
-                    if (drag.fromSheikhId === sheikhId) {
-                      onDropReorder(sheikhId, s.id)
-                    } else {
-                      ;(window as any).__dragData = null
-                    }
-                  }}
-                  className="flex items-center justify-between px-5 py-2.5 hover:bg-water-100/30 cursor-grab active:cursor-grabbing"
+                  className="flex items-center justify-between gap-3 px-5 py-2.5 hover:bg-water-100/30"
                 >
                   <div className="flex items-center gap-3 cursor-pointer" onClick={() => onViewStudent(s)}>
                     {s.profile_pic ? (
@@ -1963,7 +1935,11 @@ function StudentStatusTabs({
                     <span className="text-deep-600 text-xs ml-1">{s.student_id ? `#${s.student_id}` : `#${s.id}`}</span>
                     <span className="text-deep-800">{s.name}</span>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex gap-1" aria-label={`ترتيب ${s.name}`}>
+                      <button type="button" disabled={index === 0} onClick={() => onReorder(sheikhId, s.id, -1)} aria-label={`تحريك ${s.name} لأعلى`} className="rounded border border-water-200 px-2 py-1 text-xs text-cyan-700 disabled:cursor-not-allowed disabled:opacity-30">↑</button>
+                      <button type="button" disabled={index === rows.length - 1} onClick={() => onReorder(sheikhId, s.id, 1)} aria-label={`تحريك ${s.name} لأسفل`} className="rounded border border-water-200 px-2 py-1 text-xs text-cyan-700 disabled:cursor-not-allowed disabled:opacity-30">↓</button>
+                    </span>
                     <button onClick={() => onEditStudent(s)} className="text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-800 dark:hover:text-cyan-300 transition">تعديل</button>
                     <button onClick={() => onMoveStudent(s)} className="text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-800 dark:hover:text-cyan-300 transition">نقل</button>
                     <button onClick={() => onDeleteStudent(s.id)} className="text-xs text-red-400 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition">حذف</button>
@@ -2192,9 +2168,7 @@ export default function ManagePage() {
       })
       const withStudents = sheikhsData.map((s: SheikhInfo) => ({
         ...s,
-        students: (studentsBySheikh.get(s.id) || []).sort(
-          (a, b) => a.name.localeCompare(b.name, 'ar', { sensitivity: 'base' })
-        ),
+        students: orderStudents(studentsBySheikh.get(s.id) || []),
       }))
       setSheikhs(withStudents)
       setCircles([tahfizSettings])
@@ -2210,30 +2184,14 @@ export default function ManagePage() {
 
   const [moveStudentId, setMoveStudentId] = useState<number | null>(null)
   const [showMoveStudent, setShowMoveStudent] = useState(false)
-  const handleDragStart = (studentId: number, sheikhId: number) => {
-    ;(window as any).__dragData = { studentId, fromSheikhId: sheikhId }
-  }
-
-  const handleDropReorder = async (sheikhId: number, targetStudentId?: number) => {
-    const drag = (window as any).__dragData
-    if (!drag) return
-    ;(window as any).__dragData = null
+  const handleReorder = async (sheikhId: number, studentId: number, direction: -1 | 1) => {
     const sheikh = sheikhs.find((s) => s.id === sheikhId)
     if (!sheikh) return
-    const ids = sheikh.students.map((s) => s.id)
-    const fromIdx = ids.indexOf(drag.studentId)
-    if (fromIdx === -1) return
-    ids.splice(fromIdx, 1)
-    if (targetStudentId !== undefined) {
-      const toIdx = ids.indexOf(targetStudentId)
-      if (toIdx !== -1) ids.splice(toIdx, 0, drag.studentId)
-      else ids.push(drag.studentId)
-    } else {
-      ids.push(drag.studentId)
-    }
+    const reordered = moveStudentWithinStatus(sheikh.students, studentId, direction)
+    const ids = reordered.map(student => student.id)
     try {
       await api.reorderStudents(sheikhId, ids)
-      load()
+      await load(true)
     } catch (err) {
       console.error(err)
     }
@@ -2342,7 +2300,7 @@ export default function ManagePage() {
                     <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-wrap">
                       <span className={`text-deep-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}>{'<'}</span>
                       <span className="text-lg font-bold text-deep-800 truncate">{sheikh.name}</span>
-                      <span className="text-xs bg-water-200/50 text-deep-600 px-2 py-0.5 rounded-full">{sheikh.students.length} طالب</span>
+                      <span className="text-xs bg-water-200/50 text-deep-600 px-2 py-0.5 rounded-full">{sheikh.students.filter(student => student.status === 'مقيد').length} طالب مقيد</span>
                     </div>
                     <div className="grid grid-cols-3 gap-2 sm:flex" onClick={(e) => e.stopPropagation()}>
                       <button onClick={() => setAddingStudent({ id: sheikh.id, name: sheikh.name })} className="water-btn-outline px-3 py-2 rounded-xl text-xs">+ طالب</button>
@@ -2359,8 +2317,7 @@ export default function ManagePage() {
                       onEditStudent={(s) => setEditStudent({ student: s, sheikhName: sheikh.name })}
                       onMoveStudent={(s) => { setMoveStudentId(s.id); setShowMoveStudent(true) }}
                       onDeleteStudent={handleDeleteStudent}
-                      onDragStart={handleDragStart}
-                      onDropReorder={handleDropReorder}
+                      onReorder={handleReorder}
                       onZoomPic={(url) => setPreviewPic(url)}
                     />
                    )}
