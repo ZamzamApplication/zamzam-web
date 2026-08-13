@@ -82,7 +82,7 @@ function StudentRow({
   }, [student.notes])
 
   return (
-    <div id={`student-row-${student.id}`} className={`py-3 px-3 md:grid ${sheikhSelectionEnabled ? 'md:grid-cols-[36px_1fr_90px_minmax(145px,180px)_1fr]' : 'md:grid-cols-[36px_1fr_110px_1fr]'} md:gap-2 md:items-center md:py-2.5 md:px-4 hover:bg-water-100/30 rounded-xl transition`}>
+    <div id={`student-row-${student.id}`} className={`py-3 px-3 md:grid ${sheikhSelectionEnabled ? 'md:grid-cols-[36px_1fr_minmax(144px,170px)_minmax(145px,180px)_1fr]' : 'md:grid-cols-[36px_1fr_minmax(144px,170px)_1fr]'} md:gap-2 md:items-center md:py-2.5 md:px-4 hover:bg-water-100/30 rounded-xl transition`}>
       <div className="flex items-center gap-3 md:contents">
         {student.profile_pic ? (
           <img
@@ -219,7 +219,7 @@ function SheikhAccordion({
 
       {expanded && (
         <div className="divide-y divide-water-200/30">
-          <div className={`hidden md:grid ${sheikhSelectionEnabled ? 'grid-cols-[36px_1fr_90px_120px_1fr]' : 'grid-cols-[36px_1fr_110px_1fr]'} gap-2 items-center py-2 px-4 text-xs font-medium text-deep-500 bg-water-100/20`}>
+          <div className={`hidden md:grid ${sheikhSelectionEnabled ? 'grid-cols-[36px_1fr_minmax(144px,170px)_minmax(145px,180px)_1fr]' : 'grid-cols-[36px_1fr_minmax(144px,170px)_1fr]'} gap-2 items-center py-2 px-4 text-xs font-medium text-deep-500 bg-water-100/20`}>
             <span></span>
             <span>الطالب</span>
             <span className="text-center">الحالة</span>
