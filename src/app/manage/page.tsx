@@ -7,33 +7,14 @@ import { api } from '@/lib/api'
 import { mediaUrl } from '@/lib/format'
 import { compressProfileImage } from '@/lib/image'
 import { configuredAttendanceStatuses } from '@/lib/attendance'
-import { formatQuranRange, SURAHS, surahInfo } from '@/lib/quran'
+import { formatQuranRange } from '@/lib/quran'
 import { filterDestinationSheikhs, filterMoveStudents } from '@/lib/move-student'
 import { moveStudentWithinStatus, orderStudents } from '@/lib/student-order'
-import type { Circle, ExcusedPeriodInfo, ExcusedWeekdayInfo, QuranProgressEntry, QuranProgressRevision, QuranProgressTrendPoint, QuranRangeType, SheikhDeletionPreview, SheikhInfo, SheikhStudentDeletionResolution, StudentCategory, StudentGoal, StudentInfo, StudentQuranPlan, TahfizInvitation, UserInfo, WardCategory, WarningInfo, WarningRow, WhatsAppGroup } from '@/lib/types'
+import type { Circle, ExcusedPeriodInfo, ExcusedWeekdayInfo, QuranProgressEntry, QuranProgressRevision, QuranProgressTrendPoint, QuranRangeType, SheikhDeletionPreview, SheikhInfo, SheikhStudentDeletionResolution, StudentCategory, StudentGoal, StudentInfo, TahfizInvitation, UserInfo, WarningInfo, WarningRow, WhatsAppGroup } from '@/lib/types'
 import AsyncState from '@/components/AsyncState'
 import StudentCustomFieldsEditor from '@/components/StudentCustomFieldsEditor'
 
 const WEEKDAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
-const WARD_CATEGORIES: { category: WardCategory; label: string }[] = [
-  { category: 'new_memorization', label: 'الحفظ الجديد' },
-  { category: 'recent_revision', label: 'المراجعة القريبة' },
-  { category: 'old_revision', label: 'المراجعة البعيدة' },
-]
-
-type QuranPlanDraft = Omit<StudentQuranPlan, 'id' | 'student_id' | 'updated_at'>
-
-function defaultQuranPlans(): QuranPlanDraft[] {
-  return WARD_CATEGORIES.map(({ category }) => ({
-    category,
-    increment_unit: 'ayahs',
-    increment_amount: 1,
-    next_surah: 1,
-    next_ayah: 1,
-    next_page: null,
-  }))
-}
-
 function normalizeExcusedWeekdays(days: (ExcusedWeekdayInfo | number)[] | undefined): ExcusedWeekdayInfo[] {
   return (days || []).map((day) => (
     typeof day === 'number' ? { weekday: day, note: '' } : { ...day, note: day.note || '' }
@@ -564,10 +545,6 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
   const [editingPeriodId, setEditingPeriodId] = useState<number | null>(null)
   const [periodBusy, setPeriodBusy] = useState(false)
   const [periodError, setPeriodError] = useState('')
-  const [quranPlans, setQuranPlans] = useState<QuranPlanDraft[]>(defaultQuranPlans)
-  const [quranPlansLoaded, setQuranPlansLoaded] = useState(false)
-  const [quranPlansLoading, setQuranPlansLoading] = useState(true)
-  const [quranPlansError, setQuranPlansError] = useState('')
   const [categoryIds, setCategoryIds] = useState<number[]>(student.category_ids || student.categories?.map(category => category.id) || [])
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>(student.custom_field_values || {})
 
@@ -584,40 +561,6 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
       .then(setExcusedPeriods)
       .catch((err: any) => setPeriodError(err.message || 'تعذر تحميل فترات الغياب بعذر'))
   }, [student.id])
-
-  useEffect(() => {
-    let cancelled = false
-    setQuranPlansLoading(true)
-    api.getStudentQuranPlans(student.id)
-      .then(({ plans }) => {
-        if (cancelled) return
-        const saved = new Map(plans.map(plan => [plan.category, plan]))
-        setQuranPlans(defaultQuranPlans().map(plan => {
-          const current = saved.get(plan.category)
-          return current ? {
-            category: current.category,
-            increment_unit: current.increment_unit,
-            increment_amount: current.increment_amount,
-            next_surah: current.next_surah,
-            next_ayah: current.next_ayah,
-            next_page: current.next_page,
-          } : plan
-        }))
-        setQuranPlansLoaded(true)
-        setQuranPlansError('')
-      })
-      .catch((reason: any) => {
-        if (!cancelled) setQuranPlansError(reason.message || 'تعذر تحميل خطة الورد')
-      })
-      .finally(() => {
-        if (!cancelled) setQuranPlansLoading(false)
-      })
-    return () => { cancelled = true }
-  }, [student.id])
-
-  const updateQuranPlan = (category: WardCategory, patch: Partial<QuranPlanDraft>) => {
-    setQuranPlans(current => current.map(plan => plan.category === category ? { ...plan, ...patch } : plan))
-  }
 
   const resetPeriodForm = () => {
     setPeriodForm({ start_date: '', end_date: '', reason: '' })
@@ -780,7 +723,6 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
       await Promise.all([
         api.updateStudent(student.id, name, phone || undefined, birthday || undefined, studentId || undefined, profilePic || undefined, status, parentPhones, registrationDate || undefined, categoryIds, customFieldValues),
         api.updateExcusedWeekdays(student.id, excusedWeekdays),
-        ...(quranPlansLoaded ? [api.updateStudentQuranPlans(student.id, quranPlans)] : []),
       ])
       onUpdated()
     } catch (err: any) {
@@ -861,63 +803,6 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
         </div>
         <StudentCategoryPicker selected={categoryIds} onChange={setCategoryIds} />
         <StudentCustomFieldsEditor values={customFieldValues} onChange={setCustomFieldValues} />
-        <div className="border-t border-water-200/30 pt-3">
-          <div className="mb-3">
-            <span className="block text-sm font-bold text-deep-700">خطة الورد</span>
-            <span className="text-xs text-deep-500">تُحفظ لكل طالب وتُنشئ مقدار الحفظ والمراجعة تلقائياً في الحلقة.</span>
-          </div>
-          {quranPlansLoading && <p className="text-xs text-deep-400">جاري تحميل خطة الورد...</p>}
-          {quranPlansError && <p role="alert" className="text-xs font-semibold text-amber-700 dark:text-amber-300">{quranPlansError}</p>}
-          {quranPlansLoaded && (
-            <div className="grid gap-3 lg:grid-cols-3">
-              {WARD_CATEGORIES.map(({ category, label }) => {
-                const plan = quranPlans.find(item => item.category === category)!
-                const maxAyah = surahInfo(plan.next_surah || 1).ayahs
-                return (
-                  <section key={category} className="rounded-xl border border-cyan-200 bg-cyan-50/35 p-3 dark:border-cyan-900 dark:bg-cyan-950/15">
-                    <h3 className="text-sm font-bold text-deep-800">{label}</h3>
-                    <div className="mt-2 grid grid-cols-2 gap-2">
-                      <label className="text-xs text-deep-600">الوحدة
-                        <select value={plan.increment_unit} onChange={event => {
-                          const unit = event.target.value as QuranPlanDraft['increment_unit']
-                          updateQuranPlan(category, {
-                            increment_unit: unit,
-                            next_page: unit === 'pages' ? (plan.next_page || 1) : null,
-                            next_surah: unit === 'pages' ? null : (plan.next_surah || 1),
-                            next_ayah: unit === 'pages' ? null : (plan.next_ayah || 1),
-                          })
-                        }} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm">
-                          <option value="ayahs">آيات</option>
-                          <option value="lines">أسطر</option>
-                          <option value="pages">صفحات</option>
-                        </select>
-                      </label>
-                      <label className="text-xs text-deep-600">المقدار
-                        <input type="number" min={1} max={604} value={plan.increment_amount} onChange={event => updateQuranPlan(category, { increment_amount: Math.max(1, Number(event.target.value)) })} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm" />
-                      </label>
-                      {plan.increment_unit === 'pages' ? (
-                        <label className="col-span-2 text-xs text-deep-600">بداية الورد القادم
-                          <input type="number" min={1} max={604} value={plan.next_page || 1} onChange={event => updateQuranPlan(category, { next_page: Number(event.target.value) })} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm" />
-                        </label>
-                      ) : (
-                        <>
-                          <label className="text-xs text-deep-600">السورة
-                            <select value={plan.next_surah || 1} onChange={event => updateQuranPlan(category, { next_surah: Number(event.target.value), next_ayah: 1 })} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm">
-                              {SURAHS.map(surah => <option key={surah.number} value={surah.number}>{surah.number}. {surah.name}</option>)}
-                            </select>
-                          </label>
-                          <label className="text-xs text-deep-600">الآية
-                            <input type="number" min={1} max={maxAyah} value={Math.min(plan.next_ayah || 1, maxAyah)} onChange={event => updateQuranPlan(category, { next_ayah: Number(event.target.value) })} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm" />
-                          </label>
-                        </>
-                      )}
-                    </div>
-                  </section>
-                )
-              })}
-            </div>
-          )}
-        </div>
         <div className="border-t border-water-200/30 pt-3">
           <span className="text-sm font-medium text-deep-700 block mb-2">أيام الإعفاء</span>
           <div className="flex gap-1.5 flex-wrap">

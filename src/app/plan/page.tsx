@@ -27,6 +27,11 @@ function displayDate(value: string) {
   return new Intl.DateTimeFormat('ar-EG', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(year, month - 1, day, 12))
 }
 
+function unitLabel(unit: QuranPlanTrack['unit'], amount: number) {
+  if (unit === 'lines') return amount === 1 ? 'سطر' : 'أسطر'
+  return amount === 1 ? 'آية' : 'آيات'
+}
+
 function TrackFields({ title, accent, value, onChange }: {
   title: string
   accent: 'cyan' | 'violet'
@@ -45,7 +50,7 @@ function TrackFields({ title, accent, value, onChange }: {
         <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition ${value.enabled ? 'right-6' : 'right-1'}`} />
       </span>
     </label>
-    {value.enabled && <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_8rem_8rem]">
+    {value.enabled && <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_7rem_7rem_7rem]">
       <label className="text-xs font-semibold text-deep-700">سورة البداية
         <select value={value.start.surah} onChange={event => onChange({ ...value, start: { surah: Number(event.target.value), ayah: 1 } })} className="surface-field mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm font-normal">
           {SURAHS.map(surah => <option key={surah.number} value={surah.number}>{surah.number}. {surah.name} — {surah.ayahs} آية</option>)}
@@ -56,8 +61,14 @@ function TrackFields({ title, accent, value, onChange }: {
           {Array.from({ length: ayahCount }, (_, index) => index + 1).map(ayah => <option key={ayah} value={ayah}>{ayah}</option>)}
         </select>
       </label>
-      <label className="text-xs font-semibold text-deep-700">آيات يومياً
-        <input type="number" min={1} max={1000} required value={value.dailyAyahs} onChange={event => onChange({ ...value, dailyAyahs: Number(event.target.value) })} className="surface-field mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm font-normal" />
+      <label className="text-xs font-semibold text-deep-700">الوحدة
+        <select value={value.unit} onChange={event => onChange({ ...value, unit: event.target.value as QuranPlanTrack['unit'] })} className="surface-field mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm font-normal">
+          <option value="ayahs">آيات</option>
+          <option value="lines">أسطر</option>
+        </select>
+      </label>
+      <label className="text-xs font-semibold text-deep-700">المعدل اليومي
+        <input type="number" min={1} max={1000} required value={value.dailyAmount} onChange={event => onChange({ ...value, dailyAmount: Number(event.target.value) })} className="surface-field mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm font-normal" />
       </label>
     </div>}
   </fieldset>
@@ -69,8 +80,8 @@ export default function QuranPlanPage() {
   const [startDate, setStartDate] = useState(defaults.start)
   const [endDate, setEndDate] = useState(defaults.end)
   const [weekdays, setWeekdays] = useState<number[]>([0, 1, 2, 3, 4])
-  const [memorization, setMemorization] = useState<QuranPlanTrack>({ enabled: true, start: { surah: 1, ayah: 1 }, dailyAyahs: 5 })
-  const [revision, setRevision] = useState<QuranPlanTrack>({ enabled: true, start: { surah: 1, ayah: 1 }, dailyAyahs: 20 })
+  const [memorization, setMemorization] = useState<QuranPlanTrack>({ enabled: true, start: { surah: 1, ayah: 1 }, unit: 'ayahs', dailyAmount: 5 })
+  const [revision, setRevision] = useState<QuranPlanTrack>({ enabled: true, start: { surah: 1, ayah: 1 }, unit: 'ayahs', dailyAmount: 20 })
   const [plan, setPlan] = useState<GeneratedQuranPlan | null>(null)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
@@ -92,19 +103,39 @@ export default function QuranPlanPage() {
   const planText = () => {
     if (!plan) return ''
     const lines = [
-      `خطة الحفظ والمراجعة${studentName.trim() ? ` — ${studentName.trim()}` : ''}`,
-      `الفترة: ${displayDate(startDate)} إلى ${displayDate(endDate)}`,
-      `أيام الدراسة: ${[...weekdays].sort((a, b) => a - b).map(day => WEEKDAYS[day]).join('، ')}`,
+      '🌿 *خطة الحفظ والمراجعة* 🌿',
+      ...(studentName.trim() ? [`👤 *الطالب:* ${studentName.trim()}`] : []),
+      `📅 *الفترة:* ${displayDate(startDate)} إلى ${displayDate(endDate)}`,
+      `🗓️ *أيام الدراسة:* ${[...weekdays].sort((a, b) => a - b).map(day => WEEKDAYS[day]).join('، ')}`,
+      ...(memorization.enabled ? [`🟢 *معدل الحفظ:* ${memorization.dailyAmount} ${unitLabel(memorization.unit, memorization.dailyAmount)} يومياً`] : []),
+      ...(revision.enabled ? [`🟣 *معدل المراجعة:* ${revision.dailyAmount} ${unitLabel(revision.unit, revision.dailyAmount)} يومياً`] : []),
+      '',
+      '━━━━━━━━━━━━━━━━━━',
       '',
     ]
     plan.days.forEach(day => {
-      const portions = !day.isStudyDay ? ['راحة'] : [
-        ...(memorization.enabled ? [`الحفظ: ${day.memorization ? day.memorization.text : 'اكتمل المصحف'}`] : []),
-        ...(revision.enabled ? [`المراجعة: ${day.revision ? day.revision.text : 'اكتمل المصحف'}`] : []),
-      ]
-      lines.push(`${WEEKDAYS[day.weekday]} ${displayDate(day.date)} — ${portions.join(' | ')}`)
+      lines.push(`📌 *${WEEKDAYS[day.weekday]} — ${displayDate(day.date)}*`)
+      if (!day.isStudyDay) {
+        lines.push('🌙 راحة')
+      } else {
+        if (memorization.enabled) lines.push(`🟢 *الحفظ:* ${day.memorization ? `${day.memorization.text} _(${day.memorization.unitAmount} ${unitLabel(day.memorization.unit, day.memorization.unitAmount)})_` : 'اكتمل المصحف ✅'}`)
+        if (revision.enabled) lines.push(`🟣 *المراجعة:* ${day.revision ? `${day.revision.text} _(${day.revision.unitAmount} ${unitLabel(day.revision.unit, day.revision.unitAmount)})_` : 'اكتمل المصحف ✅'}`)
+      }
+      lines.push('', '──────────────────', '')
     })
+    lines.push('🤲 *وفقكم الله وبارك في القرآن وأهله*')
     return lines.join('\n')
+  }
+
+  const printTitle = studentName.trim()
+    ? `${studentName.trim()} - خطة - ${startDate}`
+    : `خطة الحفظ والمراجعة - ${startDate}`
+
+  const printPlan = () => {
+    const previousTitle = document.title
+    document.title = printTitle
+    window.addEventListener('afterprint', () => { document.title = previousTitle }, { once: true })
+    window.print()
   }
 
   return <div className="min-h-screen bg-[rgb(var(--bg))] px-3 py-6 sm:px-5 sm:py-10">
@@ -157,24 +188,24 @@ export default function QuranPlanPage() {
 
       {plan && <section id="plan-preview" className="print-plan mt-7 scroll-mt-5 rounded-3xl border border-water-200 bg-white p-4 shadow-xl dark:border-slate-700 dark:bg-slate-900 sm:p-7">
         <div className="flex flex-col gap-4 border-b border-water-200 pb-5 dark:border-slate-700 sm:flex-row sm:items-start sm:justify-between">
-          <div><p className="text-xs font-bold text-cyan-700 dark:text-cyan-300">بسم الله الرحمن الرحيم</p><h2 className="mt-2 text-2xl font-bold text-deep-900">خطة الحفظ والمراجعة{studentName.trim() ? ` — ${studentName.trim()}` : ''}</h2><p className="mt-2 text-sm text-deep-500">من {displayDate(startDate)} إلى {displayDate(endDate)}</p></div>
-          <div className="no-print flex flex-wrap gap-2"><button type="button" onClick={async () => { await navigator.clipboard.writeText(planText()); setCopied(true) }} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">{copied ? 'تم النسخ ✓' : 'نسخ النص'}</button><button type="button" onClick={() => window.print()} className="water-btn rounded-xl px-4 py-2 text-sm font-bold text-white">طباعة الخطة</button></div>
+          <div><p className="plan-kicker text-xs font-bold text-cyan-700 dark:text-cyan-300">بسم الله الرحمن الرحيم</p><h2 className="plan-title mt-2 text-2xl font-bold text-deep-900">{printTitle}</h2><p className="plan-period mt-2 text-sm text-deep-500">من {displayDate(startDate)} إلى {displayDate(endDate)}</p></div>
+          <div className="no-print flex flex-wrap gap-2"><button type="button" onClick={async () => { await navigator.clipboard.writeText(planText()); setCopied(true) }} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">{copied ? 'تم النسخ ✓' : 'نسخ النص'}</button><button type="button" onClick={printPlan} className="water-btn rounded-xl px-4 py-2 text-sm font-bold text-white">طباعة الخطة</button></div>
         </div>
 
         <div className="my-5 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-xl bg-cyan-50 p-3 text-center dark:bg-cyan-950/35"><strong className="block text-xl text-cyan-800 dark:text-cyan-200">{plan.studyDays}</strong><span className="text-xs text-cyan-700 dark:text-cyan-300">يوم دراسة</span></div>
-          <div className="rounded-xl bg-emerald-50 p-3 text-center dark:bg-emerald-950/35"><strong className="block text-xl text-emerald-800 dark:text-emerald-200">{plan.memorizationAyahs}</strong><span className="text-xs text-emerald-700 dark:text-emerald-300">آية حفظ</span></div>
-          <div className="rounded-xl bg-violet-50 p-3 text-center dark:bg-violet-950/35"><strong className="block text-xl text-violet-800 dark:text-violet-200">{plan.revisionAyahs}</strong><span className="text-xs text-violet-700 dark:text-violet-300">آية مراجعة</span></div>
+          <div className="plan-stat-days rounded-xl bg-cyan-50 p-3 text-center dark:bg-cyan-950/35"><strong className="block text-xl text-cyan-800 dark:text-cyan-200">{plan.studyDays}</strong><span className="text-xs text-cyan-700 dark:text-cyan-300">يوم دراسة</span></div>
+          <div className="plan-stat-memorization rounded-xl bg-emerald-50 p-3 text-center dark:bg-emerald-950/35"><strong className="block text-xl text-emerald-800 dark:text-emerald-200">{plan.memorizationAmount}</strong><span className="text-xs text-emerald-700 dark:text-emerald-300">{unitLabel(memorization.unit, plan.memorizationAmount)} حفظ</span></div>
+          <div className="plan-stat-revision rounded-xl bg-violet-50 p-3 text-center dark:bg-violet-950/35"><strong className="block text-xl text-violet-800 dark:text-violet-200">{plan.revisionAmount}</strong><span className="text-xs text-violet-700 dark:text-violet-300">{unitLabel(revision.unit, plan.revisionAmount)} مراجعة</span></div>
         </div>
 
         <div className="overflow-x-auto rounded-2xl border border-water-200 dark:border-slate-700">
-          <table className="w-full min-w-[44rem] border-collapse text-right text-sm">
+          <table className="plan-table w-full min-w-[44rem] border-collapse text-right text-sm">
             <thead className="bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-100"><tr><th className="px-4 py-3">التاريخ</th><th className="px-4 py-3">اليوم</th>{memorization.enabled && <th className="px-4 py-3">الحفظ</th>}{revision.enabled && <th className="px-4 py-3">المراجعة</th>}</tr></thead>
             <tbody className="divide-y divide-water-100 dark:divide-slate-800">
-              {plan.days.map(day => <tr key={day.date} className={day.isStudyDay ? 'bg-white dark:bg-slate-900' : 'bg-slate-50/75 text-slate-500 dark:bg-slate-950/45 dark:text-slate-400'}>
+              {plan.days.map(day => <tr key={day.date} className={day.isStudyDay ? 'plan-study-row bg-white dark:bg-slate-900' : 'plan-rest-row bg-slate-50/75 text-slate-500 dark:bg-slate-950/45 dark:text-slate-400'}>
                 <td className="whitespace-nowrap px-4 py-3">{displayDate(day.date)}</td><td className="px-4 py-3 font-semibold">{WEEKDAYS[day.weekday]}</td>
-                {memorization.enabled && <td className="px-4 py-3">{day.isStudyDay ? day.memorization ? <><span>{day.memorization.text}</span><span className="mr-1 text-xs text-emerald-600">({day.memorization.ayahCount} آية){completedMushafText(day.memorization.to)}</span></> : 'اكتمل المصحف' : 'راحة'}</td>}
-                {revision.enabled && <td className="px-4 py-3">{day.isStudyDay ? day.revision ? <><span>{day.revision.text}</span><span className="mr-1 text-xs text-violet-600">({day.revision.ayahCount} آية){completedMushafText(day.revision.to)}</span></> : 'اكتمل المصحف' : 'راحة'}</td>}
+                {memorization.enabled && <td className="plan-memorization-cell px-4 py-3">{day.isStudyDay ? day.memorization ? <><span>{day.memorization.text}</span><span className="mr-1 text-xs text-emerald-600">({day.memorization.unitAmount} {unitLabel(day.memorization.unit, day.memorization.unitAmount)}){completedMushafText(day.memorization.to)}</span></> : 'اكتمل المصحف' : 'راحة'}</td>}
+                {revision.enabled && <td className="plan-revision-cell px-4 py-3">{day.isStudyDay ? day.revision ? <><span>{day.revision.text}</span><span className="mr-1 text-xs text-violet-600">({day.revision.unitAmount} {unitLabel(day.revision.unit, day.revision.unitAmount)}){completedMushafText(day.revision.to)}</span></> : 'اكتمل المصحف' : 'راحة'}</td>}
               </tr>)}
             </tbody>
           </table>

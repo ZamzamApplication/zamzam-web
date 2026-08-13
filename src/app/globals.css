@@ -67,10 +67,70 @@
     color: #0f172a !important;
     background: #fff !important;
     padding: 12mm !important;
+    color-scheme: light !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
   }
 
-  .print-plan * {
+  .print-plan .plan-kicker {
+    color: #0e7490 !important;
+  }
+
+  .print-plan .plan-title {
     color: #0f172a !important;
+  }
+
+  .print-plan .plan-period {
+    color: #475569 !important;
+  }
+
+  .print-plan .plan-stat-days {
+    color: #155e75 !important;
+    background: #cffafe !important;
+  }
+
+  .print-plan .plan-stat-memorization {
+    color: #166534 !important;
+    background: #dcfce7 !important;
+  }
+
+  .print-plan .plan-stat-revision {
+    color: #6b21a8 !important;
+    background: #f3e8ff !important;
+  }
+
+  .print-plan .plan-stat-days *,
+  .print-plan .plan-stat-memorization *,
+  .print-plan .plan-stat-revision * {
+    color: inherit !important;
+  }
+
+  .print-plan .plan-table {
+    color: #0f172a !important;
+    border-color: #bae6fd !important;
+  }
+
+  .print-plan .plan-table thead {
+    color: #164e63 !important;
+    background: #e0f2fe !important;
+  }
+
+  .print-plan .plan-study-row {
+    color: #0f172a !important;
+    background: #fff !important;
+  }
+
+  .print-plan .plan-rest-row {
+    color: #64748b !important;
+    background: #f8fafc !important;
+  }
+
+  .print-plan .plan-memorization-cell {
+    border-inline-start: 3px solid #22c55e !important;
+  }
+
+  .print-plan .plan-revision-cell {
+    border-inline-start: 3px solid #a855f7 !important;
   }
 
   .print-plan .no-print {
