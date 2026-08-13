@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 :root {
+  color-scheme: light;
   --deep-50: 236 254 255;
   --deep-100: 207 250 254;
   --deep-200: 165 243 252;
@@ -59,6 +60,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --deep-50: 15 23 42;
   --deep-100: 30 41 59;
   --deep-200: 51 65 85;
@@ -441,6 +443,18 @@ table {
   outline: none;
   border-color: rgb(var(--water-500) / 0.95);
   box-shadow: 0 0 0 3px rgb(var(--water-300) / 0.28);
+}
+
+select option,
+select optgroup {
+  background-color: rgb(255 255 255);
+  color: rgb(15 23 42);
+}
+
+.dark select option,
+.dark select optgroup {
+  background-color: rgb(30 41 59);
+  color: rgb(248 250 252);
 }
 
 .page-loading {
