@@ -46,16 +46,44 @@
   }
 
   .print-receipt,
-  .print-receipt * {
+  .print-receipt *,
+  .print-plan,
+  .print-plan * {
     visibility: visible !important;
   }
 
-  .print-receipt {
+  .print-receipt,
+  .print-plan {
     position: fixed;
     inset: 0;
     width: 100%;
     border: 0 !important;
     box-shadow: none !important;
+  }
+
+  .print-plan {
+    position: absolute !important;
+    inset: 0 0 auto 0 !important;
+    color: #0f172a !important;
+    background: #fff !important;
+    padding: 12mm !important;
+  }
+
+  .print-plan * {
+    color: #0f172a !important;
+  }
+
+  .print-plan .no-print {
+    display: none !important;
+  }
+
+  .print-plan table {
+    min-width: 0 !important;
+    font-size: 10px !important;
+  }
+
+  .print-plan tr {
+    break-inside: avoid;
   }
 }
 

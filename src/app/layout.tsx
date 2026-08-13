@@ -219,8 +219,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const isLoginPage = pathname === '/login'
   const isSignupPage = pathname === '/signup'
   const isInvitePage = pathname.startsWith('/invite/')
+  const isPlanPage = pathname === '/plan'
   const isPendingPage = pathname === '/pending'
-  const isPublicAuthPage = isLoginPage || isSignupPage || isInvitePage
+  const isPublicAuthPage = isLoginPage || isSignupPage || isInvitePage || isPlanPage
   const isLandingPage = pathname === '/'
   const isDedicatedPlatform = pathname === '/platform'
   const isActive = (href: string) => pathname === href || (href !== '/dashboard' && pathname.startsWith(`${href}/`))
@@ -292,7 +293,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const mobileNavItems: { href: string; label: string; icon: NavIconName; adminOnly?: boolean }[] = [
     { href: '/dashboard', label: 'الرئيسية', icon: 'home' },
     { href: '/sessions', label: 'الحلقات', icon: 'sessions' },
-    { href: '/attendance', label: 'الحضور', icon: 'attendance' },
     { href: '/finance', label: 'المالية', icon: 'finance', adminOnly: true },
     { href: '/manage', label: 'الإدارة', icon: 'manage', adminOnly: true },
     { href: '/settings', label: 'الإعدادات', icon: 'settings', adminOnly: true },
@@ -431,7 +431,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               ) : (
                 <>
                   <Link href="/sessions" className={navLinkClass('/sessions')} aria-current={isActive('/sessions') ? 'page' : undefined}>الحلقات</Link>
-                  <Link href="/attendance" className={navLinkClass('/attendance')} aria-current={isActive('/attendance') ? 'page' : undefined}>سجل الحضور</Link>
                   {(user?.role === 'admin' || user?.role === 'super_admin') && <Link href="/finance" className={navLinkClass('/finance')} aria-current={isActive('/finance') ? 'page' : undefined}>القسم المالي</Link>}
                   {(user?.role === 'admin' || user?.role === 'super_admin') && <Link href="/manage" className={navLinkClass('/manage')} aria-current={isActive('/manage') ? 'page' : undefined}>الإدارة</Link>}
                   {(user?.role === 'admin' || user?.role === 'super_admin') && <Link href="/settings" className={navLinkClass('/settings')} aria-current={isActive('/settings') ? 'page' : undefined}>إعدادات التحفيظ</Link>}

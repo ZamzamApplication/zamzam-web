@@ -10,7 +10,7 @@ import CreateSessionModal from '@/components/CreateSessionModal'
 import AsyncState from '@/components/AsyncState'
 import ConfirmDialog from '@/components/ConfirmDialog'
 import { canPermanentlyDeleteSession, sessionDeletionConfirmation } from '@/lib/session-lifecycle'
-import { sessionDescriptor } from '@/lib/session-label'
+import { sessionDateLabelFromCollection } from '@/lib/session-label'
 
 export default function SessionsPage() {
   const [allSessions, setAllSessions] = useState<Session[]>([])
@@ -86,6 +86,7 @@ export default function SessionsPage() {
       <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
         <h1 className="text-2xl font-bold text-deep-800">الحلقات</h1>
         <div className="flex flex-wrap gap-2">
+          <Link href="/attendance" className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold whitespace-nowrap">سجل الحضور</Link>
           <Link href="/reports" className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold whitespace-nowrap">التقارير</Link>
           {canManage && <button
             onClick={() => setShowModal(true)}
@@ -135,7 +136,7 @@ export default function SessionsPage() {
             >
               <div className="flex justify-between items-start gap-3">
                 <div className="min-w-0">
-                  <h3 className="font-semibold text-base sm:text-lg text-deep-800 leading-7">{formatDateWithWeekday(s.date)} — {sessionDescriptor(s)}</h3>
+                  <h3 className="font-semibold text-base sm:text-lg text-deep-800 leading-7">{sessionDateLabelFromCollection(s, allSessions, formatDateWithWeekday)}</h3>
                   {s.circle_name && <p className="text-xs text-deep-500 mt-0.5">{s.circle_name}</p>}
                   {s.student_count != null && <p className="text-xs text-deep-500 mt-0.5">{s.student_count} طالب</p>}
                 </div>

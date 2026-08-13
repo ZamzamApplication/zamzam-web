@@ -793,6 +793,10 @@ export default function SessionAttendancePage() {
     suffix: status === presentStatus ? `/ ${totalCount}` : undefined,
     className: attendanceStatusColorClass(attendanceStatusColors[status]),
   }))
+  const currentSessionDescriptor = sessionDescriptor(
+    data,
+    allSessions.filter((session) => session.date === data.date).length > 1,
+  )
 
   return (
     <div>
@@ -834,7 +838,7 @@ export default function SessionAttendancePage() {
                   </button>
                 )}
                 <span>{data.circle_name || 'التحفيظ'}</span>
-                <span>— {sessionDescriptor(data)}</span>
+                {currentSessionDescriptor && <span>— {currentSessionDescriptor}</span>}
               </div>
             </div>
             <button

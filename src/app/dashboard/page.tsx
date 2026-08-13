@@ -108,7 +108,7 @@ export default function DashboardPage() {
   ]
 
   const actionCards = [
-    { title: 'تسجيل الحضور', desc: 'راجع سجل الحضور والتصفيات المحفوظة', href: '/attendance' },
+    { title: 'إنشاء خطة', desc: 'خطة حفظ ومراجعة يومية قابلة للطباعة', href: '/plan' },
     ...(canManage ? [{ title: 'إدارة الطلاب', desc: 'الشيوخ والطلاب والمستخدمون', href: '/manage' }] : []),
     ...(canManage ? [{ title: 'القسم المالي', desc: 'الاشتراكات والمصروفات والوضع المالي', href: '/finance' }] : []),
   ]

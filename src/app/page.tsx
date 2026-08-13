@@ -65,6 +65,9 @@ export default function LandingPage() {
             منصة متابعة حضور حلقات تحفيظ القرآن الكريم — إدارة الحلقات، تسجيل الحضور، والتقارير
           </p>
           <div className="flex gap-4 justify-center flex-wrap">
+            <Link href="/plan" className="inline-block rounded-xl border border-white/35 bg-white/10 px-8 py-3 text-lg font-medium text-white shadow-lg backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:bg-white/20">
+              إنشاء خطة
+            </Link>
             {user ? (
               <Link
                 href="/dashboard"
