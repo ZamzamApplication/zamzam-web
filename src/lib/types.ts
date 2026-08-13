@@ -30,6 +30,7 @@ export interface User {
     absent_status?: string
     multiple_sessions_per_day_enabled?: boolean
     session_name_options?: string[]
+    sheikh_custom_fields_enabled?: boolean
     whatsend_enabled?: boolean
     progress_tracking_enabled?: boolean
   } | null
@@ -132,6 +133,7 @@ export interface Circle {
   absent_status?: string
   multiple_sessions_per_day_enabled?: boolean
   session_name_options?: string[]
+  sheikh_custom_fields_enabled?: boolean
   contact_phone?: string
   whatsend_api_url?: string
   whatsend_groups_url?: string
@@ -405,6 +407,21 @@ export interface StudentInfo {
   excused_periods?: ExcusedPeriodInfo[]
   categories?: StudentCategory[]
   category_ids?: number[]
+  custom_field_values?: Record<string, string>
+}
+
+export type StudentCustomFieldType = 'text' | 'number' | 'date' | 'checkbox' | 'select'
+
+export interface StudentCustomField {
+  id: number
+  name: string
+  field_type: StudentCustomFieldType
+  options: string[]
+  is_required: boolean
+  is_active: boolean
+  sort_order: number
+  created_by_user_id?: number | null
+  can_edit: boolean
 }
 
 export interface StudentCategory {
@@ -511,6 +528,7 @@ export interface AttendanceGridStudent {
     first: QuranRangeSnapshot
     last: QuranRangeSnapshot
   }>>
+  custom_field_values?: Record<string, string>
   records: Record<string, string | null>
 }
 

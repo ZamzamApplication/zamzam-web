@@ -6,7 +6,7 @@ import { api } from '@/lib/api'
 import { formatDateWithWeekday, mediaUrl } from '@/lib/format'
 import { currentMonthValue, formatMonthPeriod, monthRange } from '@/lib/month'
 import { applyExcelTemplate, configuredExcelExportTemplates } from '@/lib/excel-templates'
-import type { User, SheikhInfo, AttendanceGrid, AttendanceGridSession, AttendanceGridStudent, FilterRule, FilterGroup } from '@/lib/types'
+import type { User, SheikhInfo, AttendanceGrid, AttendanceGridSession, AttendanceGridStudent, FilterRule, FilterGroup, StudentCustomField } from '@/lib/types'
 import AttendanceFilter from '@/components/AttendanceFilter'
 import ExcelPreviewModal, { type SpreadsheetSheet } from '@/components/ExcelPreviewModal'
 import MonthSwitcher from '@/components/MonthSwitcher'
@@ -181,6 +181,7 @@ export default function AttendancePage() {
   const [isDesktop, setIsDesktop] = useState<boolean | null>(null)
   const [filterToDelete, setFilterToDelete] = useState<SavedFilter | null>(null)
   const [deletingFilter, setDeletingFilter] = useState(false)
+  const [studentCustomFields, setStudentCustomFields] = useState<StudentCustomField[]>([])
 
   useEffect(() => {
     api.getMe().then((currentUser) => {
@@ -190,6 +191,7 @@ export default function AttendancePage() {
     api.getSavedFilters().then((data: any[]) => {
       setSavedFilters(data.map(parseSavedFilter))
     }).catch(() => {})
+    api.getStudentCustomFields().then(result => setStudentCustomFields(result.fields)).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -444,6 +446,10 @@ export default function AttendancePage() {
           revision__from: revisionBoundary(student, 'from'),
           revision__to: revisionBoundary(student, 'to'),
         }
+        studentCustomFields.forEach(field => {
+          const value = student.custom_field_values?.[String(field.id)] || ''
+          row[`custom_field_${field.id}`] = field.field_type === 'checkbox' ? (value === 'true' ? 'نعم' : value === 'false' ? 'لا' : '') : value
+        })
         displaySessions.forEach((session) => {
           row[`session_${session.id}`] = student.records[String(session.id)]
         })

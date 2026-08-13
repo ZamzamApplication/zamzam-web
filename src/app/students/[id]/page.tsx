@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 
 import AsyncState from '@/components/AsyncState'
+import StudentCustomFieldsEditor from '@/components/StudentCustomFieldsEditor'
 import { api } from '@/lib/api'
 import { mediaUrl } from '@/lib/format'
 import { formatSubscriptionMoney } from '@/lib/subscriptions'
@@ -23,6 +24,9 @@ export default function StudentProfilePage() {
   const [periodBusy, setPeriodBusy] = useState(false)
   const [periodError, setPeriodError] = useState('')
   const [subscription, setSubscription] = useState<StudentCurrentSubscription | null>(null)
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({})
+  const [customFieldsSaving, setCustomFieldsSaving] = useState(false)
+  const [customFieldsNotice, setCustomFieldsNotice] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -30,6 +34,7 @@ export default function StudentProfilePage() {
     try {
       const nextProfile = await api.getStudentProfile(studentId)
       setProfile(nextProfile)
+      setCustomFieldValues(nextProfile.custom_field_values || {})
       if (nextProfile.can_manage) {
         api.getStudentCurrentSubscription(studentId).then(setSubscription).catch(() => setSubscription(null))
       }
@@ -146,6 +151,25 @@ export default function StudentProfilePage() {
           <div><p className="text-xs text-deep-500">اشتراك الدورة الحالية</p><p className="mt-1 font-bold text-deep-900">{(subscription.record?.fee_minor ?? subscription.effective_fee_minor) === 0 ? 'معفى' : subscription.record?.is_paid ? 'مدفوع' : 'غير مدفوع'}{(subscription.record?.fee_minor ?? subscription.effective_fee_minor) > 0 ? ` · ${formatSubscriptionMoney(subscription.record?.fee_minor ?? subscription.effective_fee_minor, subscription.currency || 'EGP')}` : ''}</p></div>
           <button type="button" onClick={() => router.push(`/finance?student_id=${profile.id}`)} className="text-sm font-bold text-cyan-700 dark:text-cyan-300">فتح سجل الاشتراك</button>
         </div>}
+      </section>
+
+      <section className="glass-card rounded-2xl p-5">
+        <StudentCustomFieldsEditor values={customFieldValues} onChange={setCustomFieldValues} />
+        <div className="mt-3 flex items-center gap-3">
+          <button type="button" disabled={customFieldsSaving} onClick={async () => {
+            setCustomFieldsSaving(true)
+            setCustomFieldsNotice('')
+            try {
+              await api.updateStudentCustomFieldValues(profile.id, customFieldValues)
+              setCustomFieldsNotice('تم حفظ الحقول المخصصة')
+            } catch (reason: any) {
+              setCustomFieldsNotice(reason.message || 'تعذر حفظ الحقول المخصصة')
+            } finally {
+              setCustomFieldsSaving(false)
+            }
+          }} className="water-btn rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{customFieldsSaving ? 'جاري الحفظ...' : 'حفظ الحقول المخصصة'}</button>
+          {customFieldsNotice && <span className="text-xs text-deep-600">{customFieldsNotice}</span>}
+        </div>
       </section>
 
       <div className="grid gap-5 lg:grid-cols-2">

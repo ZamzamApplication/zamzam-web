@@ -12,6 +12,7 @@ import { filterDestinationSheikhs, filterMoveStudents } from '@/lib/move-student
 import { moveStudentWithinStatus, orderStudents } from '@/lib/student-order'
 import type { Circle, ExcusedPeriodInfo, ExcusedWeekdayInfo, QuranProgressEntry, QuranProgressRevision, QuranProgressTrendPoint, QuranRangeType, SheikhDeletionPreview, SheikhInfo, SheikhStudentDeletionResolution, StudentCategory, StudentGoal, StudentInfo, StudentQuranPlan, TahfizInvitation, UserInfo, WardCategory, WarningInfo, WarningRow, WhatsAppGroup } from '@/lib/types'
 import AsyncState from '@/components/AsyncState'
+import StudentCustomFieldsEditor from '@/components/StudentCustomFieldsEditor'
 
 const WEEKDAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
 const WARD_CATEGORIES: { category: WardCategory; label: string }[] = [
@@ -424,6 +425,7 @@ function AddStudentModal({ sheikhId, sheikhName, onClose, onCreated }: { sheikhI
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [categoryIds, setCategoryIds] = useState<number[]>([])
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({})
 
   const addParentPhone = () => {
     setParentPhones([...parentPhones, { phone_number: '', parent_type: 'أب', name: '' }])
@@ -454,7 +456,7 @@ function AddStudentModal({ sheikhId, sheikhName, onClose, onCreated }: { sheikhI
     setError('')
     try {
       const filteredPhones = parentPhones.filter((p) => p.phone_number)
-      const result = await api.createStudent(name, sheikhId, phone || undefined, birthday || undefined, studentId || undefined, status, filteredPhones.length ? filteredPhones : undefined, registrationDate || undefined, categoryIds)
+      const result = await api.createStudent(name, sheikhId, phone || undefined, birthday || undefined, studentId || undefined, status, filteredPhones.length ? filteredPhones : undefined, registrationDate || undefined, categoryIds, customFieldValues)
       if (profilePicFile) {
         await api.uploadStudentPic(result.id, profilePicFile)
       }
@@ -501,6 +503,7 @@ function AddStudentModal({ sheikhId, sheikhName, onClose, onCreated }: { sheikhI
           </select>
         </div>
         <StudentCategoryPicker selected={categoryIds} onChange={setCategoryIds} />
+        <StudentCustomFieldsEditor values={customFieldValues} onChange={setCustomFieldValues} />
         <div className="border-t border-water-200/30 pt-3">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-deep-700">أرقام ولي الأمر</span>
@@ -566,6 +569,7 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
   const [quranPlansLoading, setQuranPlansLoading] = useState(true)
   const [quranPlansError, setQuranPlansError] = useState('')
   const [categoryIds, setCategoryIds] = useState<number[]>(student.category_ids || student.categories?.map(category => category.id) || [])
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>(student.custom_field_values || {})
 
   useEffect(() => {
     if (!student.excused_weekdays) {
@@ -774,7 +778,7 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
     setError('')
     try {
       await Promise.all([
-        api.updateStudent(student.id, name, phone || undefined, birthday || undefined, studentId || undefined, profilePic || undefined, status, parentPhones, registrationDate || undefined, categoryIds),
+        api.updateStudent(student.id, name, phone || undefined, birthday || undefined, studentId || undefined, profilePic || undefined, status, parentPhones, registrationDate || undefined, categoryIds, customFieldValues),
         api.updateExcusedWeekdays(student.id, excusedWeekdays),
         ...(quranPlansLoaded ? [api.updateStudentQuranPlans(student.id, quranPlans)] : []),
       ])
@@ -856,6 +860,7 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
           </select>
         </div>
         <StudentCategoryPicker selected={categoryIds} onChange={setCategoryIds} />
+        <StudentCustomFieldsEditor values={customFieldValues} onChange={setCustomFieldValues} />
         <div className="border-t border-water-200/30 pt-3">
           <div className="mb-3">
             <span className="block text-sm font-bold text-deep-700">خطة الورد</span>

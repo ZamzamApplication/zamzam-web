@@ -51,6 +51,7 @@ export default function TahfizSettingsPage() {
   const [absentStatus, setAbsentStatus] = useState('غياب')
   const [multipleSessionsEnabled, setMultipleSessionsEnabled] = useState(false)
   const [sessionNameOptions, setSessionNameOptions] = useState<string[]>([])
+  const [sheikhCustomFieldsEnabled, setSheikhCustomFieldsEnabled] = useState(true)
   const [newSessionNameOption, setNewSessionNameOption] = useState('')
   const [studentCategories, setStudentCategories] = useState<StudentCategory[]>([])
   const [newStudentCategory, setNewStudentCategory] = useState('')
@@ -99,6 +100,7 @@ export default function TahfizSettingsPage() {
         setAbsentStatus(configuredAbsentStatus(data.absent_status, data.attendance_statuses))
         setMultipleSessionsEnabled(Boolean(data.multiple_sessions_per_day_enabled))
         setSessionNameOptions(data.session_name_options || ['الصباحية', 'المسائية'])
+        setSheikhCustomFieldsEnabled(data.sheikh_custom_fields_enabled ?? true)
         setAttendanceStatusColors(data.attendance_status_colors || {
           'حاضر': 'green', 'غياب': 'slate', 'غياب بعذر': 'amber', 'لا ينطبق': 'sky',
         })
@@ -344,6 +346,7 @@ export default function TahfizSettingsPage() {
           restrict_sheikh_student_access: restrictSheikhStudentAccess,
           multiple_sessions_per_day_enabled: multipleSessionsEnabled,
           session_name_options: sessionNameOptions,
+          sheikh_custom_fields_enabled: sheikhCustomFieldsEnabled,
         },
         progress: { progress_tracking_enabled: progressTrackingEnabled },
         excel: { excel_export_templates: excelExportTemplates },
@@ -485,6 +488,14 @@ export default function TahfizSettingsPage() {
               onChange={setMultipleSessionsEnabled}
               title="السماح بأكثر من حلقة في اليوم"
               description="عند التفعيل يمكنك إنشاء حلقات متعددة في التاريخ نفسه واختيار طلاب كل حلقة بالتصنيفات والاستثناءات."
+            />
+          </div>
+          <div className="mt-3">
+            <FeatureToggle
+              enabled={sheikhCustomFieldsEnabled}
+              onChange={setSheikhCustomFieldsEnabled}
+              title="السماح للشيوخ بإنشاء حقول طلاب مخصصة"
+              description="يمكن للشيخ إنشاء حقول إضافية وتعبئتها لطلابه فقط. يظل المدير قادراً على إدارة جميع الحقول."
             />
           </div>
           {multipleSessionsEnabled && <div className="mt-5 rounded-xl border border-water-200/70 bg-white/35 p-4 dark:bg-slate-800/35">

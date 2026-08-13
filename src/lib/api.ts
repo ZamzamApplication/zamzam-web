@@ -614,11 +614,30 @@ export const api = {
     return request<StudentInfo[]>('/students')
   },
 
+  getStudentCustomFields(includeInactive = false) {
+    return request<{ fields: import('./types').StudentCustomField[]; can_create: boolean }>(`/student-custom-fields${includeInactive ? '?include_inactive=true' : ''}`)
+  },
+
+  createStudentCustomField(data: { name: string; field_type: import('./types').StudentCustomFieldType; options: string[]; is_required: boolean }) {
+    return request<import('./types').StudentCustomField>('/student-custom-fields', { method: 'POST', body: JSON.stringify(data) })
+  },
+
+  updateStudentCustomField(id: number, data: { name: string; field_type: import('./types').StudentCustomFieldType; options: string[]; is_required: boolean; is_active: boolean }) {
+    return request<import('./types').StudentCustomField>(`/student-custom-fields/${id}`, { method: 'PUT', body: JSON.stringify(data) })
+  },
+
+  updateStudentCustomFieldValues(studentId: number, values: Record<string, string | boolean | number | null>) {
+    return request<{ student_id: number; values: Record<string, string | null> }>(`/students/${studentId}/custom-field-values`, {
+      method: 'PUT',
+      body: JSON.stringify({ values: Object.entries(values).map(([fieldId, value]) => ({ field_id: Number(fieldId), value })) }),
+    })
+  },
+
   getStudentProfile(studentId: number) {
     return request<StudentProfile>(`/students/${studentId}/profile`)
   },
 
-  createStudent(name: string, sheikhId: number, phone?: string, birthday?: string, customStudentId?: string, status?: string, parentPhones?: { phone_number: string; parent_type: string }[], registrationDate?: string, categoryIds?: number[]) {
+  createStudent(name: string, sheikhId: number, phone?: string, birthday?: string, customStudentId?: string, status?: string, parentPhones?: { phone_number: string; parent_type: string }[], registrationDate?: string, categoryIds?: number[], customFieldValues?: Record<string, string | boolean | number | null>) {
     return request('/students', {
       method: 'POST',
       body: JSON.stringify({
@@ -631,6 +650,7 @@ export const api = {
         registration_date: registrationDate || null,
         parent_phones: parentPhones || [],
         category_ids: categoryIds || [],
+        custom_field_values: customFieldValues || {},
       }),
     })
   },
@@ -684,7 +704,7 @@ export const api = {
     })
   },
 
-  updateStudent(id: number, name?: string, phone?: string, birthday?: string, customStudentId?: string, profilePic?: string, status?: string, parentPhones?: { phone_number?: string; parent_type?: string }[], registrationDate?: string, categoryIds?: number[]) {
+  updateStudent(id: number, name?: string, phone?: string, birthday?: string, customStudentId?: string, profilePic?: string, status?: string, parentPhones?: { phone_number?: string; parent_type?: string }[], registrationDate?: string, categoryIds?: number[], customFieldValues?: Record<string, string | boolean | number | null>) {
     const body: Record<string, unknown> = {}
     if (name !== undefined) body.name = name
     if (phone !== undefined) body.phone = phone ?? null
@@ -695,6 +715,7 @@ export const api = {
     if (registrationDate !== undefined) body.registration_date = registrationDate ?? null
     if (parentPhones !== undefined) body.parent_phones = parentPhones
     if (categoryIds !== undefined) body.category_ids = categoryIds
+    if (customFieldValues !== undefined) body.custom_field_values = customFieldValues
     return request(`/students/${id}`, {
       method: 'PUT',
       body: JSON.stringify(body),

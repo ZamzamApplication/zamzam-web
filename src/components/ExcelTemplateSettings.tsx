@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import type { ExcelExportTemplates, ExcelTemplateColumn, ExcelTemplateKey, ExcelTemplateSubcolumn } from '@/lib/excel-templates'
+import { api } from '@/lib/api'
+import type { StudentCustomField } from '@/lib/types'
 
 const TEMPLATE_LABELS: Record<ExcelTemplateKey, { title: string; description: string }> = {
   attendance: {
@@ -74,6 +76,11 @@ export default function ExcelTemplateSettings({
   onChange(value: ExcelExportTemplates): void
 }) {
   const [openTemplate, setOpenTemplate] = useState<ExcelTemplateKey | null>('attendance')
+  const [studentFields, setStudentFields] = useState<StudentCustomField[]>([])
+
+  useEffect(() => {
+    api.getStudentCustomFields().then(result => setStudentFields(result.fields)).catch(() => {})
+  }, [])
 
   const updateColumns = (key: ExcelTemplateKey, columns: ExcelTemplateColumn[]) => {
     onChange({ ...value, [key]: { ...value[key], columns } })
@@ -110,6 +117,21 @@ export default function ExcelTemplateSettings({
         subcolumns: [],
       },
     ])
+  }
+
+  const addStudentFieldColumn = (key: ExcelTemplateKey, field: StudentCustomField) => {
+    const id = `custom_field_${field.id}`
+    if (value[key].columns.some(column => column.id === id)) return
+    updateColumns(key, [...value[key].columns, {
+      id,
+      label: field.name,
+      enabled: true,
+      custom: true,
+      width: 18,
+      header_font_size: value[key].header_font_size,
+      show_header: true,
+      subcolumns: [],
+    }])
   }
 
   const removeCustomColumn = (key: ExcelTemplateKey, id: string) => {
@@ -437,8 +459,15 @@ export default function ExcelTemplateSettings({
               ))}
             </div>
             <button type="button" onClick={() => addCustomColumn(key)} className="water-btn-outline mt-3 rounded-xl px-4 py-2 text-xs font-semibold">
-              + إضافة عمود مخصص
+              + إضافة عمود فارغ
             </button>
+            {key === 'attendance' && studentFields.length > 0 && <div className="mt-3 rounded-xl border border-water-200/70 p-3">
+              <p className="text-xs font-bold text-deep-700">حقول الطلاب</p>
+              <div className="mt-2 flex flex-wrap gap-2">{studentFields.map(field => {
+                const added = template.columns.some(column => column.id === `custom_field_${field.id}`)
+                return <button key={field.id} type="button" disabled={added} onClick={() => addStudentFieldColumn(key, field)} className="rounded-full border border-water-200 px-3 py-1.5 text-xs text-cyan-700 disabled:opacity-40">{added ? '✓ ' : '+ '}{field.name}</button>
+              })}</div>
+            </div>}
             </div>}
           </section>
         )

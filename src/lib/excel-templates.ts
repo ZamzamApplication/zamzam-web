@@ -1,5 +1,5 @@
 import type { SpreadsheetSheet } from '@/components/ExcelPreviewModal'
-import { getArabicDay } from '@/lib/format'
+import { getArabicDay } from './format'
 
 export type ExcelTemplateKey = 'attendance' | 'statistics' | 'progress'
 export type AttendanceDateFormat =
