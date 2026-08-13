@@ -57,7 +57,7 @@ export default function AttendanceStatusControl({
   }
 
   return (
-    <div ref={rootRef} className="relative min-w-0">
+    <div ref={rootRef} className={`relative min-w-0 ${open ? 'z-50' : 'z-0'}`}>
       <div className={`grid min-h-11 grid-cols-[minmax(0,1fr)_2.5rem] overflow-hidden rounded-xl border shadow-sm transition ${attendanceStatusColorClass(colorKey)} ${saving ? 'opacity-60' : ''}`}>
         <button
           type="button"

@@ -206,7 +206,7 @@ function SheikhAccordion({
 }) {
 
   return (
-    <div className="glass-card overflow-visible rounded-2xl">
+    <div className="attendance-sheikh-card glass-card relative z-0 overflow-visible rounded-2xl">
       <button
         onClick={onToggle}
         className={`flex w-full items-center justify-between rounded-t-2xl bg-water-100/30 px-5 py-4 transition hover:bg-water-200/30 ${expanded ? '' : 'rounded-b-2xl'}`}
