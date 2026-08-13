@@ -9,6 +9,7 @@ import { api } from '@/lib/api'
 import type { User } from '@/lib/types'
 import FeedbackButton from '@/components/FeedbackButton'
 import PwaRegistration from '@/components/PwaRegistration'
+import TahfizInitialSettingsFields, { DEFAULT_ATTENDANCE_STATUSES, DEFAULT_SESSION_NAMES, type TahfizInitialSettings } from '@/components/TahfizInitialSettingsFields'
 
 const cairoFont = Cairo({ subsets: ['arabic'], display: 'swap', variable: '--font-cairo' })
 
@@ -208,6 +209,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const [showCreateTahfiz, setShowCreateTahfiz] = useState(false)
   const [newTahfizName, setNewTahfizName] = useState('')
   const [newTahfizPhone, setNewTahfizPhone] = useState('')
+  const [newTahfizStep, setNewTahfizStep] = useState<1 | 2>(1)
+  const [newTahfizSettings, setNewTahfizSettings] = useState<TahfizInitialSettings>({ attendanceStatuses: DEFAULT_ATTENDANCE_STATUSES, presentStatus: 'حاضر', absentStatus: 'غياب', sessionNames: DEFAULT_SESSION_NAMES })
   const [creatingTahfiz, setCreatingTahfiz] = useState(false)
   const [createTahfizError, setCreateTahfizError] = useState('')
   const router = useRouter()
@@ -262,16 +265,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const createTahfiz = async (event: React.FormEvent) => {
     event.preventDefault()
     if (newTahfizName.trim().length < 2) return
+    if (newTahfizStep === 1) {
+      setNewTahfizStep(2)
+      return
+    }
     setCreatingTahfiz(true)
     setCreateTahfizError('')
     try {
-      await api.createTahfiz(newTahfizName.trim(), newTahfizPhone)
+      await api.createTahfiz(newTahfizName.trim(), newTahfizPhone, newTahfizSettings)
       const refreshed = await api.getMe()
       setUser(refreshed)
       localStorage.setItem('user', JSON.stringify(refreshed))
       setShowCreateTahfiz(false)
       setNewTahfizName('')
       setNewTahfizPhone('')
+      setNewTahfizStep(1)
+      setNewTahfizSettings({ attendanceStatuses: DEFAULT_ATTENDANCE_STATUSES, presentStatus: 'حاضر', absentStatus: 'غياب', sessionNames: DEFAULT_SESSION_NAMES })
       setWorkspaceNotice('تم إرسال طلب التحفيظ الجديد للمراجعة. سيظهر للتبديل بعد اعتماده.')
     } catch (error: any) {
       setCreateTahfizError(error.message || 'تعذر إنشاء التحفيظ')
@@ -402,7 +411,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <span className="nav-brand-mark">💧</span> زمزم
             </Link>
             <div className="flex items-center gap-2">
-              <TahfizSwitcher user={user} onSwitch={switchTahfiz} onCreate={() => { setCreateTahfizError(''); setShowCreateTahfiz(true) }} switchingId={switchingTahfizId} />
+              <TahfizSwitcher user={user} onSwitch={switchTahfiz} onCreate={() => { setCreateTahfizError(''); setNewTahfizStep(1); setShowCreateTahfiz(true) }} switchingId={switchingTahfizId} />
               <ThemeToggle />
               <button onClick={logout} className="nav-icon-btn" title="تسجيل الخروج" aria-label="تسجيل الخروج">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -431,7 +440,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               )}
             </div>
             <div className="flex items-center gap-2 md:gap-3">
-              <TahfizSwitcher user={user} onSwitch={switchTahfiz} onCreate={() => { setCreateTahfizError(''); setShowCreateTahfiz(true) }} switchingId={switchingTahfizId} />
+              <TahfizSwitcher user={user} onSwitch={switchTahfiz} onCreate={() => { setCreateTahfizError(''); setNewTahfizStep(1); setShowCreateTahfiz(true) }} switchingId={switchingTahfizId} />
               <ThemeToggle />
               <span className="nav-username">{user.username}</span>
               <button
@@ -476,9 +485,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         )}
         {showCreateTahfiz && (
           <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/35 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="create-tahfiz-title" onClick={() => !creatingTahfiz && setShowCreateTahfiz(false)}>
-            <form onSubmit={createTahfiz} className="glass-strong w-full max-w-md rounded-2xl p-6" onClick={(event) => event.stopPropagation()}>
+            <form onSubmit={createTahfiz} className={`glass-strong max-h-[90vh] w-full overflow-y-auto rounded-2xl p-6 ${newTahfizStep === 2 ? 'max-w-2xl' : 'max-w-md'}`} onClick={(event) => event.stopPropagation()}>
               <h2 id="create-tahfiz-title" className="text-xl font-bold text-deep-900">إنشاء تحفيظ جديد</h2>
-              <p className="mt-2 text-sm text-deep-500">سيُربط التحفيظ بحسابك الحالي بصلاحية مدير، ويصبح متاحاً للتبديل بعد اعتماد المنصة.</p>
+              <p className="mt-2 text-sm text-deep-500">{newTahfizStep === 1 ? 'أدخل البيانات الأساسية. سيُربط التحفيظ بحسابك بصلاحية مدير.' : 'اضبط الحالات وأسماء الحلقات قبل إرسال الطلب.'}</p>
+              <div className="mt-4 flex gap-2" aria-label={`الخطوة ${newTahfizStep} من 2`}><span className="h-1.5 flex-1 rounded-full bg-cyan-600" /><span className={`h-1.5 flex-1 rounded-full ${newTahfizStep === 2 ? 'bg-cyan-600' : 'bg-slate-200 dark:bg-slate-700'}`} /></div>
+              {newTahfizStep === 1 && <>
               <label className="mt-4 grid gap-1 text-sm font-semibold text-deep-700">
                 اسم التحفيظ
                 <input autoFocus required minLength={2} maxLength={100} value={newTahfizName} onChange={(event) => setNewTahfizName(event.target.value)} className="surface-field rounded-xl px-3 py-2.5" />
@@ -487,10 +498,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 رقم التواصل <span className="text-xs font-normal text-deep-400">(اختياري)</span>
                 <input type="tel" maxLength={20} value={newTahfizPhone} onChange={(event) => setNewTahfizPhone(event.target.value)} className="surface-field rounded-xl px-3 py-2.5" />
               </label>
+              </>}
+              {newTahfizStep === 2 && <div className="mt-4"><TahfizInitialSettingsFields value={newTahfizSettings} onChange={setNewTahfizSettings} /></div>}
               {createTahfizError && <p role="alert" className="mt-3 text-sm font-semibold text-red-600">{createTahfizError}</p>}
               <div className="mt-5 flex gap-3">
-                <button type="button" disabled={creatingTahfiz} onClick={() => setShowCreateTahfiz(false)} className="water-btn-outline flex-1 rounded-xl px-4 py-2 disabled:opacity-50">إلغاء</button>
-                <button type="submit" disabled={creatingTahfiz || newTahfizName.trim().length < 2} className="water-btn flex-1 rounded-xl px-4 py-2 font-bold text-white disabled:opacity-50">{creatingTahfiz ? 'جاري الإنشاء…' : 'إرسال للمراجعة'}</button>
+                <button type="button" disabled={creatingTahfiz} onClick={() => newTahfizStep === 2 ? setNewTahfizStep(1) : setShowCreateTahfiz(false)} className="water-btn-outline flex-1 rounded-xl px-4 py-2 disabled:opacity-50">{newTahfizStep === 2 ? 'السابق' : 'إلغاء'}</button>
+                <button type="submit" disabled={creatingTahfiz || newTahfizName.trim().length < 2} className="water-btn flex-1 rounded-xl px-4 py-2 font-bold text-white disabled:opacity-50">{creatingTahfiz ? 'جاري الإنشاء…' : newTahfizStep === 1 ? 'التالي' : 'إرسال للمراجعة'}</button>
               </div>
             </form>
           </div>

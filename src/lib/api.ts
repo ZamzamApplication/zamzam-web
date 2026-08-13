@@ -110,7 +110,7 @@ export const api = {
     return request<void>('/auth/logout', { method: 'POST' })
   },
 
-  signup(tahfizName: string, username: string, password: string, contactPhone?: string) {
+  signup(tahfizName: string, username: string, password: string, contactPhone: string | undefined, setup: { attendanceStatuses: string[]; presentStatus: string; absentStatus: string; sessionNames: string[] }) {
     return request<{ message: string; tahfiz_id: number; status: 'pending' }>('/auth/signup', {
       method: 'POST',
       body: JSON.stringify({
@@ -118,6 +118,10 @@ export const api = {
         username,
         password,
         contact_phone: contactPhone || null,
+        attendance_statuses: setup.attendanceStatuses,
+        present_status: setup.presentStatus,
+        absent_status: setup.absentStatus,
+        session_name_options: setup.sessionNames,
       }),
     })
   },
@@ -133,10 +137,17 @@ export const api = {
     })
   },
 
-  createTahfiz(name: string, contactPhone?: string) {
+  createTahfiz(name: string, contactPhone: string | undefined, setup: { attendanceStatuses: string[]; presentStatus: string; absentStatus: string; sessionNames: string[] }) {
     return request<{ message: string; tahfiz_id: number; membership_id: number; status: 'pending'; role: 'admin' }>('/auth/tahfiz', {
       method: 'POST',
-      body: JSON.stringify({ name, contact_phone: contactPhone?.trim() || null }),
+      body: JSON.stringify({
+        name,
+        contact_phone: contactPhone?.trim() || null,
+        attendance_statuses: setup.attendanceStatuses,
+        present_status: setup.presentStatus,
+        absent_status: setup.absentStatus,
+        session_name_options: setup.sessionNames,
+      }),
     })
   },
 
