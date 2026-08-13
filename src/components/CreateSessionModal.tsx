@@ -42,7 +42,7 @@ export default function CreateSessionModal({ onClose, onCreated }: {
       const [categoryRows, studentRows] = await Promise.all([api.getStudentCategories(), api.getStudents()])
       if (cancelled) return
       setCategories(categoryRows)
-      setStudents(studentRows.filter(student => student.status === 'مقيد'))
+        setStudents(studentRows.filter(student => student.status === 'مقيد' || student.status === 'ضيف'))
     }).catch((reason: any) => {
       if (!cancelled) setError(reason.message || 'تعذر تحميل خيارات الحلقة')
     }).finally(() => {

@@ -35,7 +35,7 @@ export default function StudentProfilePage() {
       const nextProfile = await api.getStudentProfile(studentId)
       setProfile(nextProfile)
       setCustomFieldValues(nextProfile.custom_field_values || {})
-      if (nextProfile.can_manage) {
+      if (nextProfile.can_manage && nextProfile.status === 'مقيد') {
         api.getStudentCurrentSubscription(studentId).then(setSubscription).catch(() => setSubscription(null))
       }
     } catch (reason: any) {
@@ -113,7 +113,7 @@ export default function StudentProfilePage() {
     <div className="mx-auto max-w-5xl space-y-5">
       <div className="flex items-center justify-between gap-3">
         <button type="button" onClick={() => router.back()} className="water-btn-outline rounded-xl px-4 py-2 text-sm">رجوع</button>
-        {profile.can_manage && <div className="flex flex-wrap gap-2"><button type="button" onClick={() => router.push(`/finance?student_id=${profile.id}`)} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">القسم المالي</button><button type="button" onClick={() => router.push('/manage')} className="water-btn rounded-xl px-4 py-2 text-sm font-semibold text-white">إدارة الطالب</button></div>}
+        {profile.can_manage && <div className="flex flex-wrap gap-2">{profile.status === 'مقيد' && <button type="button" onClick={() => router.push(`/finance?student_id=${profile.id}`)} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">القسم المالي</button>}<button type="button" onClick={() => router.push('/manage')} className="water-btn rounded-xl px-4 py-2 text-sm font-semibold text-white">إدارة الطالب</button></div>}
       </div>
 
       <section className="glass-card rounded-2xl p-5 md:p-7">
@@ -147,7 +147,7 @@ export default function StudentProfilePage() {
           <p className="mt-1 text-xs text-deep-500">حد التنبيه المضبوط: أكثر من {profile.attendance.streak_limit}</p>
         </div>}
 
-        {profile.can_manage && subscription?.enabled && <div className="mt-4 flex flex-col gap-2 rounded-xl border border-water-200 bg-white/45 p-4 sm:flex-row sm:items-center sm:justify-between dark:bg-slate-800/40">
+        {profile.can_manage && profile.status === 'مقيد' && subscription?.enabled && <div className="mt-4 flex flex-col gap-2 rounded-xl border border-water-200 bg-white/45 p-4 sm:flex-row sm:items-center sm:justify-between dark:bg-slate-800/40">
           <div><p className="text-xs text-deep-500">اشتراك الدورة الحالية</p><p className="mt-1 font-bold text-deep-900">{(subscription.record?.fee_minor ?? subscription.effective_fee_minor) === 0 ? 'معفى' : subscription.record?.is_paid ? 'مدفوع' : 'غير مدفوع'}{(subscription.record?.fee_minor ?? subscription.effective_fee_minor) > 0 ? ` · ${formatSubscriptionMoney(subscription.record?.fee_minor ?? subscription.effective_fee_minor, subscription.currency || 'EGP')}` : ''}</p></div>
           <button type="button" onClick={() => router.push(`/finance?student_id=${profile.id}`)} className="text-sm font-bold text-cyan-700 dark:text-cyan-300">فتح سجل الاشتراك</button>
         </div>}

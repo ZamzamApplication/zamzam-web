@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
-import TahfizInitialSettingsFields, { DEFAULT_ATTENDANCE_STATUSES, DEFAULT_SESSION_NAMES, type TahfizInitialSettings } from '@/components/TahfizInitialSettingsFields'
+import TahfizInitialSettingsFields, { DEFAULT_INITIAL_TAHFIZ_SETTINGS, type TahfizInitialSettings } from '@/components/TahfizInitialSettingsFields'
 
 export default function SignupPage() {
   const [name, setName] = useState('')
@@ -16,12 +16,7 @@ export default function SignupPage() {
   const [inviteToken, setInviteToken] = useState('')
   const [modeReady, setModeReady] = useState(false)
   const [step, setStep] = useState<1 | 2>(1)
-  const [initialSettings, setInitialSettings] = useState<TahfizInitialSettings>({
-    attendanceStatuses: DEFAULT_ATTENDANCE_STATUSES,
-    presentStatus: 'حاضر',
-    absentStatus: 'غياب',
-    sessionNames: DEFAULT_SESSION_NAMES,
-  })
+  const [initialSettings, setInitialSettings] = useState<TahfizInitialSettings>(() => ({ ...DEFAULT_INITIAL_TAHFIZ_SETTINGS }))
   const router = useRouter()
 
   useEffect(() => {

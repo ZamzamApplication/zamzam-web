@@ -10,6 +10,21 @@ export type TahfizInitialSettings = {
   presentStatus: string
   absentStatus: string
   sessionNames: string[]
+  subscriptionsEnabled: boolean
+  subscriptionDefaultFeeMinor: number
+  subscriptionCurrency: string
+  monthStartDay: number
+}
+
+export const DEFAULT_INITIAL_TAHFIZ_SETTINGS: TahfizInitialSettings = {
+  attendanceStatuses: DEFAULT_ATTENDANCE_STATUSES,
+  presentStatus: 'حاضر',
+  absentStatus: 'غياب',
+  sessionNames: DEFAULT_SESSION_NAMES,
+  subscriptionsEnabled: false,
+  subscriptionDefaultFeeMinor: 0,
+  subscriptionCurrency: 'EGP',
+  monthStartDay: 1,
 }
 
 export default function TahfizInitialSettingsFields({ value, onChange }: {
@@ -76,6 +91,31 @@ export default function TahfizInitialSettingsFields({ value, onChange }: {
         <input value={newSessionName} onChange={event => setNewSessionName(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); addSessionName() } }} maxLength={50} placeholder="مثال: حلقة الفجر" className="surface-field min-w-0 flex-1 rounded-xl px-3 py-2 text-sm" />
         <button type="button" onClick={addSessionName} disabled={!newSessionName.trim() || value.sessionNames.includes(newSessionName.trim())} className="water-btn-outline rounded-xl px-4 text-xs font-semibold disabled:opacity-40">إضافة</button>
       </div>
+    </section>
+
+    <section className="rounded-2xl border border-water-200/80 bg-white/45 p-4 dark:border-slate-700 dark:bg-slate-900/45">
+      <h3 className="text-sm font-bold text-deep-900">الاشتراكات والتحصيل</h3>
+      <p className="mt-1 text-xs leading-5 text-deep-500">حدّد من البداية هل الدار تحصل اشتراكًا شهريًا. يمكن تعديل هذه الإعدادات لاحقًا من القسم المالي.</p>
+      <label className="mt-3 flex items-center gap-3 rounded-xl border border-water-200 bg-white/60 p-3 text-sm font-semibold text-deep-800 dark:border-slate-700 dark:bg-slate-800/60">
+        <input type="checkbox" checked={value.subscriptionsEnabled} onChange={event => onChange({ ...value, subscriptionsEnabled: event.target.checked })} />
+        الدار بها اشتراكات شهرية
+      </label>
+      {value.subscriptionsEnabled && <div className="mt-3 grid gap-3 sm:grid-cols-3">
+        <label className="text-xs font-semibold text-deep-700">الرسم الشهري
+          <input type="number" required min="0.01" step="0.01" value={value.subscriptionDefaultFeeMinor ? value.subscriptionDefaultFeeMinor / 100 : ''} onChange={event => onChange({ ...value, subscriptionDefaultFeeMinor: Math.round(Number(event.target.value || 0) * 100) })} className="surface-field mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm font-normal" />
+        </label>
+        <label className="text-xs font-semibold text-deep-700">العملة
+          <select value={value.subscriptionCurrency} onChange={event => onChange({ ...value, subscriptionCurrency: event.target.value })} className="surface-field mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm font-normal">
+            <option value="EGP">EGP</option><option value="SAR">SAR</option><option value="USD">USD</option>
+          </select>
+        </label>
+        <label className="text-xs font-semibold text-deep-700">بداية الشهر المالي
+          <select value={value.monthStartDay} onChange={event => onChange({ ...value, monthStartDay: Number(event.target.value) })} className="surface-field mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm font-normal">
+            {Array.from({ length: 28 }, (_, index) => index + 1).map(day => <option key={day} value={day}>يوم {day}</option>)}
+          </select>
+        </label>
+      </div>}
+      {!value.subscriptionsEnabled && <p className="mt-2 text-xs text-deep-500">لن تُنشأ رسوم أو مطالبات للطلاب. يمكن تفعيلها لاحقًا.</p>}
     </section>
   </div>
 }

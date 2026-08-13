@@ -23,7 +23,7 @@ export default function SessionMembershipModal({ sessionId, expectedVersion, ini
   useEffect(() => {
     Promise.all([api.getStudents(), api.getStudentCategories()])
       .then(([studentRows, categoryRows]) => {
-        setStudents(studentRows.filter(student => student.status === 'مقيد'))
+        setStudents(studentRows.filter(student => student.status === 'مقيد' || student.status === 'ضيف'))
         setCategories(categoryRows)
       })
       .catch((reason: any) => setError(reason.message || 'تعذر تحميل الطلاب'))

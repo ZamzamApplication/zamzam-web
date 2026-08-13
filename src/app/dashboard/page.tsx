@@ -101,7 +101,7 @@ export default function DashboardPage() {
   const completionRate = stats.sessions > 0 ? Math.round((stats.confirmedSessions / stats.sessions) * 100) : 0
 
   const metricCards = [
-    { label: 'الطلاب', value: stats.students, href: canManage ? '/manage' : undefined, accent: 'bg-cyan-500', detail: 'طالب مقيد في التحفيظ' },
+    { label: 'الطلاب', value: stats.students, href: canManage ? '/manage' : undefined, accent: 'bg-cyan-500', detail: 'طالب نشط في التحفيظ' },
     { label: 'الشيوخ', value: stats.sheikhs, href: canManage ? '/manage' : undefined, accent: 'bg-emerald-500', detail: 'شيخ مسؤول عن المتابعة' },
     { label: 'الحلقات', value: stats.sessions, href: '/sessions', accent: 'bg-amber-500', detail: `${stats.pendingSessions} حلقة قيد الانتظار` },
     { label: 'الحضور المؤكد', value: stats.confirmedSessions, href: '/attendance', accent: 'bg-indigo-500', detail: 'حلقة مكتملة في سجل الحضور' },

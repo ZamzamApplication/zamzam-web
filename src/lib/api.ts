@@ -110,7 +110,7 @@ export const api = {
     return request<void>('/auth/logout', { method: 'POST' })
   },
 
-  signup(tahfizName: string, username: string, password: string, contactPhone: string | undefined, setup: { attendanceStatuses: string[]; presentStatus: string; absentStatus: string; sessionNames: string[] }) {
+  signup(tahfizName: string, username: string, password: string, contactPhone: string | undefined, setup: { attendanceStatuses: string[]; presentStatus: string; absentStatus: string; sessionNames: string[]; subscriptionsEnabled: boolean; subscriptionDefaultFeeMinor: number; subscriptionCurrency: string; monthStartDay: number }) {
     return request<{ message: string; tahfiz_id: number; status: 'pending' }>('/auth/signup', {
       method: 'POST',
       body: JSON.stringify({
@@ -122,6 +122,10 @@ export const api = {
         present_status: setup.presentStatus,
         absent_status: setup.absentStatus,
         session_name_options: setup.sessionNames,
+        subscriptions_enabled: setup.subscriptionsEnabled,
+        subscription_default_fee_minor: setup.subscriptionDefaultFeeMinor,
+        subscription_currency: setup.subscriptionCurrency,
+        month_start_day: setup.monthStartDay,
       }),
     })
   },
@@ -137,7 +141,7 @@ export const api = {
     })
   },
 
-  createTahfiz(name: string, contactPhone: string | undefined, setup: { attendanceStatuses: string[]; presentStatus: string; absentStatus: string; sessionNames: string[] }) {
+  createTahfiz(name: string, contactPhone: string | undefined, setup: { attendanceStatuses: string[]; presentStatus: string; absentStatus: string; sessionNames: string[]; subscriptionsEnabled: boolean; subscriptionDefaultFeeMinor: number; subscriptionCurrency: string; monthStartDay: number }) {
     return request<{ message: string; tahfiz_id: number; membership_id: number; status: 'pending'; role: 'admin' }>('/auth/tahfiz', {
       method: 'POST',
       body: JSON.stringify({
@@ -147,6 +151,10 @@ export const api = {
         present_status: setup.presentStatus,
         absent_status: setup.absentStatus,
         session_name_options: setup.sessionNames,
+        subscriptions_enabled: setup.subscriptionsEnabled,
+        subscription_default_fee_minor: setup.subscriptionDefaultFeeMinor,
+        subscription_currency: setup.subscriptionCurrency,
+        month_start_day: setup.monthStartDay,
       }),
     })
   },

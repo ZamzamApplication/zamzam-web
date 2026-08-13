@@ -9,7 +9,7 @@ import { api } from '@/lib/api'
 import type { User } from '@/lib/types'
 import FeedbackButton from '@/components/FeedbackButton'
 import PwaRegistration from '@/components/PwaRegistration'
-import TahfizInitialSettingsFields, { DEFAULT_ATTENDANCE_STATUSES, DEFAULT_SESSION_NAMES, type TahfizInitialSettings } from '@/components/TahfizInitialSettingsFields'
+import TahfizInitialSettingsFields, { DEFAULT_INITIAL_TAHFIZ_SETTINGS, type TahfizInitialSettings } from '@/components/TahfizInitialSettingsFields'
 
 const cairoFont = Cairo({ subsets: ['arabic'], display: 'swap', variable: '--font-cairo' })
 
@@ -210,7 +210,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const [newTahfizName, setNewTahfizName] = useState('')
   const [newTahfizPhone, setNewTahfizPhone] = useState('')
   const [newTahfizStep, setNewTahfizStep] = useState<1 | 2>(1)
-  const [newTahfizSettings, setNewTahfizSettings] = useState<TahfizInitialSettings>({ attendanceStatuses: DEFAULT_ATTENDANCE_STATUSES, presentStatus: 'حاضر', absentStatus: 'غياب', sessionNames: DEFAULT_SESSION_NAMES })
+  const [newTahfizSettings, setNewTahfizSettings] = useState<TahfizInitialSettings>(() => ({ ...DEFAULT_INITIAL_TAHFIZ_SETTINGS }))
   const [creatingTahfiz, setCreatingTahfiz] = useState(false)
   const [createTahfizError, setCreateTahfizError] = useState('')
   const router = useRouter()
@@ -280,7 +280,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       setNewTahfizName('')
       setNewTahfizPhone('')
       setNewTahfizStep(1)
-      setNewTahfizSettings({ attendanceStatuses: DEFAULT_ATTENDANCE_STATUSES, presentStatus: 'حاضر', absentStatus: 'غياب', sessionNames: DEFAULT_SESSION_NAMES })
+      setNewTahfizSettings({ ...DEFAULT_INITIAL_TAHFIZ_SETTINGS })
       setWorkspaceNotice('تم إرسال طلب التحفيظ الجديد للمراجعة. سيظهر للتبديل بعد اعتماده.')
     } catch (error: any) {
       setCreateTahfizError(error.message || 'تعذر إنشاء التحفيظ')
