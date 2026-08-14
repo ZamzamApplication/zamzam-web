@@ -23,3 +23,7 @@ export function configuredAbsentStatus(absentStatus: string | null | undefined, 
   const present = configuredPresentStatus(undefined, available)
   return available.find((status) => status !== present) || available[0]
 }
+
+export function countStudentsExceptAbsent<T extends { status: string }>(students: T[], absentStatus: string): number {
+  return students.filter((student) => student.status !== absentStatus).length
+}

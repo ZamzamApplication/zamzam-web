@@ -7,7 +7,7 @@ import { getArabicDay, mediaUrl } from '@/lib/format'
 import type { AttendanceThresholdAlert, ProgressCategory, QuranProgressInput, Session, SessionAttendance, SheikhGroup } from '@/lib/types'
 import InlineQuranProgress, { createRequiredProgressDraft, INLINE_PROGRESS_CATEGORIES, isSurahAyahRangeComplete, type ProgressDraftMap, progressDraftKey, progressEntryToInput } from '@/components/InlineQuranProgress'
 import AttendanceStatusControl, { attendanceStatusColorClass } from '@/components/AttendanceStatusControl'
-import { configuredAttendanceStatuses, configuredPresentStatus, DEFAULT_ATTENDANCE_STATUSES } from '@/lib/attendance'
+import { configuredAbsentStatus, configuredAttendanceStatuses, configuredPresentStatus, countStudentsExceptAbsent, DEFAULT_ATTENDANCE_STATUSES } from '@/lib/attendance'
 import { sessionDescriptor } from '@/lib/session-label'
 import SessionMembershipModal from '@/components/SessionMembershipModal'
 
@@ -179,6 +179,7 @@ function SheikhAccordion({
   attendanceStatusColors,
   sheikhSelectionEnabled,
   presentStatus,
+  absentStatus,
 }: {
   group: SheikhGroup
   circleSheikhs: { id: number; name: string }[]
@@ -203,6 +204,7 @@ function SheikhAccordion({
   attendanceStatusColors: Record<string, string>
   sheikhSelectionEnabled: boolean
   presentStatus: string
+  absentStatus: string
 }) {
 
   return (
@@ -213,7 +215,7 @@ function SheikhAccordion({
       >
         <span className="text-lg font-bold text-deep-800">{group.sheikh.name}</span>
         <span className="text-deep-500 text-sm">
-          {group.students.filter((s) => s.status === presentStatus).length}/{group.students.length}
+          {countStudentsExceptAbsent(group.students, absentStatus)}/{group.students.length}
         </span>
       </button>
 
@@ -294,6 +296,7 @@ export default function SessionAttendancePage() {
     'حاضر': 'green', 'غياب': 'slate', 'غياب بعذر': 'amber', 'لا ينطبق': 'sky',
   })
   const [presentStatus, setPresentStatus] = useState('حاضر')
+  const [absentStatus, setAbsentStatus] = useState('غياب')
   const [sheikhSelectionEnabled, setSheikhSelectionEnabled] = useState(true)
   const [studentScopeRestricted, setStudentScopeRestricted] = useState(false)
   const [progressDrafts, setProgressDrafts] = useState<ProgressDraftMap>({})
@@ -359,6 +362,7 @@ export default function SessionAttendancePage() {
       setAttendanceStatuses(configuredAttendanceStatuses(currentUser.tahfiz?.attendance_statuses))
       const effectivePresentStatus = configuredPresentStatus(currentUser.tahfiz?.present_status, currentUser.tahfiz?.attendance_statuses)
       setPresentStatus(effectivePresentStatus)
+      setAbsentStatus(configuredAbsentStatus(currentUser.tahfiz?.absent_status, currentUser.tahfiz?.attendance_statuses))
       setAttendanceStatusColors(currentUser.tahfiz?.attendance_status_colors || {
         'حاضر': 'green', 'غياب': 'slate', 'غياب بعذر': 'amber', 'لا ينطبق': 'sky',
       })
@@ -985,6 +989,7 @@ export default function SessionAttendancePage() {
             attendanceStatusColors={attendanceStatusColors}
             sheikhSelectionEnabled={sheikhSelectionEnabled}
             presentStatus={presentStatus}
+            absentStatus={absentStatus}
           />
         ))}
         {visibleGroups.length === 0 && (
