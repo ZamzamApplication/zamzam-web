@@ -562,7 +562,7 @@ export interface CircleStudentStatsResponse {
 export type ProgressCategory = 'new_memorization' | 'recent_revision' | 'old_revision' | 'test'
 export type QuranRangeType = 'surah_ayah' | 'page'
 export type WardCategory = Exclude<ProgressCategory, 'test'>
-export type WardIncrementUnit = 'ayahs' | 'lines' | 'pages'
+export type WardIncrementUnit = 'ayahs' | 'lines' | 'pages' | 'juz' | 'hizb' | 'quarter' | 'half_page'
 
 export interface QuranRangeSnapshot {
   range_type: QuranRangeType

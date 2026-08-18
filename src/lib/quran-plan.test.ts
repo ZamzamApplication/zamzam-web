@@ -1,11 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import { formatPlanRange, generateQuranPlan, type QuranPlanTrack } from './quran-plan'
 
-function quranTrack(id: string, start: { surah: number; ayah: number }, dailyAmount: number, unit: 'ayahs' | 'lines' = 'ayahs'): QuranPlanTrack {
+function quranTrack(id: string, start: { surah: number; ayah: number }, dailyAmount: number, unit: QuranPlanTrack['unit'] = 'ayahs'): QuranPlanTrack {
   return { id, name: id, enabled: true, kind: 'quran', start, unit, dailyAmount, subject: '', quantityUnit: 'صفحة', startNumber: 1 }
 }
 
 describe('Quran plan generation', () => {
+  it('supports the named Hifz units', () => {
+    const plan = generateQuranPlan({
+      startDate: '2026-01-04', endDate: '2026-01-04', weekdays: [0],
+      tracks: [quranTrack('memorization', { surah: 1, ayah: 1 }, 1, 'half_page')],
+    })
+    expect(plan.days[0].assignments.memorization?.unit).toBe('half_page')
+    expect(plan.days[0].assignments.memorization?.unitAmount).toBe(1)
+    expect(plan.days[0].assignments.memorization?.ayahCount).toBeGreaterThan(0)
+  })
   it('allocates inclusive daily ayah ranges across surahs', () => {
     const plan = generateQuranPlan({
       startDate: '2026-08-16', endDate: '2026-08-18', weekdays: [0, 2],

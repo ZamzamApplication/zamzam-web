@@ -2,7 +2,7 @@ import { SURAHS, surahInfo } from './quran'
 import { QURAN_LINE_END_OFFSETS_BASE64 } from './quran-line-data'
 
 export type QuranPoint = { surah: number; ayah: number }
-export type QuranPlanUnit = 'ayahs' | 'lines'
+export type QuranPlanUnit = 'ayahs' | 'lines' | 'juz' | 'hizb' | 'quarter' | 'page' | 'half_page'
 export type QuranPlanTrack = {
   id: string
   name: string
@@ -166,9 +166,20 @@ function allocateLines(start: QuranPoint, requestedLines: number): { assignment:
 }
 
 function allocate(start: QuranPoint, track: QuranPlanTrack) {
-  return track.unit === 'lines'
-    ? allocateLines(start, track.dailyAmount)
-    : allocateAyahs(start, track.dailyAmount)
+  if (track.unit === 'ayahs') return allocateAyahs(start, track.dailyAmount)
+  const linesPerUnit: Record<Exclude<QuranPlanUnit, 'ayahs' | 'lines'>, number> = {
+    juz: 300,
+    hizb: 150,
+    quarter: 38,
+    page: 15,
+    half_page: 8,
+  }
+  const lineAmount = track.unit === 'lines' ? track.dailyAmount : track.dailyAmount * linesPerUnit[track.unit]
+  const result = allocateLines(start, lineAmount)
+  return {
+    ...result,
+    assignment: { ...result.assignment, unit: track.unit, unitAmount: track.dailyAmount },
+  }
 }
 
 function allocateQuantity(start: number, track: QuranPlanTrack): { assignment: QuranAssignment; next: number } {
@@ -206,7 +217,7 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
   const enabledTracks = input.tracks.filter(track => track.enabled)
   const ids = new Set<string>()
   for (const track of enabledTracks) {
-    const invalidQuran = track.kind === 'quran' && (!isValidQuranPoint(track.start) || !['ayahs', 'lines'].includes(track.unit))
+    const invalidQuran = track.kind === 'quran' && (!isValidQuranPoint(track.start) || !['ayahs', 'lines', 'juz', 'hizb', 'quarter', 'page', 'half_page'].includes(track.unit))
     const invalidQuantity = track.kind === 'quantity' && (!track.subject.trim() || !track.quantityUnit.trim() || !Number.isInteger(track.startNumber) || track.startNumber < 1)
     if (!track.id.trim() || ids.has(track.id) || !track.name.trim() || invalidQuran || invalidQuantity || !Number.isInteger(track.dailyAmount) || track.dailyAmount < 1) {
       throw new Error('invalid_track')

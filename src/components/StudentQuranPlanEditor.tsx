@@ -111,7 +111,11 @@ export default function StudentQuranPlanEditor({ studentId }: { studentId: numbe
                     }} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm">
                       <option value="ayahs">آيات</option>
                       <option value="lines">أسطر</option>
-                      <option value="pages">صفحات</option>
+                      <option value="pages">صفحة</option>
+                      <option value="juz">جزء</option>
+                      <option value="hizb">حزب</option>
+                      <option value="quarter">ربع</option>
+                      <option value="half_page">نصف صفحة</option>
                     </select>
                   </label>
                   <label className="text-xs text-deep-600">المقدار

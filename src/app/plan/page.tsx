@@ -40,8 +40,16 @@ function displayDate(value: string) {
 
 function amountLabel(track: QuranPlanTrack, amount: number) {
   if (track.kind === 'quantity') return `${amount} ${track.quantityUnit}`
-  if (track.unit === 'lines') return `${amount} ${amount === 1 ? 'سطر' : 'أسطر'}`
-  return `${amount} ${amount === 1 ? 'آية' : 'آيات'}`
+  const unitLabels: Record<QuranPlanTrack['unit'], [string, string]> = {
+    ayahs: ['آية', 'آيات'],
+    lines: ['سطر', 'أسطر'],
+    juz: ['جزء', 'أجزاء'],
+    hizb: ['حزب', 'أحزاب'],
+    quarter: ['ربع', 'أرباع'],
+    page: ['صفحة', 'صفحات'],
+    half_page: ['نصف صفحة', 'أنصاف صفحات'],
+  }
+  return `${amount} ${unitLabels[track.unit][amount === 1 ? 0 : 1]}`
 }
 
 function TrackFields({ track, index, count, onChange, onMove, onRemove }: {
@@ -89,7 +97,7 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove }: {
           </select>
         </label>
         <label className="text-xs font-semibold text-deep-700">الوحدة
-          <select value={track.unit} onChange={event => onChange({ ...track, unit: event.target.value as QuranPlanTrack['unit'] })} className="surface-field mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm font-normal"><option value="ayahs">آيات</option><option value="lines">أسطر</option></select>
+          <select value={track.unit} onChange={event => onChange({ ...track, unit: event.target.value as QuranPlanTrack['unit'] })} className="surface-field mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm font-normal"><option value="ayahs">آيات</option><option value="lines">أسطر</option><option value="juz">جزء</option><option value="hizb">حزب</option><option value="quarter">ربع</option><option value="page">صفحة</option><option value="half_page">نصف صفحة</option></select>
         </label>
         <label className="text-xs font-semibold text-deep-700">المعدل اليومي
           <input type="number" min={1} max={1000} required value={track.dailyAmount} onChange={event => onChange({ ...track, dailyAmount: Number(event.target.value) })} className="surface-field mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm font-normal" />
@@ -204,7 +212,7 @@ export default function QuranPlanPage() {
 
     {plan && <section id="plan-preview" className="print-plan mt-7 scroll-mt-5 rounded-3xl border border-water-200 bg-white p-4 shadow-xl dark:border-slate-700 dark:bg-slate-900 sm:p-7">
       <div className="flex flex-col gap-4 border-b border-water-200 pb-5 dark:border-slate-700 sm:flex-row sm:items-start sm:justify-between"><div><p className="plan-kicker text-xs font-bold text-cyan-700 dark:text-cyan-300">بسم الله الرحمن الرحيم</p><h2 className="plan-title mt-2 text-2xl font-bold text-deep-900">{printTitle}</h2><p className="plan-period mt-2 text-sm text-deep-500">من {displayDate(startDate)} إلى {displayDate(endDate)}</p></div><div className="no-print flex flex-wrap gap-2"><button type="button" onClick={async () => { await navigator.clipboard.writeText(planText()); setCopied(true) }} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">{copied ? 'تم النسخ ✓' : 'نسخ النص'}</button><button type="button" onClick={printPlan} className="water-btn rounded-xl px-4 py-2 text-sm font-bold text-white">طباعة الخطة</button></div></div>
-      <div className="my-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"><div className="plan-stat-days rounded-xl bg-cyan-50 p-3 text-center dark:bg-cyan-950/35"><strong className="block text-xl text-cyan-800 dark:text-cyan-200">{plan.studyDays}</strong><span className="text-xs text-cyan-700 dark:text-cyan-300">يوم دراسة</span></div>{plan.tracks.map((track, index) => { const style = TRACK_STYLES[index % TRACK_STYLES.length]; return <div key={track.id} className="rounded-xl p-3 text-center" style={{ backgroundColor: style.soft, color: style.ink }}><strong className="block text-xl">{plan.totals[track.id].amount}</strong><span className="text-xs">{track.name} · {track.kind === 'quantity' ? track.quantityUnit : track.unit === 'lines' ? 'أسطر' : 'آيات'}</span></div> })}</div>
+      <div className="my-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"><div className="plan-stat-days rounded-xl bg-cyan-50 p-3 text-center dark:bg-cyan-950/35"><strong className="block text-xl text-cyan-800 dark:text-cyan-200">{plan.studyDays}</strong><span className="text-xs text-cyan-700 dark:text-cyan-300">يوم دراسة</span></div>{plan.tracks.map((track, index) => { const style = TRACK_STYLES[index % TRACK_STYLES.length]; return <div key={track.id} className="rounded-xl p-3 text-center" style={{ backgroundColor: style.soft, color: style.ink }}><strong className="block text-xl">{plan.totals[track.id].amount}</strong><span className="text-xs">{track.name} · {track.kind === 'quantity' ? track.quantityUnit : amountLabel(track, 1).replace(/^1 /, '')}</span></div> })}</div>
       <div className="overflow-x-auto rounded-2xl border border-water-200 dark:border-slate-700"><table className="plan-table w-full border-collapse text-right text-sm" style={{ minWidth: `${Math.max(44, 18 + plan.tracks.length * 14)}rem` }}><thead className="bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-100"><tr><th className="px-4 py-3">التاريخ</th><th className="px-4 py-3">اليوم</th>{plan.tracks.map(track => <th key={track.id} className="px-4 py-3">{track.name}</th>)}</tr></thead><tbody className="divide-y divide-water-100 dark:divide-slate-800">{plan.days.map(day => <tr key={day.date} className={day.isStudyDay ? 'plan-study-row bg-white dark:bg-slate-900' : 'plan-rest-row bg-slate-50/75 text-slate-500 dark:bg-slate-950/45 dark:text-slate-400'}><td className="whitespace-nowrap px-4 py-3">{displayDate(day.date)}</td><td className="px-4 py-3 font-semibold">{WEEKDAYS[day.weekday]}</td>{plan.tracks.map((track, index) => <td key={track.id} className="px-4 py-3" style={{ borderInlineStart: `3px solid ${TRACK_STYLES[index % TRACK_STYLES.length].line}` }}>{assignmentCell(track, day.assignments[track.id], day.isStudyDay)}</td>)}</tr>)}</tbody></table></div>
       <p className="mt-5 text-center text-xs text-deep-400">وُلدت الخطة بواسطة زمزم · يمكن تعديل المدخلات وإعادة إنشائها في أي وقت</p>
     </section>}
