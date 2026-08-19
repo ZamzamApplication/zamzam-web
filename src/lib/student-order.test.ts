@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { moveStudentWithinStatus, orderStudents } from './student-order'
+import { alphabetizeStudents, moveStudentWithinStatus, orderStudents } from './student-order'
 
 const students = [
   { id: 1, name: 'يوسف', status: 'مقيد', sort_order: 0 },
@@ -15,6 +15,11 @@ describe('management student ordering', () => {
   it('uses saved sort order when present', () => {
     const saved = students.map((student, index) => ({ ...student, sort_order: [2, 0, 1][index] }))
     expect(orderStudents(saved).map(student => student.id)).toEqual([2, 3, 1])
+  })
+
+  it('resets a saved order to Arabic alphabetical order', () => {
+    const saved = students.map((student, index) => ({ ...student, sort_order: [0, 2, 1][index] }))
+    expect(alphabetizeStudents(saved).map(student => student.id)).toEqual([2, 3, 1])
   })
 
   it('moves a student only against neighbors with the same status', () => {

@@ -9,7 +9,7 @@ import { compressProfileImage } from '@/lib/image'
 import { configuredAttendanceStatuses } from '@/lib/attendance'
 import { formatQuranRange } from '@/lib/quran'
 import { filterDestinationSheikhs, filterMoveStudents } from '@/lib/move-student'
-import { moveStudentWithinStatus, orderStudents } from '@/lib/student-order'
+import { alphabetizeStudents, moveStudentWithinStatus, orderStudents } from '@/lib/student-order'
 import type { Circle, ExcusedPeriodInfo, ExcusedWeekdayInfo, QuranProgressEntry, QuranProgressRevision, QuranProgressTrendPoint, QuranRangeType, SheikhDeletionPreview, SheikhInfo, SheikhStudentDeletionResolution, StudentCategory, StudentGoal, StudentInfo, TahfizInvitation, UserInfo, WarningInfo, WarningRow, WhatsAppGroup } from '@/lib/types'
 import AsyncState from '@/components/AsyncState'
 import StudentCustomFieldsEditor from '@/components/StudentCustomFieldsEditor'
@@ -2074,6 +2074,8 @@ export default function ManagePage() {
 
   const [moveStudentId, setMoveStudentId] = useState<number | null>(null)
   const [showMoveStudent, setShowMoveStudent] = useState(false)
+  const [resettingStudentOrder, setResettingStudentOrder] = useState(false)
+  const [studentOrderNotice, setStudentOrderNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const handleReorder = async (sheikhId: number, studentId: number, direction: -1 | 1) => {
     const sheikh = sheikhs.find((s) => s.id === sheikhId)
     if (!sheikh) return
@@ -2084,6 +2086,24 @@ export default function ManagePage() {
       await load(true)
     } catch (err) {
       console.error(err)
+    }
+  }
+
+  const resetStudentOrderAlphabetically = async () => {
+    if (!window.confirm('سيتم إعادة ترتيب جميع الطلاب أبجديًا داخل قائمة كل شيخ. هل تريد المتابعة؟')) return
+    setResettingStudentOrder(true)
+    setStudentOrderNotice(null)
+    try {
+      await Promise.all(sheikhs.map((sheikh) => {
+        const studentIds = alphabetizeStudents(sheikh.students).map(student => student.id)
+        return studentIds.length > 0 ? api.reorderStudents(sheikh.id, studentIds) : Promise.resolve()
+      }))
+      await load(true)
+      setStudentOrderNotice({ type: 'success', text: 'تمت إعادة ترتيب الطلاب أبجديًا.' })
+    } catch (err: any) {
+      setStudentOrderNotice({ type: 'error', text: err.message || 'تعذر إعادة ترتيب الطلاب أبجديًا.' })
+    } finally {
+      setResettingStudentOrder(false)
     }
   }
 
@@ -2170,10 +2190,12 @@ export default function ManagePage() {
               {allExpanded ? 'طي الكل' : 'فتح الكل'}
             </button>
             <div className="flex flex-wrap gap-2">
+              <button type="button" disabled={resettingStudentOrder || sheikhs.every(sheikh => sheikh.students.length === 0)} onClick={() => void resetStudentOrderAlphabetically()} className="water-btn-outline px-4 py-2 rounded-xl text-sm disabled:opacity-50">{resettingStudentOrder ? 'جاري الترتيب...' : 'ترتيب الطلاب أبجديًا'}</button>
               <button onClick={() => { setMoveStudentId(null); setShowMoveStudent(true) }} className="water-btn-outline px-4 py-2 rounded-xl text-sm">نقل طالب</button>
               <button onClick={() => setShowAddSheikh(true)} className="water-btn text-white px-4 py-2 rounded-xl text-sm">+ إضافة شيخ</button>
             </div>
           </div>
+          {studentOrderNotice && <p role={studentOrderNotice.type === 'error' ? 'alert' : 'status'} className={`mb-4 rounded-xl border px-4 py-2 text-sm font-semibold ${studentOrderNotice.type === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300' : 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300'}`}>{studentOrderNotice.text}</p>}
 
           {visibleSheikhs.length === 0 ? (
             <div className="glass-card rounded-2xl p-8 text-center text-deep-600/60">

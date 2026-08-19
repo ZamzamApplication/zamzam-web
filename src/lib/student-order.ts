@@ -16,6 +16,12 @@ export function orderStudents<T extends OrderedStudent>(students: T[]): T[] {
   })
 }
 
+export function alphabetizeStudents<T extends OrderedStudent>(students: T[]): T[] {
+  return [...students].sort((left, right) => (
+    left.name.localeCompare(right.name, 'ar', { sensitivity: 'base' })
+  ))
+}
+
 export function moveStudentWithinStatus<T extends OrderedStudent>(
   students: T[],
   studentId: number,
