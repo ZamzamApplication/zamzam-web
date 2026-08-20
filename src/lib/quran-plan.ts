@@ -103,19 +103,21 @@ function pointAtOffset(offset: number): QuranPoint {
 
 const quranQuarterStartOffsets = QURAN_QUARTER_STARTS.map(([surah, ayah]) => globalOffset({ surah, ayah }))
 
-export function formatPlanRange(from: QuranPoint, to: QuranPoint): string {
-  if (from.surah === to.surah) {
-    return from.ayah === to.ayah
-      ? `سورة ${surahInfo(from.surah).name} — الآية ${from.ayah}`
-      : `سورة ${surahInfo(from.surah).name} — من الآية ${from.ayah} إلى ${to.ayah}`
-  }
-  return `من سورة ${surahInfo(from.surah).name}، الآية ${from.ayah} إلى سورة ${surahInfo(to.surah).name}، الآية ${to.ayah}`
-}
-
 const arabicAyahNumber = new Intl.NumberFormat('ar-EG', { useGrouping: false })
 
 function mushafAyahMarker(ayah: number): string {
   return `۝${arabicAyahNumber.format(ayah)}`
+}
+
+export function formatPlanRange(from: QuranPoint, to: QuranPoint): string {
+  const fromAyah = mushafAyahMarker(from.ayah)
+  const toAyah = mushafAyahMarker(to.ayah)
+  if (from.surah === to.surah) {
+    return from.ayah === to.ayah
+      ? `سورة ${surahInfo(from.surah).name} — ${fromAyah}`
+      : `سورة ${surahInfo(from.surah).name} — ${fromAyah} : ${toAyah}`
+  }
+  return `سورة ${surahInfo(from.surah).name} ${fromAyah} ← سورة ${surahInfo(to.surah).name} ${toAyah}`
 }
 
 export function formatCompactPlanRange(from: QuranPoint, to: QuranPoint): string {

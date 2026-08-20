@@ -96,8 +96,8 @@ describe('Quran plan generation', () => {
   })
 
   it('formats single and cross-surah ranges clearly', () => {
-    expect(formatPlanRange({ surah: 1, ayah: 1 }, { surah: 1, ayah: 3 })).toContain('من الآية 1 إلى 3')
-    expect(formatPlanRange({ surah: 1, ayah: 7 }, { surah: 2, ayah: 2 })).toContain('إلى سورة البقرة')
+    expect(formatPlanRange({ surah: 1, ayah: 1 }, { surah: 1, ayah: 3 })).toBe('سورة الفاتحة — ۝١ : ۝٣')
+    expect(formatPlanRange({ surah: 1, ayah: 7 }, { surah: 2, ayah: 2 })).toBe('سورة الفاتحة ۝٧ ← سورة البقرة ۝٢')
   })
 
   it('formats copied ranges compactly with Arabic ayah numbers', () => {

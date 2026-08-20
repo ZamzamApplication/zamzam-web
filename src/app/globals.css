@@ -43,7 +43,7 @@
 @media print {
   @page plan {
     size: A4 landscape;
-    margin: 0;
+    margin: 10mm;
   }
 
   body * {
@@ -72,9 +72,11 @@
     inset: 0 0 auto 0 !important;
     color: #0f172a !important;
     background: #fff !important;
-    width: 297mm !important;
-    min-height: 210mm !important;
-    padding: 9mm 11mm !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
     font-family: Cairo, Arial, sans-serif !important;
     border-radius: 0 !important;
     color-scheme: light !important;
@@ -186,6 +188,7 @@
     line-height: 1.55 !important;
     vertical-align: middle !important;
     border-bottom: 1px solid #e2e8f0 !important;
+    overflow-wrap: anywhere !important;
   }
 
   .print-plan .plan-table th:first-child,
