@@ -114,9 +114,13 @@ export function formatPlanRange(from: QuranPoint, to: QuranPoint): string {
 
 const arabicAyahNumber = new Intl.NumberFormat('ar-EG', { useGrouping: false })
 
+function mushafAyahMarker(ayah: number): string {
+  return `۝${arabicAyahNumber.format(ayah)}`
+}
+
 export function formatCompactPlanRange(from: QuranPoint, to: QuranPoint): string {
-  const fromAyah = arabicAyahNumber.format(from.ayah)
-  const toAyah = arabicAyahNumber.format(to.ayah)
+  const fromAyah = mushafAyahMarker(from.ayah)
+  const toAyah = mushafAyahMarker(to.ayah)
   if (from.surah === to.surah) {
     return from.ayah === to.ayah
       ? `سورة ${surahInfo(from.surah).name}: ${fromAyah}`

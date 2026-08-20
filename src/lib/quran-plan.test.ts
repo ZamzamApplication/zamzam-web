@@ -101,7 +101,7 @@ describe('Quran plan generation', () => {
   })
 
   it('formats copied ranges compactly with Arabic ayah numbers', () => {
-    expect(formatCompactPlanRange({ surah: 28, ayah: 25 }, { surah: 28, ayah: 26 })).toBe('سورة القصص: ٢٥ : ٢٦')
-    expect(formatCompactPlanRange({ surah: 1, ayah: 7 }, { surah: 2, ayah: 2 })).toBe('سورة الفاتحة: ٧ ← سورة البقرة: ٢')
+    expect(formatCompactPlanRange({ surah: 28, ayah: 25 }, { surah: 28, ayah: 26 })).toBe('سورة القصص: ۝٢٥ : ۝٢٦')
+    expect(formatCompactPlanRange({ surah: 1, ayah: 7 }, { surah: 2, ayah: 2 })).toBe('سورة الفاتحة: ۝٧ ← سورة البقرة: ۝٢')
   })
 })

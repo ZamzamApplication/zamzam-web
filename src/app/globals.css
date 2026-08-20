@@ -41,6 +41,11 @@
 }
 
 @media print {
+  @page plan {
+    size: A4 landscape;
+    margin: 0;
+  }
+
   body * {
     visibility: hidden !important;
   }
@@ -62,26 +67,73 @@
   }
 
   .print-plan {
+    page: plan;
     position: absolute !important;
     inset: 0 0 auto 0 !important;
     color: #0f172a !important;
     background: #fff !important;
-    padding: 12mm !important;
+    width: 297mm !important;
+    min-height: 210mm !important;
+    padding: 9mm 11mm !important;
+    font-family: Cairo, Arial, sans-serif !important;
+    border-radius: 0 !important;
     color-scheme: light !important;
     print-color-adjust: exact !important;
     -webkit-print-color-adjust: exact !important;
   }
 
+  .print-plan .plan-header {
+    display: block !important;
+    padding-bottom: 5mm !important;
+    border-bottom: 2px solid #0891b2 !important;
+  }
+
   .print-plan .plan-kicker {
     color: #0e7490 !important;
+    font-size: 25px !important;
+    line-height: 1.6 !important;
+    text-align: center !important;
+    margin: 0 !important;
+  }
+
+  .print-plan .plan-heading {
+    width: 100% !important;
+    text-align: center !important;
   }
 
   .print-plan .plan-title {
     color: #0f172a !important;
+    font-size: 20px !important;
+    line-height: 1.5 !important;
+    margin-top: 1mm !important;
   }
 
   .print-plan .plan-period {
     color: #475569 !important;
+    font-size: 11px !important;
+    margin-top: 1mm !important;
+  }
+
+  .print-plan .plan-summary {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(38mm, 1fr)) !important;
+    gap: 3mm !important;
+    margin: 5mm 0 !important;
+  }
+
+  .print-plan .plan-stat {
+    padding: 2.5mm 3mm !important;
+    border: 1px solid currentColor !important;
+    border-radius: 3mm !important;
+  }
+
+  .print-plan .plan-stat strong {
+    font-size: 17px !important;
+    line-height: 1.2 !important;
+  }
+
+  .print-plan .plan-stat span {
+    font-size: 9px !important;
   }
 
   .print-plan .plan-stat-days {
@@ -108,16 +160,58 @@
   .print-plan .plan-table {
     color: #0f172a !important;
     border-color: #bae6fd !important;
+    width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
   }
 
   .print-plan .plan-table thead {
     color: #164e63 !important;
-    background: #e0f2fe !important;
+    background: #cffafe !important;
+    display: table-header-group !important;
+  }
+
+  .print-plan .plan-table th {
+    padding: 2.5mm 2mm !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+    border-bottom: 1.5px solid #0891b2 !important;
+  }
+
+  .print-plan .plan-table td {
+    padding: 2mm !important;
+    font-size: 9px !important;
+    line-height: 1.55 !important;
+    vertical-align: middle !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+  }
+
+  .print-plan .plan-table th:first-child,
+  .print-plan .plan-table td:first-child {
+    width: 32mm !important;
+  }
+
+  .print-plan .plan-table th:nth-child(2),
+  .print-plan .plan-table td:nth-child(2) {
+    width: 18mm !important;
+    text-align: center !important;
+  }
+
+  .print-plan .plan-table-wrap {
+    overflow: visible !important;
+    border: 1px solid #a5f3fc !important;
+    border-radius: 3mm !important;
   }
 
   .print-plan .plan-study-row {
     color: #0f172a !important;
     background: #fff !important;
+  }
+
+  .print-plan .plan-study-row:nth-child(even) {
+    background: #f8fafc !important;
   }
 
   .print-plan .plan-rest-row {
@@ -139,11 +233,11 @@
 
   .print-plan table {
     min-width: 0 !important;
-    font-size: 10px !important;
   }
 
   .print-plan tr {
     break-inside: avoid;
+    page-break-inside: avoid;
   }
 }
 
