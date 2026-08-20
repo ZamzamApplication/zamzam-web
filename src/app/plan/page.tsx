@@ -3,8 +3,9 @@
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
 
+import ExcelPreviewModal, { type SpreadsheetSheet } from '@/components/ExcelPreviewModal'
 import { SURAHS, surahInfo } from '@/lib/quran'
-import { completedMushafText, generateQuranPlan, type GeneratedQuranPlan, type QuranAssignment, type QuranPlanTrack } from '@/lib/quran-plan'
+import { completedMushafText, formatCompactPlanRange, generateQuranPlan, type GeneratedQuranPlan, type QuranAssignment, type QuranPlanTrack } from '@/lib/quran-plan'
 
 const WEEKDAYS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
 const TRACK_STYLES = [
@@ -80,11 +81,6 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove }: {
     </div>
 
     {track.enabled && <>
-      <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-white/45 p-1 dark:bg-slate-900/35" role="group" aria-label="نوع البند">
-        <button type="button" onClick={() => onChange({ ...track, kind: 'quran' })} className={`rounded-lg px-3 py-2 text-xs font-bold ${track.kind === 'quran' ? `${style.toggle} text-white` : 'text-deep-500'}`}>ورد قرآني</button>
-        <button type="button" onClick={() => onChange({ ...track, kind: 'quantity' })} className={`rounded-lg px-3 py-2 text-xs font-bold ${track.kind === 'quantity' ? `${style.toggle} text-white` : 'text-deep-500'}`}>مادة أخرى</button>
-      </div>
-
       {track.kind === 'quran' ? <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_7rem_7rem_7rem]">
         <label className="text-xs font-semibold text-deep-700">سورة البداية
           <select value={track.start.surah} onChange={event => onChange({ ...track, start: { surah: Number(event.target.value), ayah: 1 } })} className="surface-field mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm font-normal">
@@ -97,7 +93,7 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove }: {
           </select>
         </label>
         <label className="text-xs font-semibold text-deep-700">الوحدة
-          <select value={track.unit} onChange={event => onChange({ ...track, unit: event.target.value as QuranPlanTrack['unit'] })} className="surface-field mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm font-normal"><option value="ayahs">آيات</option><option value="lines">أسطر</option><option value="juz">جزء</option><option value="hizb">حزب</option><option value="quarter">ربع</option><option value="page">صفحة</option><option value="half_page">نصف صفحة</option></select>
+          <select value={track.unit} onChange={event => onChange({ ...track, unit: event.target.value as QuranPlanTrack['unit'] })} className="surface-field mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm font-normal"><option value="ayahs">آيات</option><option value="lines">أسطر</option><option value="half_page">نصف صفحة</option><option value="page">صفحة</option><option value="quarter">ربع</option><option value="hizb">حزب</option><option value="juz">جزء</option></select>
         </label>
         <label className="text-xs font-semibold text-deep-700">المعدل اليومي
           <input type="number" min={1} max={1000} required value={track.dailyAmount} onChange={event => onChange({ ...track, dailyAmount: Number(event.target.value) })} className="surface-field mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm font-normal" />
@@ -128,6 +124,7 @@ export default function QuranPlanPage() {
   const [weekdays, setWeekdays] = useState<number[]>([0, 1, 2, 3, 4])
   const [tracks, setTracks] = useState<QuranPlanTrack[]>([defaultTrack('memorization', 'الحفظ', 5), defaultTrack('revision', 'المراجعة', 20)])
   const [plan, setPlan] = useState<GeneratedQuranPlan | null>(null)
+  const [excelSheets, setExcelSheets] = useState<SpreadsheetSheet[] | null>(null)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
 
@@ -170,7 +167,10 @@ export default function QuranPlanPage() {
       if (!day.isStudyDay) lines.push('🌙 راحة')
       else plan.tracks.forEach((track, index) => {
         const assignment = day.assignments[track.id]
-        lines.push(`${TRACK_STYLES[index % TRACK_STYLES.length].emoji} *${track.name}:* ${assignment ? `${assignment.text} _(${amountLabel(track, assignment.unitAmount)})_` : 'اكتمل الورد ✅'}`)
+        const assignmentText = assignment?.from && assignment.to
+          ? formatCompactPlanRange(assignment.from, assignment.to)
+          : assignment?.text
+        lines.push(`${TRACK_STYLES[index % TRACK_STYLES.length].emoji} *${track.name}:* ${assignmentText || 'اكتمل الورد ✅'}`)
       })
       lines.push('', '──────────────────', '')
     })
@@ -186,10 +186,64 @@ export default function QuranPlanPage() {
     window.print()
   }
 
-  const assignmentCell = (track: QuranPlanTrack, assignment: QuranAssignment | null, isStudyDay: boolean) => {
+  const openExcelPreview = () => {
+    if (!plan) return
+    const trackColumns = plan.tracks.map((track, index) => ({
+      id: `track_${index}`,
+      label: track.name,
+      width: 42,
+    }))
+    const schedule: SpreadsheetSheet = {
+      name: 'جدول الخطة',
+      columns: [
+        { id: 'date', label: 'التاريخ', width: 24 },
+        { id: 'day', label: 'اليوم', width: 14 },
+        { id: 'status', label: 'الحالة', width: 14 },
+        ...trackColumns,
+      ],
+      rows: plan.days.map(day => ({
+        date: displayDate(day.date),
+        day: WEEKDAYS[day.weekday],
+        status: day.isStudyDay ? 'دراسة' : 'راحة',
+        ...Object.fromEntries(plan.tracks.map((track, index) => {
+          const assignment = day.assignments[track.id]
+          const value = !day.isStudyDay
+            ? 'راحة'
+            : assignment
+              ? `${assignment.text}${assignment.to ? completedMushafText(assignment.to) : ''}`
+              : 'اكتمل الورد'
+          return [`track_${index}`, value]
+        })),
+      })),
+      headerBackgroundColor: '#0E7490',
+      headerFontColor: '#FFFFFF',
+    }
+    const summaryRows = [
+      ...(studentName.trim() ? [{ item: 'الطالب', value: studentName.trim() }] : []),
+      { item: 'الفترة', value: `من ${displayDate(startDate)} إلى ${displayDate(endDate)}` },
+      { item: 'أيام الدراسة', value: [...weekdays].sort((a, b) => a - b).map(day => WEEKDAYS[day]).join('، ') },
+      { item: 'عدد أيام الدراسة', value: plan.studyDays },
+      ...plan.tracks.map(track => ({
+        item: track.name,
+        value: `${amountLabel(track, track.dailyAmount)} يومياً · الإجمالي ${amountLabel(track, plan.totals[track.id].amount)}`,
+      })),
+    ]
+    setExcelSheets([
+      schedule,
+      {
+        name: 'ملخص الخطة',
+        columns: [{ id: 'item', label: 'البيان', width: 24 }, { id: 'value', label: 'القيمة', width: 55 }],
+        rows: summaryRows,
+        headerBackgroundColor: '#0F766E',
+        headerFontColor: '#FFFFFF',
+      },
+    ])
+  }
+
+  const assignmentCell = (assignment: QuranAssignment | null, isStudyDay: boolean) => {
     if (!isStudyDay) return 'راحة'
     if (!assignment) return 'اكتمل الورد'
-    return <><span>{assignment.text}</span><span className="mr-1 text-xs">({amountLabel(track, assignment.unitAmount)}){assignment.to ? completedMushafText(assignment.to) : ''}</span></>
+    return <><span>{assignment.text}</span>{assignment.to ? completedMushafText(assignment.to) : ''}</>
   }
 
   return <div className="min-h-screen bg-[rgb(var(--bg))] px-3 py-6 sm:px-5 sm:py-10"><div className="mx-auto max-w-6xl">
@@ -211,10 +265,11 @@ export default function QuranPlanPage() {
     </section>
 
     {plan && <section id="plan-preview" className="print-plan mt-7 scroll-mt-5 rounded-3xl border border-water-200 bg-white p-4 shadow-xl dark:border-slate-700 dark:bg-slate-900 sm:p-7">
-      <div className="flex flex-col gap-4 border-b border-water-200 pb-5 dark:border-slate-700 sm:flex-row sm:items-start sm:justify-between"><div><p className="plan-kicker text-xs font-bold text-cyan-700 dark:text-cyan-300">بسم الله الرحمن الرحيم</p><h2 className="plan-title mt-2 text-2xl font-bold text-deep-900">{printTitle}</h2><p className="plan-period mt-2 text-sm text-deep-500">من {displayDate(startDate)} إلى {displayDate(endDate)}</p></div><div className="no-print flex flex-wrap gap-2"><button type="button" onClick={async () => { await navigator.clipboard.writeText(planText()); setCopied(true) }} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">{copied ? 'تم النسخ ✓' : 'نسخ النص'}</button><button type="button" onClick={printPlan} className="water-btn rounded-xl px-4 py-2 text-sm font-bold text-white">طباعة الخطة</button></div></div>
+      <div className="flex flex-col gap-4 border-b border-water-200 pb-5 dark:border-slate-700 sm:flex-row sm:items-start sm:justify-between"><div><p className="plan-kicker text-xs font-bold text-cyan-700 dark:text-cyan-300">بسم الله الرحمن الرحيم</p><h2 className="plan-title mt-2 text-2xl font-bold text-deep-900">{printTitle}</h2><p className="plan-period mt-2 text-sm text-deep-500">من {displayDate(startDate)} إلى {displayDate(endDate)}</p></div><div className="no-print flex flex-wrap gap-2"><button type="button" onClick={async () => { await navigator.clipboard.writeText(planText()); setCopied(true) }} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">{copied ? 'تم النسخ ✓' : 'نسخ النص'}</button><button type="button" onClick={openExcelPreview} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">تصدير Excel</button><button type="button" onClick={printPlan} className="water-btn rounded-xl px-4 py-2 text-sm font-bold text-white">طباعة الخطة</button></div></div>
       <div className="my-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"><div className="plan-stat-days rounded-xl bg-cyan-50 p-3 text-center dark:bg-cyan-950/35"><strong className="block text-xl text-cyan-800 dark:text-cyan-200">{plan.studyDays}</strong><span className="text-xs text-cyan-700 dark:text-cyan-300">يوم دراسة</span></div>{plan.tracks.map((track, index) => { const style = TRACK_STYLES[index % TRACK_STYLES.length]; return <div key={track.id} className="rounded-xl p-3 text-center" style={{ backgroundColor: style.soft, color: style.ink }}><strong className="block text-xl">{plan.totals[track.id].amount}</strong><span className="text-xs">{track.name} · {track.kind === 'quantity' ? track.quantityUnit : amountLabel(track, 1).replace(/^1 /, '')}</span></div> })}</div>
-      <div className="overflow-x-auto rounded-2xl border border-water-200 dark:border-slate-700"><table className="plan-table w-full border-collapse text-right text-sm" style={{ minWidth: `${Math.max(44, 18 + plan.tracks.length * 14)}rem` }}><thead className="bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-100"><tr><th className="px-4 py-3">التاريخ</th><th className="px-4 py-3">اليوم</th>{plan.tracks.map(track => <th key={track.id} className="px-4 py-3">{track.name}</th>)}</tr></thead><tbody className="divide-y divide-water-100 dark:divide-slate-800">{plan.days.map(day => <tr key={day.date} className={day.isStudyDay ? 'plan-study-row bg-white dark:bg-slate-900' : 'plan-rest-row bg-slate-50/75 text-slate-500 dark:bg-slate-950/45 dark:text-slate-400'}><td className="whitespace-nowrap px-4 py-3">{displayDate(day.date)}</td><td className="px-4 py-3 font-semibold">{WEEKDAYS[day.weekday]}</td>{plan.tracks.map((track, index) => <td key={track.id} className="px-4 py-3" style={{ borderInlineStart: `3px solid ${TRACK_STYLES[index % TRACK_STYLES.length].line}` }}>{assignmentCell(track, day.assignments[track.id], day.isStudyDay)}</td>)}</tr>)}</tbody></table></div>
+      <div className="overflow-x-auto rounded-2xl border border-water-200 dark:border-slate-700"><table className="plan-table w-full border-collapse text-right text-sm" style={{ minWidth: `${Math.max(44, 18 + plan.tracks.length * 14)}rem` }}><thead className="bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-100"><tr><th className="px-4 py-3">التاريخ</th><th className="px-4 py-3">اليوم</th>{plan.tracks.map(track => <th key={track.id} className="px-4 py-3">{track.name}</th>)}</tr></thead><tbody className="divide-y divide-water-100 dark:divide-slate-800">{plan.days.map(day => <tr key={day.date} className={day.isStudyDay ? 'plan-study-row bg-white dark:bg-slate-900' : 'plan-rest-row bg-slate-50/75 text-slate-500 dark:bg-slate-950/45 dark:text-slate-400'}><td className="whitespace-nowrap px-4 py-3">{displayDate(day.date)}</td><td className="px-4 py-3 font-semibold">{WEEKDAYS[day.weekday]}</td>{plan.tracks.map((track, index) => <td key={track.id} className="px-4 py-3" style={{ borderInlineStart: `3px solid ${TRACK_STYLES[index % TRACK_STYLES.length].line}` }}>{assignmentCell(day.assignments[track.id], day.isStudyDay)}</td>)}</tr>)}</tbody></table></div>
       <p className="mt-5 text-center text-xs text-deep-400">وُلدت الخطة بواسطة زمزم · يمكن تعديل المدخلات وإعادة إنشائها في أي وقت</p>
     </section>}
+    {excelSheets && <ExcelPreviewModal sheets={excelSheets} filename={`zamzam-plan-${startDate}.xlsx`} helpText="راجع جدول الخطة وملخصها قبل تنزيل ملف Excel." onClose={() => setExcelSheets(null)} />}
   </div></div>
 }

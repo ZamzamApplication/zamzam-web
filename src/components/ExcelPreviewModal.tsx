@@ -41,10 +41,12 @@ function safeSheetName(name: string, index: number): string {
 export default function ExcelPreviewModal({
   sheets,
   filename,
+  helpText,
   onClose,
 }: {
   sheets: SpreadsheetSheet[]
   filename: string
+  helpText?: string
   onClose: () => void
 }) {
   const [activeIndex, setActiveIndex] = useState(0)
@@ -236,9 +238,9 @@ export default function ExcelPreviewModal({
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>
             <h2 className="text-lg font-bold text-deep-800">معاينة Excel</h2>
-            <p className="text-xs text-deep-500 mt-1">
-              الأعمدة والعناوين محفوظة في <a href="/settings" className="font-semibold text-cyan-700 underline dark:text-cyan-300">إعدادات قوالب Excel</a>.
-            </p>
+            {helpText
+              ? <p className="text-xs text-deep-500 mt-1">{helpText}</p>
+              : <p className="text-xs text-deep-500 mt-1">الأعمدة والعناوين محفوظة في <a href="/settings" className="font-semibold text-cyan-700 underline dark:text-cyan-300">إعدادات قوالب Excel</a>.</p>}
           </div>
           <button type="button" onClick={onClose} className="text-deep-400 hover:text-deep-700" aria-label="إغلاق">✕</button>
         </div>

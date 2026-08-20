@@ -1,5 +1,6 @@
 import { SURAHS, surahInfo } from './quran'
 import { QURAN_LINE_END_OFFSETS_BASE64 } from './quran-line-data'
+import { QURAN_QUARTER_STARTS } from './quran-quarter-data'
 
 export type QuranPoint = { surah: number; ayah: number }
 export type QuranPlanUnit = 'ayahs' | 'lines' | 'juz' | 'hizb' | 'quarter' | 'page' | 'half_page'
@@ -100,6 +101,8 @@ function pointAtOffset(offset: number): QuranPoint {
   return LAST_POINT
 }
 
+const quranQuarterStartOffsets = QURAN_QUARTER_STARTS.map(([surah, ayah]) => globalOffset({ surah, ayah }))
+
 export function formatPlanRange(from: QuranPoint, to: QuranPoint): string {
   if (from.surah === to.surah) {
     return from.ayah === to.ayah
@@ -107,6 +110,19 @@ export function formatPlanRange(from: QuranPoint, to: QuranPoint): string {
       : `سورة ${surahInfo(from.surah).name} — من الآية ${from.ayah} إلى ${to.ayah}`
   }
   return `من سورة ${surahInfo(from.surah).name}، الآية ${from.ayah} إلى سورة ${surahInfo(to.surah).name}، الآية ${to.ayah}`
+}
+
+const arabicAyahNumber = new Intl.NumberFormat('ar-EG', { useGrouping: false })
+
+export function formatCompactPlanRange(from: QuranPoint, to: QuranPoint): string {
+  const fromAyah = arabicAyahNumber.format(from.ayah)
+  const toAyah = arabicAyahNumber.format(to.ayah)
+  if (from.surah === to.surah) {
+    return from.ayah === to.ayah
+      ? `سورة ${surahInfo(from.surah).name}: ${fromAyah}`
+      : `سورة ${surahInfo(from.surah).name}: ${fromAyah} : ${toAyah}`
+  }
+  return `سورة ${surahInfo(from.surah).name}: ${fromAyah} ← سورة ${surahInfo(to.surah).name}: ${toAyah}`
 }
 
 function allocateAyahs(start: QuranPoint, requestedAyahs: number): { assignment: QuranAssignment; next: QuranPoint | null } {
@@ -165,12 +181,49 @@ function allocateLines(start: QuranPoint, requestedLines: number): { assignment:
   }
 }
 
+function allocateQuarters(start: QuranPoint, requestedQuarters: number): { assignment: QuranAssignment; next: QuranPoint | null } {
+  const startOffset = globalOffset(start)
+  let low = 0
+  let high = quranQuarterStartOffsets.length
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2)
+    if (quranQuarterStartOffsets[middle] <= startOffset) low = middle + 1
+    else high = middle
+  }
+
+  const followingBoundaryIndex = low + requestedQuarters - 1
+  const endOffset = followingBoundaryIndex < quranQuarterStartOffsets.length
+    ? quranQuarterStartOffsets[followingBoundaryIndex] - 1
+    : globalOffset(LAST_POINT)
+  const end = pointAtOffset(endOffset)
+  const next = nextPoint(end)
+  return {
+    assignment: {
+      from: start,
+      to: end,
+      fromNumber: null,
+      toNumber: null,
+      ayahCount: endOffset - startOffset + 1,
+      unit: 'quarter',
+      unitAmount: requestedQuarters,
+      text: formatPlanRange(start, end),
+      completedMushaf: next === null,
+    },
+    next,
+  }
+}
+
 function allocate(start: QuranPoint, track: QuranPlanTrack) {
   if (track.unit === 'ayahs') return allocateAyahs(start, track.dailyAmount)
-  const linesPerUnit: Record<Exclude<QuranPlanUnit, 'ayahs' | 'lines'>, number> = {
-    juz: 300,
-    hizb: 150,
-    quarter: 38,
+  if (track.unit === 'quarter' || track.unit === 'hizb' || track.unit === 'juz') {
+    const quartersPerUnit = track.unit === 'quarter' ? 1 : track.unit === 'hizb' ? 4 : 8
+    const result = allocateQuarters(start, track.dailyAmount * quartersPerUnit)
+    return {
+      ...result,
+      assignment: { ...result.assignment, unit: track.unit, unitAmount: track.dailyAmount },
+    }
+  }
+  const linesPerUnit: Record<Exclude<QuranPlanUnit, 'ayahs' | 'lines' | 'juz' | 'hizb' | 'quarter'>, number> = {
     page: 15,
     half_page: 8,
   }

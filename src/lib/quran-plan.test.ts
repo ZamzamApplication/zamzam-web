@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { formatPlanRange, generateQuranPlan, type QuranPlanTrack } from './quran-plan'
+import { formatCompactPlanRange, formatPlanRange, generateQuranPlan, type QuranPlanTrack } from './quran-plan'
+import { QURAN_QUARTER_STARTS } from './quran-quarter-data'
 
 function quranTrack(id: string, start: { surah: number; ayah: number }, dailyAmount: number, unit: QuranPlanTrack['unit'] = 'ayahs'): QuranPlanTrack {
   return { id, name: id, enabled: true, kind: 'quran', start, unit, dailyAmount, subject: '', quantityUnit: 'صفحة', startNumber: 1 }
@@ -71,8 +72,36 @@ describe('Quran plan generation', () => {
     expect(plan.days[0].assignments.memorization?.unitAmount).toBe(2)
   })
 
+  it('uses all 240 canonical starts for quarter-based plans', () => {
+    expect(QURAN_QUARTER_STARTS).toHaveLength(240)
+    const plan = generateQuranPlan({
+      startDate: '2026-08-16', endDate: '2026-08-17', weekdays: [0, 1],
+      tracks: [quranTrack('memorization', { surah: 1, ayah: 1 }, 1, 'quarter')],
+    })
+    expect(plan.days[0].assignments.memorization?.to).toEqual({ surah: 2, ayah: 25 })
+    expect(plan.days[1].assignments.memorization?.from).toEqual({ surah: 2, ayah: 26 })
+    expect(plan.days[1].assignments.memorization?.to).toEqual({ surah: 2, ayah: 43 })
+  })
+
+  it('defines a hizb as 4 quarters and a juz as 8 quarters', () => {
+    const plan = generateQuranPlan({
+      startDate: '2026-08-16', endDate: '2026-08-16', weekdays: [0],
+      tracks: [
+        quranTrack('hizb', { surah: 1, ayah: 1 }, 1, 'hizb'),
+        quranTrack('juz', { surah: 1, ayah: 1 }, 1, 'juz'),
+      ],
+    })
+    expect(plan.days[0].assignments.hizb?.to).toEqual({ surah: 2, ayah: 74 })
+    expect(plan.days[0].assignments.juz?.to).toEqual({ surah: 2, ayah: 141 })
+  })
+
   it('formats single and cross-surah ranges clearly', () => {
     expect(formatPlanRange({ surah: 1, ayah: 1 }, { surah: 1, ayah: 3 })).toContain('من الآية 1 إلى 3')
     expect(formatPlanRange({ surah: 1, ayah: 7 }, { surah: 2, ayah: 2 })).toContain('إلى سورة البقرة')
+  })
+
+  it('formats copied ranges compactly with Arabic ayah numbers', () => {
+    expect(formatCompactPlanRange({ surah: 28, ayah: 25 }, { surah: 28, ayah: 26 })).toBe('سورة القصص: ٢٥ : ٢٦')
+    expect(formatCompactPlanRange({ surah: 1, ayah: 7 }, { surah: 2, ayah: 2 })).toBe('سورة الفاتحة: ٧ ← سورة البقرة: ٢')
   })
 })
