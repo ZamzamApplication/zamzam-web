@@ -72,14 +72,14 @@ export default function SignupPage() {
           <div aria-hidden="true" className="absolute -bottom-20 -right-16 -z-10 h-72 w-72 rounded-full bg-white/5" />
           <div className="flex h-full flex-col">
             <Link href="/" className="inline-flex w-fit items-center gap-3 rounded-2xl bg-white/10 px-3 py-2 backdrop-blur-sm hover:bg-white/15">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-xl text-cyan-700 shadow-lg shadow-cyan-950/15">💧</span>
-              <span><strong className="block text-lg leading-none">زمزم</strong><small className="mt-1 block text-[10px] text-cyan-100">إدارة التحفيظ ببساطة</small></span>
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-xl text-blue-700 shadow-lg shadow-cyan-950/15">💧</span>
+              <span><strong className="block text-lg leading-none">زمزم</strong><small className="mt-1 block text-[10px] text-blue-100">إدارة التحفيظ ببساطة</small></span>
             </Link>
 
             <div className="my-10 lg:my-auto">
-              <p className="mb-3 text-xs font-bold tracking-wider text-cyan-100">منظومة واحدة · رؤية أوضح</p>
+              <p className="mb-3 text-xs font-bold tracking-wider text-blue-100">منظومة واحدة · رؤية أوضح</p>
               <h2 className="max-w-sm text-3xl font-bold leading-[1.45] sm:text-4xl">كل ما تحتاجه الحلقة، في مكان هادئ ومنظّم.</h2>
-              <p className="mt-4 max-w-md text-sm leading-7 text-cyan-50/85">سجّل الحضور، تابع إنجاز الطلاب، ونظّم عمل الشيوخ من واجهة عربية مصممة للاستخدام اليومي.</p>
+              <p className="mt-4 max-w-md text-sm leading-7 text-blue-50/85">سجّل الحضور، تابع إنجاز الطلاب، ونظّم عمل الشيوخ من واجهة عربية مصممة للاستخدام اليومي.</p>
               <div className="mt-8 grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
                 {[
                   ['✓', 'إعداد سريع', 'ابدأ بخطوتين واضبط التفاصيل لاحقًا'],
@@ -88,13 +88,13 @@ export default function SignupPage() {
                 ].map(([icon, label, detail]) => (
                   <div key={label} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/10 p-3 backdrop-blur-sm">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15 text-lg font-bold">{icon}</span>
-                    <span><strong className="block text-sm">{label}</strong><small className="mt-0.5 block text-[11px] leading-5 text-cyan-50/75">{detail}</small></span>
+                    <span><strong className="block text-sm">{label}</strong><small className="mt-0.5 block text-[11px] leading-5 text-blue-50/75">{detail}</small></span>
                   </div>
                 ))}
               </div>
             </div>
 
-            <p className="text-xs leading-5 text-cyan-100/70">صُمم زمزم ليبقى بسيطًا مهما نما عدد الطلاب والحلقات.</p>
+            <p className="text-xs leading-5 text-blue-100/70">صُمم زمزم ليبقى بسيطًا مهما نما عدد الطلاب والحلقات.</p>
           </div>
         </aside>
 
@@ -107,7 +107,7 @@ export default function SignupPage() {
             {!inviteToken && (
               <div className="mb-8" aria-label={`الخطوة ${step} من 2`}>
                 <div className="mb-3 flex items-center justify-between text-xs font-semibold">
-                  <span className="text-cyan-700 dark:text-cyan-300">الخطوة {step} من 2</span>
+                  <span className="text-blue-700 dark:text-blue-300">الخطوة {step} من 2</span>
                   <span className="text-deep-400">{step === 1 ? 'بيانات الحساب' : 'إعداد التحفيظ'}</span>
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700"><div className={`h-full rounded-full bg-gradient-to-l from-cyan-500 to-teal-500 transition-all duration-300 ${step === 1 ? 'w-1/2' : 'w-full'}`} /></div>
@@ -145,7 +145,7 @@ export default function SignupPage() {
                 <button disabled={loading} className="water-btn flex-1 rounded-xl py-3 font-semibold text-white shadow-lg shadow-cyan-600/15 disabled:opacity-50">{loading ? 'جاري الإرسال...' : inviteToken ? 'إنشاء الحساب والانضمام' : step === 1 ? 'متابعة الإعداد' : 'إرسال طلب التسجيل'}</button>
               </div>
             </form>
-            <p className="mt-6 text-center text-sm text-deep-500">{inviteToken ? 'لديك حساب بالفعل؟' : 'لديك حساب؟'} <Link href={inviteToken ? `/login?next=${encodeURIComponent(`/invite/${inviteToken}`)}` : '/login'} className="font-bold text-cyan-700 hover:text-cyan-600 dark:text-cyan-300">تسجيل الدخول</Link></p>
+            <p className="mt-6 text-center text-sm text-deep-500">{inviteToken ? 'لديك حساب بالفعل؟' : 'لديك حساب؟'} <Link href={inviteToken ? `/login?next=${encodeURIComponent(`/invite/${inviteToken}`)}` : '/login'} className="font-bold text-blue-700 hover:text-blue-600 dark:text-blue-300">تسجيل الدخول</Link></p>
           </div>
         </section>
       </div>

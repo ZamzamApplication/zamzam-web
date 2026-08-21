@@ -122,7 +122,7 @@ export default function PlatformFeedbackPanel() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${STATUS_META[item.status].className}`}>{STATUS_META[item.status].label}</span>
-                    <span className="rounded-full bg-cyan-100 px-2.5 py-1 text-xs font-bold text-cyan-800 dark:bg-cyan-900/35 dark:text-cyan-200">{CATEGORY_LABEL[item.category]}</span>
+                    <span className="rounded-full bg-cyan-100 px-2.5 py-1 text-xs font-bold text-blue-800 dark:bg-cyan-900/35 dark:text-blue-200">{CATEGORY_LABEL[item.category]}</span>
                   </div>
                   <h3 className="mt-3 font-bold text-deep-900">{item.title}</h3>
                   <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-deep-700">{item.description}</p>

@@ -97,7 +97,7 @@ function StudentRow({
           </div>
         )}
         <div className="min-w-0 flex-1 md:contents">
-          <button type="button" onClick={onViewStudent} className="block max-w-full truncate text-right font-medium text-deep-800 hover:text-cyan-700 hover:underline">
+          <button type="button" onClick={onViewStudent} className="block max-w-full truncate text-right font-medium text-deep-800 hover:text-blue-700 hover:underline">
             {student.name}
           </button>
         </div>
@@ -839,7 +839,7 @@ export default function SessionAttendancePage() {
                     <button onClick={() => setEditingDate(false)} className="text-xs text-deep-400 px-2 py-1">إلغاء</button>
                   </span>
                 ) : (
-                  <button disabled={data.is_confirmed || (userRole !== 'admin' && userRole !== 'super_admin')} onClick={() => { setEditDateVal(data.date); setEditNameVal(data.name || ''); setEditingDate(true) }} className="hover:text-cyan-600 transition cursor-pointer disabled:cursor-default">
+                  <button disabled={data.is_confirmed || (userRole !== 'admin' && userRole !== 'super_admin')} onClick={() => { setEditDateVal(data.date); setEditNameVal(data.name || ''); setEditingDate(true) }} className="hover:text-blue-600 transition cursor-pointer disabled:cursor-default">
                     {getArabicDay(data.date)} — {data.date}
                   </button>
                 )}
@@ -926,7 +926,7 @@ export default function SessionAttendancePage() {
 
       <div aria-live="polite" className="mb-4 min-h-6 text-center text-sm">
         {saveState === 'pending' && <span className="text-amber-600">تغييرات بانتظار الحفظ...</span>}
-        {saveState === 'saving' && <span className="text-cyan-700">جاري حفظ التغييرات...</span>}
+        {saveState === 'saving' && <span className="text-blue-700">جاري حفظ التغييرات...</span>}
         {saveState === 'saved' && <span className="text-emerald-600">تم حفظ جميع التغييرات</span>}
         {saveState === 'error' && (
           <span className="text-red-600">
@@ -951,7 +951,7 @@ export default function SessionAttendancePage() {
       <div className="flex justify-start mb-2">
         <button
           onClick={() => setExpandedSheikhs(allExpanded ? new Set() : new Set(data.sheikh_groups.map((g) => g.sheikh.id)))}
-          className="text-xs text-cyan-700 dark:text-cyan-400 hover:underline px-2 py-1 transition"
+          className="text-xs text-blue-700 dark:text-blue-400 hover:underline px-2 py-1 transition"
         >
           {allExpanded ? 'طي الكل' : 'فتح الكل'}
         </button>

@@ -156,7 +156,7 @@ function TahfizSwitcher({
                   }`}
                 >
                   <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl text-sm font-bold ${
-                    isCurrent ? 'bg-cyan-600 text-white' : 'bg-water-100 text-cyan-700 dark:bg-slate-800 dark:text-cyan-300'
+                    isCurrent ? 'bg-cyan-600 text-white' : 'bg-water-100 text-blue-700 dark:bg-slate-800 dark:text-blue-300'
                   }`}>
                     {membership.tahfiz_name.trim().charAt(0)}
                   </span>
@@ -189,7 +189,7 @@ function TahfizSwitcher({
               setOpen(false)
               onCreate()
             }}
-            className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-cyan-300 px-3 py-2.5 text-sm font-bold text-cyan-700 hover:bg-cyan-50 dark:border-cyan-700 dark:text-cyan-300 dark:hover:bg-cyan-950/40"
+            className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-cyan-300 px-3 py-2.5 text-sm font-bold text-blue-700 hover:bg-cyan-50 dark:border-cyan-700 dark:text-blue-300 dark:hover:bg-cyan-950/40"
           >
             <span aria-hidden="true">＋</span> إنشاء تحفيظ جديد
           </button>
@@ -465,7 +465,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             ))}
           </nav>}
           {!isDedicatedPlatform && user.tahfiz && (
-            <div className="border-b border-cyan-200/70 bg-cyan-50/85 px-4 py-1.5 text-center text-xs font-semibold text-cyan-900 dark:border-cyan-900 dark:bg-cyan-950/70 dark:text-cyan-100">
+            <div className="border-b border-cyan-200/70 bg-cyan-50/85 px-4 py-1.5 text-center text-xs font-semibold text-blue-900 dark:border-cyan-900 dark:bg-cyan-950/70 dark:text-blue-100">
               تعمل الآن داخل: <span className="font-bold">{user.tahfiz.name}</span>
               {switchingTahfizId && <span className="mr-2">— جاري التبديل…</span>}
             </div>
@@ -478,7 +478,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </div>
         )}
         {workspaceNotice && (
-          <div role="status" className="bg-cyan-50 px-4 py-2 text-center text-sm font-semibold text-cyan-800 dark:bg-cyan-950/70 dark:text-cyan-100">
+          <div role="status" className="bg-cyan-50 px-4 py-2 text-center text-sm font-semibold text-blue-800 dark:bg-cyan-950/70 dark:text-blue-100">
             {workspaceNotice}
           </div>
         )}

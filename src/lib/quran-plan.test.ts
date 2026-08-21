@@ -53,6 +53,39 @@ describe('Quran plan generation', () => {
     expect(plan.totals.reading.endNumber).toBe(40)
   })
 
+  it('finishes bounded books and continues with the next book', () => {
+    const books: QuranPlanTrack = {
+      ...quranTrack('books', { surah: 1, ayah: 1 }, 4),
+      name: 'قراءة', kind: 'quantity', quantityUnit: 'صفحة', startNumber: 1,
+      items: [
+        { id: 'book-1', name: 'الكتاب الأول', totalUnits: 5 },
+        { id: 'book-2', name: 'الكتاب الثاني', totalUnits: 4 },
+      ],
+    }
+    const plan = generateQuranPlan({ startDate: '2026-08-16', endDate: '2026-08-19', weekdays: [0, 1, 2, 3], tracks: [books] })
+    expect(plan.days[1].assignments.books?.text).toContain('الكتاب الأول — صفحة 5')
+    expect(plan.days[1].assignments.books?.text).toContain('الكتاب الثاني — من صفحة 1 إلى 3')
+    expect(plan.days[2].assignments.books?.text).toContain('الكتاب الثاني — صفحة 4')
+    expect(plan.days[3].assignments.books).toBeNull()
+    expect(plan.totals.books.amount).toBe(9)
+  })
+
+  it('sequences YouTube playlists and includes an episode link for every assignment', () => {
+    const playlists: QuranPlanTrack = {
+      ...quranTrack('lessons', { surah: 1, ayah: 1 }, 2),
+      name: 'مشاهدة', kind: 'playlist',
+      items: [
+        { id: 'series-1', name: 'السلسلة الأولى', totalUnits: 2, url: 'https://www.youtube.com/watch?v=first&list=PL123' },
+        { id: 'series-2', name: 'السلسلة الثانية', totalUnits: 2, url: 'https://www.youtube.com/watch?v=second&list=PL456' },
+      ],
+    }
+    const plan = generateQuranPlan({ startDate: '2026-08-16', endDate: '2026-08-18', weekdays: [0, 1, 2], tracks: [playlists] })
+    expect(plan.days[0].assignments.lessons?.links).toHaveLength(2)
+    expect(plan.days[0].assignments.lessons?.links?.[1].url).toContain('index=2')
+    expect(plan.days[1].assignments.lessons?.text).toContain('السلسلة الثانية')
+    expect(plan.days[2].assignments.lessons).toBeNull()
+  })
+
   it('stops safely at the end of the Mushaf', () => {
     const plan = generateQuranPlan({
       startDate: '2026-08-16', endDate: '2026-08-18', weekdays: [0, 1, 2],
@@ -61,6 +94,13 @@ describe('Quran plan generation', () => {
     expect(plan.days[0].assignments.memorization?.ayahCount).toBe(2)
     expect(plan.days[0].assignments.memorization?.completedMushaf).toBe(true)
     expect(plan.days[1].assignments.memorization).toBeNull()
+  })
+
+  it('can restart a cyclic Quran entry after finishing the Mushaf', () => {
+    const track = { ...quranTrack('revision', { surah: 114, ayah: 5 }, 5), cyclic: true }
+    const plan = generateQuranPlan({ startDate: '2026-08-16', endDate: '2026-08-17', weekdays: [0, 1], tracks: [track] })
+    expect(plan.days[0].assignments.revision?.completedMushaf).toBe(true)
+    expect(plan.days[1].assignments.revision?.from).toEqual({ surah: 1, ayah: 1 })
   })
 
   it('uses the offline Madani Mushaf mapping for line-based plans', () => {

@@ -181,7 +181,7 @@ export default function ExcelTemplateSettings({
                 <span className="block text-sm font-bold text-deep-800">{TEMPLATE_LABELS[key].title}</span>
                 <span className="mt-1 block text-xs text-deep-500">{TEMPLATE_LABELS[key].description}</span>
               </span>
-              <span className={`shrink-0 text-lg text-cyan-700 transition-transform ${openTemplate === key ? 'rotate-180' : ''}`} aria-hidden="true">⌄</span>
+              <span className={`shrink-0 text-lg text-blue-700 transition-transform ${openTemplate === key ? 'rotate-180' : ''}`} aria-hidden="true">⌄</span>
             </button>
             {openTemplate === key && <div id={`excel-template-${key}`} className="border-t border-water-200/70 p-4">
             <div className="mt-3 grid gap-3 rounded-xl border border-water-200/70 bg-white/45 p-3 sm:grid-cols-2 lg:grid-cols-3 dark:bg-slate-900/30">
@@ -368,7 +368,7 @@ export default function ExcelTemplateSettings({
                   {column.id === 'attendance' && <span className="text-[11px] text-deep-500 sm:col-start-2 sm:col-span-3">يتوسع إلى تواريخ الحلقات</span>}
                   {column.custom && (
                     <div className="flex flex-wrap items-center gap-3 sm:col-start-2 sm:col-span-4">
-                      <button type="button" onClick={() => addSubcolumns(key, column)} disabled={column.subcolumns.length >= 10} className="text-xs font-semibold text-cyan-700 disabled:opacity-40 dark:text-cyan-300">
+                      <button type="button" onClick={() => addSubcolumns(key, column)} disabled={column.subcolumns.length >= 10} className="text-xs font-semibold text-blue-700 disabled:opacity-40 dark:text-blue-300">
                         {column.subcolumns.length >= 2 ? '+ فرع' : 'تقسيم لفرعين'}
                       </button>
                       {column.subcolumns.length >= 2 && (
@@ -465,7 +465,7 @@ export default function ExcelTemplateSettings({
               <p className="text-xs font-bold text-deep-700">حقول الطلاب</p>
               <div className="mt-2 flex flex-wrap gap-2">{studentFields.map(field => {
                 const added = template.columns.some(column => column.id === `custom_field_${field.id}`)
-                return <button key={field.id} type="button" disabled={added} onClick={() => addStudentFieldColumn(key, field)} className="rounded-full border border-water-200 px-3 py-1.5 text-xs text-cyan-700 disabled:opacity-40">{added ? '✓ ' : '+ '}{field.name}</button>
+                return <button key={field.id} type="button" disabled={added} onClick={() => addStudentFieldColumn(key, field)} className="rounded-full border border-water-200 px-3 py-1.5 text-xs text-blue-700 disabled:opacity-40">{added ? '✓ ' : '+ '}{field.name}</button>
               })}</div>
             </div>}
             </div>}

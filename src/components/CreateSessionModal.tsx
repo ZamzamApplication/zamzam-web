@@ -124,7 +124,7 @@ export default function CreateSessionModal({ onClose, onCreated }: {
               <p className="text-sm font-bold text-deep-800">اختر التصنيفات</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {categories.length === 0 && <span className="text-xs text-deep-500">لا توجد تصنيفات بعد؛ يمكنك اختيار الطلاب مباشرة.</span>}
-                {categories.map(category => <button key={category.id} type="button" onClick={() => toggleCategory(category.id)} className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${selectedCategories.has(category.id) ? 'border-cyan-500 bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-200' : 'border-water-200 text-deep-600'}`}>
+                {categories.map(category => <button key={category.id} type="button" onClick={() => toggleCategory(category.id)} className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${selectedCategories.has(category.id) ? 'border-cyan-500 bg-cyan-100 text-blue-800 dark:bg-cyan-900/40 dark:text-blue-200' : 'border-water-200 text-deep-600'}`}>
                   {category.name} ({category.student_count || 0})
                 </button>)}
               </div>
@@ -132,7 +132,7 @@ export default function CreateSessionModal({ onClose, onCreated }: {
             <div className="rounded-xl border border-water-200/70 bg-white/35 p-3 dark:bg-slate-800/35">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <p className="text-sm font-bold text-deep-800">طلاب الحلقة ({selectedStudents.size})</p>
-                <button type="button" onClick={() => setSelectedStudents(selectedStudents.size === students.length ? new Set() : new Set(students.map(student => student.id)))} className="text-xs font-semibold text-cyan-700 dark:text-cyan-300">
+                <button type="button" onClick={() => setSelectedStudents(selectedStudents.size === students.length ? new Set() : new Set(students.map(student => student.id)))} className="text-xs font-semibold text-blue-700 dark:text-blue-300">
                   {selectedStudents.size === students.length ? 'إلغاء اختيار الكل' : 'اختيار الكل'}
                 </button>
               </div>

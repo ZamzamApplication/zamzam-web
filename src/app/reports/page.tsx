@@ -233,7 +233,7 @@ export default function ReportsPage() {
       <section className="mb-6 overflow-hidden rounded-3xl border border-cyan-200/70 bg-gradient-to-bl from-cyan-50/90 via-white/70 to-water-100/60 p-5 shadow-sm dark:border-cyan-900 dark:from-cyan-950/50 dark:via-slate-900/60 dark:to-slate-900/40 sm:p-7">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-bold tracking-wide text-cyan-700 dark:text-cyan-300">لوحة التحليل</p>
+            <p className="text-xs font-bold tracking-wide text-blue-700 dark:text-blue-300">لوحة التحليل</p>
             <h1 className="mt-1 text-2xl font-black text-deep-900 sm:text-3xl">التقارير</h1>
             <p className="mt-2 text-sm text-deep-500">
               {selectedCircleName ? `${selectedCircleName} — ` : ''}{periodLabel}
@@ -241,7 +241,7 @@ export default function ReportsPage() {
           </div>
           {circleRate && (
             <div className="rounded-2xl border border-cyan-200 bg-white/80 px-5 py-3 text-center shadow-sm dark:border-cyan-800 dark:bg-slate-900/70">
-              <p className="text-3xl font-black text-cyan-700 dark:text-cyan-300">{circleRate.attendance_rate}%</p>
+              <p className="text-3xl font-black text-blue-700 dark:text-blue-300">{circleRate.attendance_rate}%</p>
               <p className="text-xs text-deep-500">نسبة الحضور</p>
             </div>
           )}
@@ -249,7 +249,7 @@ export default function ReportsPage() {
       </section>
 
       {circleRate?.scope === 'assigned_students' && (
-        <div role="status" className="mb-5 rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm font-semibold text-cyan-800 dark:border-cyan-800 dark:bg-cyan-900/25 dark:text-cyan-200">
+        <div role="status" className="mb-5 rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm font-semibold text-blue-800 dark:border-cyan-800 dark:bg-cyan-900/25 dark:text-blue-200">
           تعرض هذه التقارير الطلاب المسندين إليك فقط.
         </div>
       )}
@@ -296,7 +296,7 @@ export default function ReportsPage() {
               <p className="text-xs text-deep-500 mt-1">{periodLabel}</p>
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-              <div className="rounded-2xl border border-cyan-200 bg-cyan-50/70 p-4 text-center text-cyan-800 dark:border-cyan-800 dark:bg-cyan-950/30 dark:text-cyan-200">
+              <div className="rounded-2xl border border-cyan-200 bg-cyan-50/70 p-4 text-center text-blue-800 dark:border-cyan-800 dark:bg-cyan-950/30 dark:text-blue-200">
                 <div className="text-2xl font-black">{circleRate.total_attendance_records}</div>
                 <div className="mt-1 text-xs opacity-75">إجمالي السجلات</div>
               </div>
@@ -348,11 +348,11 @@ export default function ReportsPage() {
                       <div className="flex items-center gap-3 min-w-0">
                         {studentAvatar(s.student_name, s.profile_pic)}
                         <div className="min-w-0">
-                          <button type="button" onClick={() => router.push(`/students/${s.student_id}`)} className="block max-w-full truncate text-right font-bold text-deep-800 hover:text-cyan-700 hover:underline">{s.student_name}</button>
+                          <button type="button" onClick={() => router.push(`/students/${s.student_id}`)} className="block max-w-full truncate text-right font-bold text-deep-800 hover:text-blue-700 hover:underline">{s.student_name}</button>
                           <p className="text-xs text-deep-500 truncate mt-0.5">{s.sheikh_name}</p>
                         </div>
                       </div>
-                      <span className="text-xl font-bold text-cyan-700 dark:text-cyan-400 shrink-0">{s.attendance_rate}%</span>
+                      <span className="text-xl font-bold text-blue-700 dark:text-blue-400 shrink-0">{s.attendance_rate}%</span>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-center">
                       {attendanceStatuses.map((status) => (
@@ -383,7 +383,7 @@ export default function ReportsPage() {
                           <td className="py-2 px-3 text-deep-800">
                             <div className="flex items-center gap-3 min-w-[160px]">
                               {studentAvatar(s.student_name, s.profile_pic)}
-                              <button type="button" onClick={() => router.push(`/students/${s.student_id}`)} className="truncate hover:text-cyan-700 hover:underline">{s.student_name}</button>
+                              <button type="button" onClick={() => router.push(`/students/${s.student_id}`)} className="truncate hover:text-blue-700 hover:underline">{s.student_name}</button>
                             </div>
                           </td>
                           <td className="py-2 px-3 text-center text-deep-500">{s.sheikh_name}</td>
@@ -394,7 +394,7 @@ export default function ReportsPage() {
                               </span>
                             </td>
                           ))}
-                          <td className="py-2 px-3 text-center font-bold text-cyan-700 dark:text-cyan-400">
+                          <td className="py-2 px-3 text-center font-bold text-blue-700 dark:text-blue-400">
                             {s.attendance_rate}%
                           </td>
                         </tr>
@@ -419,7 +419,7 @@ export default function ReportsPage() {
                   ['test', 'اختبارات'],
                 ].map(([key, label]) => (
                   <div key={key} className="rounded-xl bg-water-100/35 p-3 text-center">
-                    <p className="text-2xl font-bold text-cyan-700 dark:text-cyan-400">{progressReport.category_totals[key] || 0}</p>
+                    <p className="text-2xl font-bold text-blue-700 dark:text-blue-400">{progressReport.category_totals[key] || 0}</p>
                     <p className="mt-1 text-xs text-deep-500">{label}</p>
                   </div>
                 ))}
@@ -433,10 +433,10 @@ export default function ReportsPage() {
                     <tbody>
                       {displayProgressStudents.map((student) => (
                         <tr key={student.student_id} className="border-b border-water-200/20">
-                          <td className="px-3 py-2 font-medium text-deep-800"><button type="button" onClick={() => router.push(`/students/${student.student_id}`)} className="hover:text-cyan-700 hover:underline">{student.student_name}</button></td>
-                          <td className="px-3 py-2 text-center text-xs text-cyan-800 dark:text-cyan-200">{student.latest_entry ? formatQuranRange(student.latest_entry) : '—'}</td>
+                          <td className="px-3 py-2 font-medium text-deep-800"><button type="button" onClick={() => router.push(`/students/${student.student_id}`)} className="hover:text-blue-700 hover:underline">{student.student_name}</button></td>
+                          <td className="px-3 py-2 text-center text-xs text-blue-800 dark:text-blue-200">{student.latest_entry ? formatQuranRange(student.latest_entry) : '—'}</td>
                           <td className="px-3 py-2 text-center">{student.entries}</td>
-                          <td className="px-3 py-2 text-center font-bold text-cyan-700">{student.average_quality}/5</td>
+                          <td className="px-3 py-2 text-center font-bold text-blue-700">{student.average_quality}/5</td>
                           <td className="px-3 py-2 text-center">{student.mistakes}</td>
                         </tr>
                       ))}

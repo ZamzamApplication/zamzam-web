@@ -56,7 +56,7 @@ export default function InvitationPage() {
     <div className="mx-auto max-w-xl py-8">
       <section className="glass-strong rounded-2xl p-6 text-center md:p-8">
         <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-cyan-100 text-2xl dark:bg-cyan-900/40">✉</div>
-        <p className="mt-5 text-sm font-semibold text-cyan-700 dark:text-cyan-300">دعوة للانضمام إلى تحفيظ</p>
+        <p className="mt-5 text-sm font-semibold text-blue-700 dark:text-blue-300">دعوة للانضمام إلى تحفيظ</p>
         <h1 className="mt-2 text-2xl font-bold text-deep-900">{invitation.tahfiz_name}</h1>
         <div className="mt-5 grid gap-3 rounded-xl bg-water-50/70 p-4 text-sm dark:bg-slate-800/50">
           <p>الصلاحية: <b>{invitation.role === 'admin' ? 'مدير' : 'مستخدم / شيخ'}</b></p>

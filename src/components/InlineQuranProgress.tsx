@@ -194,7 +194,7 @@ export default function InlineQuranProgress({
                     </select>
                   </label>
                   <AyahSelect label="إلى آية" value={draft.to_ayah || 1} surah={toSurah} disabled={disabled} onChange={(value) => onChange({ ...draft, to_ayah: toSurah === fromSurah ? Math.max(draft.from_ayah || 1, value) : value })} />
-                  <button type="button" onClick={() => onChange({ ...draft, from_ayah: 1, to_ayah: toSurahMaxAyah })} disabled={disabled || fromSurah === 0 || toSurah === 0} className="col-span-2 rounded-lg border border-water-200 bg-water-50 px-2 py-1.5 text-[10px] font-semibold text-cyan-700 disabled:opacity-50">السور المحددة كاملة</button>
+                  <button type="button" onClick={() => onChange({ ...draft, from_ayah: 1, to_ayah: toSurahMaxAyah })} disabled={disabled || fromSurah === 0 || toSurah === 0} className="col-span-2 rounded-lg border border-water-200 bg-water-50 px-2 py-1.5 text-[10px] font-semibold text-blue-700 disabled:opacity-50">السور المحددة كاملة</button>
                   </>
                 )}
                   <div className="col-span-2">
@@ -212,7 +212,7 @@ export default function InlineQuranProgress({
       {requiredDrafts.length > 0 && (
         <div className="mt-3 rounded-xl border border-water-200 bg-white/75 p-3 dark:bg-slate-800/60">
           <details>
-            <summary className="cursor-pointer text-[11px] font-semibold text-cyan-700">ملاحظات (اختياري)</summary>
+            <summary className="cursor-pointer text-[11px] font-semibold text-blue-700">ملاحظات (اختياري)</summary>
             <div className="mt-2">
               <input value={requiredDrafts[0]?.notes || ''} onChange={(event) => updateAll({ notes: event.target.value || null })} disabled={disabled} placeholder="ملاحظات المتابعة" className="surface-field rounded-lg px-3 py-2 text-xs" />
             </div>

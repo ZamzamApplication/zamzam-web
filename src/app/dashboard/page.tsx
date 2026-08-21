@@ -119,7 +119,7 @@ export default function DashboardPage() {
         <div className="glass-card rounded-lg p-5 md:p-6">
           <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
             <div>
-              <p className="text-sm font-semibold text-cyan-700 dark:text-cyan-300 mb-2">لوحة المتابعة</p>
+              <p className="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-2">لوحة المتابعة</p>
               <h1 className="text-2xl md:text-3xl font-bold text-deep-900">{tahfizName}</h1>
               <p className="text-deep-500 text-sm mt-2 max-w-2xl">
                 نظرة سريعة على التحفيظ والحلقات غير المؤكدة، مع وصول مباشر لأهم مهام اليوم.
@@ -215,7 +215,7 @@ export default function DashboardPage() {
               <h2 className="text-lg font-bold text-deep-800">الحلقات قيد الانتظار</h2>
               <p className="text-xs text-deep-500 mt-1">آخر الحلقات التي تحتاج متابعة أو تأكيد</p>
             </div>
-            <Link href="/sessions" className="text-sm font-semibold text-cyan-700 hover:text-cyan-900 dark:text-cyan-300 dark:hover:text-cyan-200 transition">
+            <Link href="/sessions" className="text-sm font-semibold text-blue-700 hover:text-blue-900 dark:text-blue-300 dark:hover:text-blue-200 transition">
               عرض الكل
             </Link>
           </div>

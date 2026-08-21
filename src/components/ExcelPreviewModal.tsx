@@ -240,7 +240,7 @@ export default function ExcelPreviewModal({
             <h2 className="text-lg font-bold text-deep-800">معاينة Excel</h2>
             {helpText
               ? <p className="text-xs text-deep-500 mt-1">{helpText}</p>
-              : <p className="text-xs text-deep-500 mt-1">الأعمدة والعناوين محفوظة في <a href="/settings" className="font-semibold text-cyan-700 underline dark:text-cyan-300">إعدادات قوالب Excel</a>.</p>}
+              : <p className="text-xs text-deep-500 mt-1">الأعمدة والعناوين محفوظة في <a href="/settings" className="font-semibold text-blue-700 underline dark:text-blue-300">إعدادات قوالب Excel</a>.</p>}
           </div>
           <button type="button" onClick={onClose} className="text-deep-400 hover:text-deep-700" aria-label="إغلاق">✕</button>
         </div>

@@ -483,7 +483,7 @@ export default function AttendancePage() {
       )}
 
       {grid?.scope === 'assigned_students' && (
-        <div role="status" className="mb-4 rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm font-semibold text-cyan-800 dark:border-cyan-800 dark:bg-cyan-900/25 dark:text-cyan-200">
+        <div role="status" className="mb-4 rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm font-semibold text-blue-800 dark:border-cyan-800 dark:bg-cyan-900/25 dark:text-blue-200">
           يعرض هذا السجل الطلاب المسندين إليك فقط.
         </div>
       )}
@@ -539,7 +539,7 @@ export default function AttendancePage() {
                 onClick={() => handleLoadFilter(f)}
                 className={`px-3 py-2 rounded-r-lg text-sm border border-water-300 transition ${
                   activeSavedFilter?.id === f.id
-                    ? 'bg-cyan-100/70 dark:bg-cyan-900/40 text-cyan-800 dark:text-cyan-200'
+                    ? 'bg-cyan-100/70 dark:bg-cyan-900/40 text-blue-800 dark:text-blue-200'
                     : 'bg-white/80 dark:bg-slate-800/70 hover:bg-water-100/80 text-deep-700'
                 }`}
               >
@@ -684,7 +684,7 @@ export default function AttendancePage() {
                   <div className="flex items-center gap-3 min-w-0">
                     <StudentAvatar name={student.name} profilePic={student.profile_pic} className="w-9 h-9" onZoomPic={setPreviewPic} />
                     <div className="min-w-0">
-                      <button type="button" onClick={() => router.push(`/students/${student.id}`)} className="block max-w-full truncate text-right font-semibold text-deep-800 hover:text-cyan-700 hover:underline">{student.name}</button>
+                      <button type="button" onClick={() => router.push(`/students/${student.id}`)} className="block max-w-full truncate text-right font-semibold text-deep-800 hover:text-blue-700 hover:underline">{student.name}</button>
                       <p className="text-xs text-deep-500 truncate">{student.sheikh_name || 'بدون شيخ'}</p>
                     </div>
                   </div>
@@ -735,7 +735,7 @@ export default function AttendancePage() {
                       <div className="flex items-center gap-3 min-w-0">
                         <StudentAvatar name={student.name} profilePic={student.profile_pic} onZoomPic={setPreviewPic} />
                         <span className="min-w-0">
-                          <button type="button" onClick={() => router.push(`/students/${student.id}`)} className="block max-w-full truncate text-right hover:text-cyan-700 hover:underline">{student.name}</button>
+                          <button type="button" onClick={() => router.push(`/students/${student.id}`)} className="block max-w-full truncate text-right hover:text-blue-700 hover:underline">{student.name}</button>
                           <span className="block text-xs font-normal text-deep-500 truncate">{student.sheikh_name || 'بدون شيخ'}</span>
                         </span>
                       </div>

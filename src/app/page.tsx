@@ -61,7 +61,7 @@ export default function LandingPage() {
           <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 leading-tight drop-shadow-lg">
             زمزم لتحفيظ القرآن
           </h1>
-          <p className="text-lg md:text-xl text-cyan-200/90 mb-8 max-w-xl mx-auto drop-shadow">
+          <p className="text-lg md:text-xl text-blue-200/90 mb-8 max-w-xl mx-auto drop-shadow">
             منصة متابعة حضور حلقات تحفيظ القرآن الكريم — إدارة الحلقات، تسجيل الحضور، والتقارير
           </p>
           <div className="flex gap-4 justify-center flex-wrap">

@@ -66,13 +66,13 @@ export default function StudentProfilePage() {
           {profile.profile_pic ? (
             <img src={mediaUrl(profile.profile_pic)!} alt="" className="h-24 w-24 rounded-full border-2 border-water-300 object-cover" />
           ) : (
-            <div className="grid h-24 w-24 place-items-center rounded-full border-2 border-water-300 bg-water-100 text-3xl font-bold text-cyan-700">{profile.name.charAt(0)}</div>
+            <div className="grid h-24 w-24 place-items-center rounded-full border-2 border-water-300 bg-water-100 text-3xl font-bold text-blue-700">{profile.name.charAt(0)}</div>
           )}
           <div className="min-w-0 flex-1 text-center sm:text-right">
             <h1 className="text-2xl font-bold text-deep-900">{profile.name}</h1>
             <p className="mt-1 text-sm text-deep-500">{profile.student_id ? `رقم الطالب: ${profile.student_id}` : `المعرف: ${profile.id}`}</p>
             <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
-              <span className="rounded-full bg-cyan-50 px-3 py-1 text-xs font-bold text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-200">{profile.status}</span>
+              <span className="rounded-full bg-cyan-50 px-3 py-1 text-xs font-bold text-blue-700 dark:bg-cyan-900/30 dark:text-blue-200">{profile.status}</span>
               {profile.sheikh && <span className="rounded-full bg-water-50 px-3 py-1 text-xs text-deep-600 dark:bg-slate-800">{profile.sheikh.name}</span>}
             </div>
           </div>
@@ -94,7 +94,7 @@ export default function StudentProfilePage() {
 
         {profile.can_manage && profile.status === 'مقيد' && subscription?.enabled && <div className="mt-4 flex flex-col gap-2 rounded-xl border border-water-200 bg-white/45 p-4 sm:flex-row sm:items-center sm:justify-between dark:bg-slate-800/40">
           <div><p className="text-xs text-deep-500">اشتراك الدورة الحالية</p><p className="mt-1 font-bold text-deep-900">{(subscription.record?.fee_minor ?? subscription.effective_fee_minor) === 0 ? 'معفى' : subscription.record?.is_paid ? 'مدفوع' : 'غير مدفوع'}{(subscription.record?.fee_minor ?? subscription.effective_fee_minor) > 0 ? ` · ${formatSubscriptionMoney(subscription.record?.fee_minor ?? subscription.effective_fee_minor, subscription.currency || 'EGP')}` : ''}</p></div>
-          <button type="button" onClick={() => router.push(`/finance?student_id=${profile.id}`)} className="text-sm font-bold text-cyan-700 dark:text-cyan-300">فتح سجل الاشتراك</button>
+          <button type="button" onClick={() => router.push(`/finance?student_id=${profile.id}`)} className="text-sm font-bold text-blue-700 dark:text-blue-300">فتح سجل الاشتراك</button>
         </div>}
       </section>
 

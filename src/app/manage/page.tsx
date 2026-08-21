@@ -56,7 +56,7 @@ function StudentCategoryPicker({ selected, onChange }: { selected: number[]; onC
     <div className="flex flex-wrap gap-2">
       {categories.map(category => {
         const checked = selected.includes(category.id)
-        return <label key={category.id} className={`flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-xs ${checked ? 'border-cyan-500 bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-200' : 'border-water-200 text-deep-600'}`}>
+        return <label key={category.id} className={`flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-xs ${checked ? 'border-cyan-500 bg-cyan-100 text-blue-800 dark:bg-cyan-900/40 dark:text-blue-200' : 'border-water-200 text-deep-600'}`}>
           <input type="checkbox" checked={checked} onChange={() => onChange(checked ? selected.filter(id => id !== category.id) : [...selected, category.id])} className="rounded" />
           {category.name}
         </label>
@@ -866,7 +866,7 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
           <div className="mt-4 max-h-52 space-y-2 overflow-y-auto">
             {excusedPeriods.length === 0 ? <p className="text-xs text-deep-400">لا توجد فترات عذر مسجلة.</p> : excusedPeriods.map(period => <article key={period.id} className="rounded-xl border border-water-200 bg-white/35 p-3 dark:bg-slate-800/30">
               <div className="flex items-start justify-between gap-2"><div><p className="text-xs font-bold text-deep-800">{period.reason}</p><p className="mt-1 text-[11px] text-deep-500">{period.start_date} — {period.end_date}</p></div><span className="rounded-full bg-water-50 px-2 py-1 text-[10px] text-deep-700 dark:bg-slate-800">{excusedPeriodStatusLabel(period.status)}</span></div>
-              {period.status !== 'cancelled' && <div className="mt-2 flex flex-wrap gap-2"><button type="button" disabled={periodBusy} onClick={() => startEditingPeriod(period)} className="text-xs font-semibold text-cyan-700 dark:text-cyan-300">تعديل</button>{period.status === 'active' && <button type="button" disabled={periodBusy} onClick={() => void endExcusedPeriodEarly(period)} className="text-xs font-semibold text-amber-700 dark:text-amber-300">عودة مبكرة</button>}{(period.status === 'active' || period.status === 'upcoming') && <button type="button" disabled={periodBusy} onClick={() => void cancelExcusedPeriod(period)} className="text-xs font-semibold text-red-600 dark:text-red-300">إلغاء الفترة</button>}</div>}
+              {period.status !== 'cancelled' && <div className="mt-2 flex flex-wrap gap-2"><button type="button" disabled={periodBusy} onClick={() => startEditingPeriod(period)} className="text-xs font-semibold text-blue-700 dark:text-blue-300">تعديل</button>{period.status === 'active' && <button type="button" disabled={periodBusy} onClick={() => void endExcusedPeriodEarly(period)} className="text-xs font-semibold text-amber-700 dark:text-amber-300">عودة مبكرة</button>}{(period.status === 'active' || period.status === 'upcoming') && <button type="button" disabled={periodBusy} onClick={() => void cancelExcusedPeriod(period)} className="text-xs font-semibold text-red-600 dark:text-red-300">إلغاء الفترة</button>}</div>}
             </article>)}
           </div>
         </div>
@@ -908,7 +908,7 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
                     <button
                       type="button"
                       onClick={() => handleStartEditWarning(w)}
-                      className="text-deep-400 hover:text-cyan-600 text-xs px-1 transition"
+                      className="text-deep-400 hover:text-blue-600 text-xs px-1 transition"
                     >
                       ✏
                     </button>
@@ -1018,7 +1018,7 @@ function InviteUserModal({ sheikhs, onClose }: { sheikhs: SheikhInfo[]; onClose:
     <Modal title="إنشاء رابط دعوة" onClose={onClose}>
       <ErrorMsg error={error} />
       <form onSubmit={create} className="space-y-4">
-        <p className="rounded-xl bg-cyan-50/70 p-3 text-xs leading-5 text-cyan-900 dark:bg-cyan-900/25 dark:text-cyan-100">
+        <p className="rounded-xl bg-cyan-50/70 p-3 text-xs leading-5 text-blue-900 dark:bg-cyan-900/25 dark:text-blue-100">
           الرابط صالح لمدة 48 ساعة ويُستخدم مرة واحدة فقط. يجب على المستلم تسجيل الدخول قبل قبوله.
         </p>
         <label className="block text-sm font-medium text-deep-700">
@@ -1449,7 +1449,7 @@ function MoveSheikhModal({ initialStudentId, sheikhs, onClose, onMoved, onStale 
             <h3 id="current-sheikh-heading" className="text-sm font-bold text-deep-800">2. الطالب والشيخ الحالي</h3>
             {selectedStudent && currentSheikh ? <div className="mt-4 space-y-3">
               <div><p className="text-xs text-deep-500">الطالب</p><p className="font-bold text-deep-900">{selectedStudent.name}</p><p className="text-xs text-deep-500">{selectedStudent.student_id ? `#${selectedStudent.student_id}` : `#${selectedStudent.id}`}</p></div>
-              <div className="rounded-xl border border-water-200 bg-white/50 p-3 dark:bg-slate-800/50"><p className="text-xs text-deep-500">الشيخ الحالي</p><p className="font-bold text-cyan-700 dark:text-cyan-300">{currentSheikh.name}</p></div>
+              <div className="rounded-xl border border-water-200 bg-white/50 p-3 dark:bg-slate-800/50"><p className="text-xs text-deep-500">الشيخ الحالي</p><p className="font-bold text-blue-700 dark:text-blue-300">{currentSheikh.name}</p></div>
             </div> : <p className="mt-4 text-sm text-deep-500">اختر طالباً لعرض الشيخ الحالي.</p>}
           </section>
 
@@ -1651,7 +1651,7 @@ function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete, onMo
             <div className="rounded-xl border border-cyan-200/70 bg-cyan-50/50 p-3 dark:border-cyan-800 dark:bg-cyan-900/20">
               <div className="flex items-center justify-between">
                 <span className="font-bold text-deep-800">الحفظ والمراجعة</span>
-                <span className="text-sm font-bold text-cyan-700">متوسط {averageQuality}/5</span>
+                <span className="text-sm font-bold text-blue-700">متوسط {averageQuality}/5</span>
               </div>
               {progressError && <p role="alert" className="mt-2 text-xs text-red-600">{progressError}</p>}
               {progressEntries.length === 0 ? (
@@ -1664,7 +1664,7 @@ function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete, onMo
                         <span className="font-semibold">{entry.category === 'new_memorization' ? 'حفظ جديد' : entry.category === 'recent_revision' ? 'مراجعة قريبة' : entry.category === 'old_revision' ? 'مراجعة قديمة' : 'اختبار'}</span>
                         <span>{entry.quality_score}/5 — {entry.mistakes} أخطاء</span>
                       </div>
-                      <p className="mt-1 font-semibold text-cyan-800 dark:text-cyan-200">{formatQuranRange(entry)}</p>
+                      <p className="mt-1 font-semibold text-blue-800 dark:text-blue-200">{formatQuranRange(entry)}</p>
                       {entry.next_assignment && <p className="mt-1 text-deep-500">التالي: {entry.next_assignment}</p>}
                     </div>
                   ))}
@@ -1804,7 +1804,7 @@ function StudentStatusTabs({
               onClick={() => setOpenTab(openTab === status ? '' : status)}
               className={`px-3 py-2 text-xs font-medium transition border-b-2 -mb-px ${
                 openTab === status
-                  ? 'border-cyan-500 text-cyan-700 dark:text-cyan-400'
+                  ? 'border-cyan-500 text-blue-700 dark:text-blue-400'
                   : 'border-transparent text-deep-500 hover:text-deep-700'
               }`}
             >
@@ -1835,11 +1835,11 @@ function StudentStatusTabs({
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="inline-flex gap-1" aria-label={`ترتيب ${s.name}`}>
-                      <button type="button" disabled={index === 0} onClick={() => onReorder(sheikhId, s.id, -1)} aria-label={`تحريك ${s.name} لأعلى`} className="rounded border border-water-200 px-2 py-1 text-xs text-cyan-700 disabled:cursor-not-allowed disabled:opacity-30">↑</button>
-                      <button type="button" disabled={index === rows.length - 1} onClick={() => onReorder(sheikhId, s.id, 1)} aria-label={`تحريك ${s.name} لأسفل`} className="rounded border border-water-200 px-2 py-1 text-xs text-cyan-700 disabled:cursor-not-allowed disabled:opacity-30">↓</button>
+                      <button type="button" disabled={index === 0} onClick={() => onReorder(sheikhId, s.id, -1)} aria-label={`تحريك ${s.name} لأعلى`} className="rounded border border-water-200 px-2 py-1 text-xs text-blue-700 disabled:cursor-not-allowed disabled:opacity-30">↑</button>
+                      <button type="button" disabled={index === rows.length - 1} onClick={() => onReorder(sheikhId, s.id, 1)} aria-label={`تحريك ${s.name} لأسفل`} className="rounded border border-water-200 px-2 py-1 text-xs text-blue-700 disabled:cursor-not-allowed disabled:opacity-30">↓</button>
                     </span>
-                    <button onClick={() => onEditStudent(s)} className="text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-800 dark:hover:text-cyan-300 transition">تعديل</button>
-                    <button onClick={() => onMoveStudent(s)} className="text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-800 dark:hover:text-cyan-300 transition">نقل</button>
+                    <button onClick={() => onEditStudent(s)} className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition">تعديل</button>
+                    <button onClick={() => onMoveStudent(s)} className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition">نقل</button>
                     <button onClick={() => onDeleteStudent(s.id)} className="text-xs text-red-400 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition">حذف</button>
                   </div>
                 </div>
@@ -1972,7 +1972,7 @@ function WarningsTab({ sheikhs }: { sheikhs: SheikhInfo[] }) {
                   </td>
                   <td className="px-3 py-3 text-deep-800 font-medium">{w.warning_number}</td>
                   <td className="px-3 py-3 text-deep-800">
-                    <button type="button" onClick={() => router.push(`/students/${w.student_id}`)} className="hover:text-cyan-700 hover:underline">
+                    <button type="button" onClick={() => router.push(`/students/${w.student_id}`)} className="hover:text-blue-700 hover:underline">
                       {w.student_name}
                     </button>
                   </td>
@@ -2177,7 +2177,7 @@ export default function ManagePage() {
             key={t.key}
             onClick={() => setActiveTab(t.key)}
             className={`px-4 py-2 text-sm font-medium transition border-b-2 -mb-px ${
-              activeTab === t.key ? 'text-cyan-700 dark:text-cyan-400 border-cyan-500' : 'text-deep-500 border-transparent hover:text-deep-700'
+              activeTab === t.key ? 'text-blue-700 dark:text-blue-400 border-cyan-500' : 'text-deep-500 border-transparent hover:text-deep-700'
             }`}
           >
             {t.label}
@@ -2269,13 +2269,13 @@ export default function ManagePage() {
                     <div className="flex items-center gap-3">
                       <span className="font-medium text-deep-800">{u.username}</span>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        u.role === 'admin' ? 'bg-purple-100/60 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300' : 'bg-water-100/60 text-cyan-700'
+                        u.role === 'admin' ? 'bg-purple-100/60 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300' : 'bg-water-100/60 text-blue-700'
                       }`}>
                         {u.role === 'admin' ? 'مدير' : 'شيخ'}
                       </span>
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={() => setEditUser(u)} className="text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-800 dark:hover:text-cyan-300 transition">تعديل</button>
+                      <button onClick={() => setEditUser(u)} className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition">تعديل</button>
                       <button onClick={() => handleDeleteUser(u.id)} className="text-xs text-red-400 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition">حذف</button>
                     </div>
                   </div>

@@ -66,7 +66,7 @@ function PaymentForm({ count, totalMinor, currency, busy, onCancel, onSubmit }: 
   return <form className="space-y-4" onSubmit={event => { event.preventDefault(); void onSubmit({ payment_date: paymentDate, payment_method: method, payment_note: note.trim() || null }) }}>
     <div className="rounded-xl border border-cyan-200 bg-cyan-50/70 p-4 dark:border-cyan-800 dark:bg-cyan-950/30">
       <p className="text-sm text-deep-600">{count === 1 ? 'المبلغ المطلوب بالكامل' : `سداد كامل لعدد ${count} طلاب`}</p>
-      <p className="mt-1 text-2xl font-bold text-cyan-700 dark:text-cyan-300">{formatSubscriptionMoney(totalMinor, currency)}</p>
+      <p className="mt-1 text-2xl font-bold text-blue-700 dark:text-blue-300">{formatSubscriptionMoney(totalMinor, currency)}</p>
     </div>
     <label className="block text-sm font-medium text-deep-700">تاريخ الدفع
       <input type="date" required value={paymentDate} onChange={event => setPaymentDate(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-4 py-2.5" />
@@ -533,7 +533,7 @@ export default function SubscriptionsPage() {
   const pages = Math.max(1, Math.ceil(total / pageSize))
   return <div className="space-y-5">
     <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-      <div><Link href="/manage" className="text-sm font-semibold text-cyan-700 dark:text-cyan-300">الإدارة ‹</Link><h1 className="mt-1 text-2xl font-bold text-deep-900">القسم المالي</h1><p className="mt-1 text-sm text-deep-500">الاشتراكات والمصروفات والوضع المالي للتحفيظ</p></div>
+      <div><Link href="/manage" className="text-sm font-semibold text-blue-700 dark:text-blue-300">الإدارة ‹</Link><h1 className="mt-1 text-2xl font-bold text-deep-900">القسم المالي</h1><p className="mt-1 text-sm text-deep-500">الاشتراكات والمصروفات والوضع المالي للتحفيظ</p></div>
       <div className="flex flex-wrap gap-2"><button type="button" onClick={() => { setActiveSection('expenses'); setEditingExpense(null) }} disabled={expenseCategories.every(category => !category.enabled)} className="water-btn rounded-xl px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">إضافة مصروف</button><button type="button" onClick={() => setShowSettings(true)} className="water-btn-outline rounded-xl px-4 py-2.5 text-sm font-semibold">إعدادات المالية</button></div>
     </header>
 
@@ -544,7 +544,7 @@ export default function SubscriptionsPage() {
       {[
         ['المحصل نقديًا', overview?.cash_collected_minor ?? 0, 'text-emerald-600'],
         ['المصروفات', overview?.expenses_minor ?? 0, 'text-red-600'],
-        ['صافي الوضع المالي', overview?.net_cash_minor ?? 0, (overview?.net_cash_minor ?? 0) >= 0 ? 'text-cyan-700' : 'text-red-600'],
+        ['صافي الوضع المالي', overview?.net_cash_minor ?? 0, (overview?.net_cash_minor ?? 0) >= 0 ? 'text-blue-700' : 'text-red-600'],
       ].map(([label, value, color]) => <div key={String(label)} className="glass-card rounded-2xl p-4"><p className="text-xs text-deep-500">{label}</p><p className={`mt-2 text-lg font-bold ${color}`}>{formatSubscriptionMoney(Number(value), currency)}</p></div>)}
     </section>
 
@@ -588,7 +588,7 @@ export default function SubscriptionsPage() {
           <span className="mt-1 flex gap-2"><input value={searchDraft} onChange={event => setSearchDraft(event.target.value)} className="surface-field min-w-0 flex-1 rounded-xl px-3 py-2.5 text-sm" placeholder="ابحث عن طالب..." /><button className="water-btn rounded-xl px-4 text-sm font-bold text-white">بحث</button></span>
         </label></form>
       </div>
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-deep-500">الدورة المعروضة: {formatMonthPeriod(period.slice(0, 7), monthStartDay)}</p>{studentIdFilter && <button type="button" onClick={() => { setStudentIdFilter(undefined); setPage(1) }} className="text-xs font-semibold text-cyan-700 dark:text-cyan-300">عرض كل الطلاب ×</button>}</div>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-deep-500">الدورة المعروضة: {formatMonthPeriod(period.slice(0, 7), monthStartDay)}</p>{studentIdFilter && <button type="button" onClick={() => { setStudentIdFilter(undefined); setPage(1) }} className="text-xs font-semibold text-blue-700 dark:text-blue-300">عرض كل الطلاب ×</button>}</div>
     </section>
 
     {selected.size > 0 && <div className="sticky top-3 z-20 flex flex-col gap-3 rounded-2xl border border-cyan-300 bg-cyan-50/95 p-4 shadow-lg backdrop-blur sm:flex-row sm:items-center sm:justify-between dark:border-cyan-800 dark:bg-cyan-950/95">
@@ -606,7 +606,7 @@ export default function SubscriptionsPage() {
           <div className="text-sm"><p className="text-xs text-deep-500">{record.is_paid ? 'بيانات الدفع' : 'الفترة'}</p><p className="text-deep-700">{record.is_paid ? `${record.payment_date} · ${paymentMethodLabel(record.payment_method)}` : `${record.period_start} — ${record.period_end}`}</p></div>
           <div className="flex flex-wrap gap-2 md:justify-end">
             {record.is_paid ? <><button type="button" disabled={busy} onClick={() => void showReceipt(record)} className="water-btn-outline rounded-lg px-3 py-1.5 text-xs">الإيصال</button>{record.student_id !== null && <button type="button" disabled={busy} onClick={() => setEditingRecord(record)} className="water-btn-outline rounded-lg px-3 py-1.5 text-xs">رسوم الأشهر القادمة</button>}<button type="button" disabled={busy} onClick={() => void makeUnpaid(record)} className="rounded-lg border border-red-200 px-3 py-1.5 text-xs text-red-600 dark:border-red-800 dark:text-red-300">إلغاء السداد</button></> : <><button type="button" onClick={() => setEditingRecord(record)} className="water-btn-outline rounded-lg px-3 py-1.5 text-xs">تعديل الرسوم</button>{record.fee_minor > 0 && <button type="button" onClick={() => setPayingRecord(record)} className="water-btn rounded-lg px-3 py-1.5 text-xs font-bold text-white">سداد</button>}</>}
-            {record.student_id !== null && <Link href={`/students/${record.student_id}`} className="rounded-lg px-2 py-1.5 text-xs font-semibold text-cyan-700 dark:text-cyan-300">ملف الطالب</Link>}
+            {record.student_id !== null && <Link href={`/students/${record.student_id}`} className="rounded-lg px-2 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300">ملف الطالب</Link>}
           </div>
         </article>)}
       </div>}

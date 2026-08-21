@@ -69,7 +69,7 @@ export default function AuditLogPageView() {
 
   return <div className="space-y-5">
     <header className="flex flex-wrap items-start justify-between gap-3 px-1">
-      <div><Link href="/manage" className="text-sm font-semibold text-cyan-700 dark:text-cyan-300">الإدارة ‹</Link><h1 className="mt-1 text-2xl font-bold text-deep-900">سجل التدقيق</h1><p className="mt-1 text-sm text-deep-500">سجل للعمليات الإدارية داخل هذا التحفيظ فقط.</p></div>
+      <div><Link href="/manage" className="text-sm font-semibold text-blue-700 dark:text-blue-300">الإدارة ‹</Link><h1 className="mt-1 text-2xl font-bold text-deep-900">سجل التدقيق</h1><p className="mt-1 text-sm text-deep-500">سجل للعمليات الإدارية داخل هذا التحفيظ فقط.</p></div>
       <span className="rounded-full bg-water-100 px-3 py-1.5 text-sm font-bold text-deep-700">{result.total} عملية</span>
     </header>
 

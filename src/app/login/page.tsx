@@ -50,14 +50,14 @@ export default function LoginPage() {
           <div aria-hidden="true" className="absolute -bottom-20 -right-16 -z-10 h-72 w-72 rounded-full bg-white/5" />
           <div className="flex h-full flex-col">
             <Link href="/" className="inline-flex w-fit items-center gap-3 rounded-2xl bg-white/10 px-3 py-2 backdrop-blur-sm hover:bg-white/15">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-xl text-cyan-700 shadow-lg shadow-cyan-950/15">💧</span>
-              <span><strong className="block text-lg leading-none">زمزم</strong><small className="mt-1 block text-[10px] text-cyan-100">إدارة التحفيظ ببساطة</small></span>
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-xl text-blue-700 shadow-lg shadow-cyan-950/15">💧</span>
+              <span><strong className="block text-lg leading-none">زمزم</strong><small className="mt-1 block text-[10px] text-blue-100">إدارة التحفيظ ببساطة</small></span>
             </Link>
 
             <div className="my-auto">
-              <p className="mb-3 text-xs font-bold tracking-wider text-cyan-100">منظومة واحدة · رؤية أوضح</p>
+              <p className="mb-3 text-xs font-bold tracking-wider text-blue-100">منظومة واحدة · رؤية أوضح</p>
               <h2 className="max-w-sm text-3xl font-bold leading-[1.45] sm:text-4xl">كل ما تحتاجه الحلقة، في مكان هادئ ومنظّم.</h2>
-              <p className="mt-4 max-w-md text-sm leading-7 text-cyan-50/85">سجّل الحضور، تابع إنجاز الطلاب، ونظّم عمل الشيوخ من واجهة عربية مصممة للاستخدام اليومي.</p>
+              <p className="mt-4 max-w-md text-sm leading-7 text-blue-50/85">سجّل الحضور، تابع إنجاز الطلاب، ونظّم عمل الشيوخ من واجهة عربية مصممة للاستخدام اليومي.</p>
               <div className="mt-8 grid gap-3">
                 {[
                   ['✓', 'إعداد سريع', 'ابدأ بخطوتين واضبط التفاصيل لاحقًا'],
@@ -66,13 +66,13 @@ export default function LoginPage() {
                 ].map(([icon, label, detail]) => (
                   <div key={label} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/10 p-3 backdrop-blur-sm">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15 text-lg font-bold">{icon}</span>
-                    <span><strong className="block text-sm">{label}</strong><small className="mt-0.5 block text-[11px] leading-5 text-cyan-50/75">{detail}</small></span>
+                    <span><strong className="block text-sm">{label}</strong><small className="mt-0.5 block text-[11px] leading-5 text-blue-50/75">{detail}</small></span>
                   </div>
                 ))}
               </div>
             </div>
 
-            <p className="text-xs leading-5 text-cyan-100/70">صُمم زمزم ليبقى بسيطًا مهما نما عدد الطلاب والحلقات.</p>
+            <p className="text-xs leading-5 text-blue-100/70">صُمم زمزم ليبقى بسيطًا مهما نما عدد الطلاب والحلقات.</p>
           </div>
         </aside>
 
@@ -131,7 +131,7 @@ export default function LoginPage() {
             </form>
             <div className="mt-6 flex items-center gap-3 text-xs text-deep-400" aria-hidden="true"><span className="h-px flex-1 bg-water-200" /><span>أو</span><span className="h-px flex-1 bg-water-200" /></div>
             <p className="mt-5 text-center text-sm text-deep-500">
-              ليس لديك حساب؟ <Link href="/signup" className="font-bold text-cyan-700 hover:text-cyan-600 dark:text-cyan-300">سجّل تحفيظك</Link>
+              ليس لديك حساب؟ <Link href="/signup" className="font-bold text-blue-700 hover:text-blue-600 dark:text-blue-300">سجّل تحفيظك</Link>
             </p>
           </div>
         </section>

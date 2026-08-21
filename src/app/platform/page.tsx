@@ -223,7 +223,7 @@ export default function PlatformPage() {
       <section className="glass-card rounded-2xl p-5 md:p-7">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <span className="inline-flex rounded-full bg-cyan-100/80 px-3 py-1 text-xs font-bold text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-200">
+            <span className="inline-flex rounded-full bg-cyan-100/80 px-3 py-1 text-xs font-bold text-blue-800 dark:bg-cyan-900/40 dark:text-blue-200">
               إدارة النظام
             </span>
             <h1 className="mt-3 text-2xl md:text-3xl font-bold text-deep-900">لوحة منصة زمزم</h1>
@@ -318,7 +318,7 @@ export default function PlatformPage() {
               {selectedUser.memberships.filter(membership => membership.is_active).length === 0 ? (
                 <span className="text-sm text-deep-500">لا توجد صلاحيات نشطة</span>
               ) : selectedUser.memberships.filter(membership => membership.is_active).map(membership => (
-                <span key={membership.id} className="inline-flex items-center gap-2 rounded-xl bg-cyan-50 px-3 py-2 text-sm text-cyan-900 dark:bg-cyan-900/30 dark:text-cyan-100">
+                <span key={membership.id} className="inline-flex items-center gap-2 rounded-xl bg-cyan-50 px-3 py-2 text-sm text-blue-900 dark:bg-cyan-900/30 dark:text-blue-100">
                   <span>{membership.tahfiz_name} · {membership.role === 'admin' ? 'مدير' : 'شيخ'}</span>
                   <button
                     onClick={() => revokeMembership(membership)}

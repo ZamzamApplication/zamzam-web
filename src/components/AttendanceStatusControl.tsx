@@ -95,7 +95,7 @@ export default function AttendanceStatusControl({
                 setOpen(false)
                 if (status !== value) onChange(status)
               }}
-              className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-right text-xs hover:bg-water-50 dark:hover:bg-slate-800 ${status === value ? 'font-bold text-cyan-700 dark:text-cyan-300' : 'text-deep-800'}`}
+              className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-right text-xs hover:bg-water-50 dark:hover:bg-slate-800 ${status === value ? 'font-bold text-blue-700 dark:text-blue-300' : 'text-deep-800'}`}
             >
               <span>{status}</span>
               <span aria-hidden="true">{status === value ? '✓' : ''}</span>

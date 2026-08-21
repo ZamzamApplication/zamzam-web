@@ -4,17 +4,25 @@ import { QURAN_QUARTER_STARTS } from './quran-quarter-data'
 
 export type QuranPoint = { surah: number; ayah: number }
 export type QuranPlanUnit = 'ayahs' | 'lines' | 'juz' | 'hizb' | 'quarter' | 'page' | 'half_page'
+export type QuranPlanSequenceItem = {
+  id: string
+  name: string
+  totalUnits: number
+  url?: string
+}
 export type QuranPlanTrack = {
   id: string
   name: string
   enabled: boolean
-  kind: 'quran' | 'quantity'
+  kind: 'quran' | 'quantity' | 'playlist'
   start: QuranPoint
   unit: QuranPlanUnit
   subject: string
   quantityUnit: string
   startNumber: number
   dailyAmount: number
+  cyclic?: boolean
+  items?: QuranPlanSequenceItem[]
 }
 export type QuranPlanInput = {
   startDate: string
@@ -32,6 +40,7 @@ export type QuranAssignment = {
   unitAmount: number
   text: string
   completedMushaf: boolean
+  links?: { label: string; url: string }[]
 }
 export type QuranPlanDay = {
   date: string
@@ -263,6 +272,96 @@ function allocateQuantity(start: number, track: QuranPlanTrack): { assignment: Q
   }
 }
 
+type SequenceCursor = { itemIndex: number; unitNumber: number } | null
+
+function youtubeEpisodeUrl(value: string, episode: number): string {
+  try {
+    const url = new URL(value.trim())
+    const playlistId = url.searchParams.get('list')
+    if (playlistId) {
+      const episodeUrl = new URL('https://www.youtube.com/watch')
+      episodeUrl.searchParams.set('list', playlistId)
+      episodeUrl.searchParams.set('index', String(episode))
+      return episodeUrl.toString()
+    }
+    if (url.hostname === 'youtu.be') {
+      const videoId = url.pathname.split('/').filter(Boolean)[0]
+      if (videoId) {
+        url.hostname = 'www.youtube.com'
+        url.pathname = '/watch'
+        url.searchParams.set('v', videoId)
+      }
+    }
+    url.searchParams.set('index', String(episode))
+    return url.toString()
+  } catch {
+    return value.trim()
+  }
+}
+
+function allocateSequence(cursor: SequenceCursor, track: QuranPlanTrack): { assignment: QuranAssignment | null; next: SequenceCursor } {
+  if (!cursor || !track.items?.length) return { assignment: null, next: null }
+  let itemIndex = cursor.itemIndex
+  let unitNumber = cursor.unitNumber
+  let remaining = track.dailyAmount
+  let allocated = 0
+  const parts: string[] = []
+  const links: { label: string; url: string }[] = []
+  let firstNumber: number | null = null
+  let lastNumber: number | null = null
+
+  while (remaining > 0 && itemIndex < track.items.length) {
+    const item = track.items[itemIndex]
+    const available = item.totalUnits - unitNumber + 1
+    if (available <= 0) {
+      itemIndex += 1
+      unitNumber = 1
+      continue
+    }
+    const count = Math.min(remaining, available)
+    const endNumber = unitNumber + count - 1
+    if (firstNumber === null) firstNumber = unitNumber
+    lastNumber = endNumber
+    if (track.kind === 'playlist') {
+      parts.push(count === 1
+        ? `${item.name} — الحلقة ${unitNumber}`
+        : `${item.name} — الحلقات ${unitNumber}–${endNumber}`)
+      for (let episode = unitNumber; episode <= endNumber; episode += 1) {
+        links.push({ label: `${item.name} — الحلقة ${episode}`, url: youtubeEpisodeUrl(item.url || '', episode) })
+      }
+    } else {
+      const unit = track.quantityUnit.trim()
+      parts.push(count === 1
+        ? `${item.name} — ${unit} ${unitNumber}`
+        : `${item.name} — من ${unit} ${unitNumber} إلى ${endNumber}`)
+    }
+    allocated += count
+    remaining -= count
+    unitNumber = endNumber + 1
+    if (unitNumber > item.totalUnits) {
+      itemIndex += 1
+      unitNumber = 1
+    }
+  }
+
+  if (allocated === 0) return { assignment: null, next: null }
+  return {
+    assignment: {
+      from: null,
+      to: null,
+      fromNumber: firstNumber,
+      toNumber: lastNumber,
+      ayahCount: 0,
+      unit: 'quantity',
+      unitAmount: allocated,
+      text: parts.join(' · '),
+      completedMushaf: false,
+      links: links.length ? links : undefined,
+    },
+    next: itemIndex < track.items.length ? { itemIndex, unitNumber } : null,
+  }
+}
+
 export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
   const start = parseDate(input.startDate)
   const end = parseDate(input.endDate)
@@ -277,8 +376,14 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
   const ids = new Set<string>()
   for (const track of enabledTracks) {
     const invalidQuran = track.kind === 'quran' && (!isValidQuranPoint(track.start) || !['ayahs', 'lines', 'juz', 'hizb', 'quarter', 'page', 'half_page'].includes(track.unit))
-    const invalidQuantity = track.kind === 'quantity' && (!track.subject.trim() || !track.quantityUnit.trim() || !Number.isInteger(track.startNumber) || track.startNumber < 1)
-    if (!track.id.trim() || ids.has(track.id) || !track.name.trim() || invalidQuran || invalidQuantity || !Number.isInteger(track.dailyAmount) || track.dailyAmount < 1) {
+    const hasSequence = (track.kind === 'quantity' || track.kind === 'playlist') && track.items !== undefined
+    const invalidSequence = hasSequence && (!track.items?.length || track.items.some(item => (
+      !item.id.trim() || !item.name.trim() || !Number.isInteger(item.totalUnits) || item.totalUnits < 1
+      || (track.kind === 'playlist' && (!item.url?.trim() || !/^https?:\/\//i.test(item.url.trim()) || !/[?&]list=/i.test(item.url.trim())))
+    )) || (track.kind === 'quantity' && (!Number.isInteger(track.startNumber) || track.startNumber < 1 || track.startNumber > (track.items?.[0]?.totalUnits ?? 0))))
+    const invalidLegacyQuantity = track.kind === 'quantity' && !hasSequence && (!track.subject.trim() || !track.quantityUnit.trim() || !Number.isInteger(track.startNumber) || track.startNumber < 1)
+    const invalidPlaylist = track.kind === 'playlist' && !hasSequence
+    if (!track.id.trim() || ids.has(track.id) || !track.name.trim() || invalidQuran || invalidSequence || invalidLegacyQuantity || invalidPlaylist || !Number.isInteger(track.dailyAmount) || track.dailyAmount < 1) {
       throw new Error('invalid_track')
     }
     ids.add(track.id)
@@ -286,7 +391,8 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
   if (enabledTracks.length === 0) throw new Error('track_required')
 
   const nextPoints = new Map(enabledTracks.filter(track => track.kind === 'quran').map(track => [track.id, track.start as QuranPoint | null]))
-  const nextNumbers = new Map(enabledTracks.filter(track => track.kind === 'quantity').map(track => [track.id, track.startNumber]))
+  const nextNumbers = new Map(enabledTracks.filter(track => track.kind === 'quantity' && track.items === undefined).map(track => [track.id, track.startNumber]))
+  const sequenceCursors = new Map(enabledTracks.filter(track => track.kind !== 'quran' && track.items !== undefined).map(track => [track.id, { itemIndex: 0, unitNumber: track.kind === 'quantity' ? track.startNumber : 1 } as SequenceCursor]))
   const totals: Record<string, QuranPlanTrackTotal> = Object.fromEntries(
     enabledTracks.map(track => [track.id, { ayahs: 0, amount: 0, end: null, endNumber: null }]),
   )
@@ -304,7 +410,15 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
     if (isStudyDay) {
       studyDays += 1
       for (const track of enabledTracks) {
-        if (track.kind === 'quantity') {
+        if (track.kind !== 'quran' && track.items !== undefined) {
+          const result = allocateSequence(sequenceCursors.get(track.id) ?? null, track)
+          assignments[track.id] = result.assignment
+          sequenceCursors.set(track.id, result.next)
+          if (result.assignment) {
+            totals[track.id].endNumber = result.assignment.toNumber
+            totals[track.id].amount += result.assignment.unitAmount
+          }
+        } else if (track.kind === 'quantity') {
           const next = nextNumbers.get(track.id)
           if (next == null) continue
           const result = allocateQuantity(next, track)
@@ -317,7 +431,7 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
           if (!next) continue
           const result = allocate(next, track)
           assignments[track.id] = result.assignment
-          nextPoints.set(track.id, result.next)
+          nextPoints.set(track.id, result.next ?? (track.cyclic ? { surah: 1, ayah: 1 } : null))
           totals[track.id].end = result.assignment.to
           totals[track.id].ayahs += result.assignment.ayahCount
           totals[track.id].amount += result.assignment.unitAmount
