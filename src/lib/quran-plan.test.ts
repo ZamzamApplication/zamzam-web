@@ -75,13 +75,13 @@ describe('Quran plan generation', () => {
       ...quranTrack('lessons', { surah: 1, ayah: 1 }, 2),
       name: 'مشاهدة', kind: 'playlist',
       items: [
-        { id: 'series-1', name: 'السلسلة الأولى', totalUnits: 2, url: 'https://www.youtube.com/watch?v=first&list=PL123' },
-        { id: 'series-2', name: 'السلسلة الثانية', totalUnits: 2, url: 'https://www.youtube.com/watch?v=second&list=PL456' },
+        { id: 'series-1', name: 'السلسلة الأولى', totalUnits: 2, url: 'https://www.youtube.com/playlist?list=PL123', episodes: [{ title: 'الأولى', url: 'https://youtube.com/watch?v=one' }, { title: 'الثانية', url: 'https://youtube.com/watch?v=two' }] },
+        { id: 'series-2', name: 'السلسلة الثانية', totalUnits: 2, url: 'https://www.youtube.com/playlist?list=PL456', episodes: [{ title: 'الثالثة', url: 'https://youtube.com/watch?v=three' }, { title: 'الرابعة', url: 'https://youtube.com/watch?v=four' }] },
       ],
     }
     const plan = generateQuranPlan({ startDate: '2026-08-16', endDate: '2026-08-18', weekdays: [0, 1, 2], tracks: [playlists] })
     expect(plan.days[0].assignments.lessons?.links).toHaveLength(2)
-    expect(plan.days[0].assignments.lessons?.links?.[1].url).toContain('index=2')
+    expect(plan.days[0].assignments.lessons?.links?.[1].url).toBe('https://youtube.com/watch?v=two')
     expect(plan.days[1].assignments.lessons?.text).toContain('السلسلة الثانية')
     expect(plan.days[2].assignments.lessons).toBeNull()
   })
@@ -136,12 +136,12 @@ describe('Quran plan generation', () => {
   })
 
   it('formats single and cross-surah ranges clearly', () => {
-    expect(formatPlanRange({ surah: 1, ayah: 1 }, { surah: 1, ayah: 3 })).toBe('سورة الفاتحة — ۝١ : ۝٣')
-    expect(formatPlanRange({ surah: 1, ayah: 7 }, { surah: 2, ayah: 2 })).toBe('سورة الفاتحة ۝٧ ← سورة البقرة ۝٢')
+    expect(formatPlanRange({ surah: 1, ayah: 1 }, { surah: 1, ayah: 3 })).toBe('سورة الفاتحة — ١ : ٣')
+    expect(formatPlanRange({ surah: 1, ayah: 7 }, { surah: 2, ayah: 2 })).toBe('سورة الفاتحة ٧ ← سورة البقرة ٢')
   })
 
   it('formats copied ranges compactly with Arabic ayah numbers', () => {
-    expect(formatCompactPlanRange({ surah: 28, ayah: 25 }, { surah: 28, ayah: 26 })).toBe('سورة القصص: ۝٢٥ : ۝٢٦')
-    expect(formatCompactPlanRange({ surah: 1, ayah: 7 }, { surah: 2, ayah: 2 })).toBe('سورة الفاتحة: ۝٧ ← سورة البقرة: ۝٢')
+    expect(formatCompactPlanRange({ surah: 28, ayah: 25 }, { surah: 28, ayah: 26 })).toBe('سورة القصص: ٢٥ : ٢٦')
+    expect(formatCompactPlanRange({ surah: 1, ayah: 7 }, { surah: 2, ayah: 2 })).toBe('سورة الفاتحة: ٧ ← سورة البقرة: ٢')
   })
 })

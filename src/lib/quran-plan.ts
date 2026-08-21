@@ -9,6 +9,7 @@ export type QuranPlanSequenceItem = {
   name: string
   totalUnits: number
   url?: string
+  episodes?: { title: string; url: string }[]
 }
 export type QuranPlanTrack = {
   id: string
@@ -115,7 +116,7 @@ const quranQuarterStartOffsets = QURAN_QUARTER_STARTS.map(([surah, ayah]) => glo
 const arabicAyahNumber = new Intl.NumberFormat('ar-EG', { useGrouping: false })
 
 function mushafAyahMarker(ayah: number): string {
-  return `۝${arabicAyahNumber.format(ayah)}`
+  return arabicAyahNumber.format(ayah)
 }
 
 export function formatPlanRange(from: QuranPoint, to: QuranPoint): string {
@@ -324,10 +325,14 @@ function allocateSequence(cursor: SequenceCursor, track: QuranPlanTrack): { assi
     lastNumber = endNumber
     if (track.kind === 'playlist') {
       parts.push(count === 1
-        ? `${item.name} — الحلقة ${unitNumber}`
+        ? `${item.name} — الحلقة ${unitNumber}: ${item.episodes?.[unitNumber - 1]?.title || ''}`.trim()
         : `${item.name} — الحلقات ${unitNumber}–${endNumber}`)
       for (let episode = unitNumber; episode <= endNumber; episode += 1) {
-        links.push({ label: `${item.name} — الحلقة ${episode}`, url: youtubeEpisodeUrl(item.url || '', episode) })
+        const importedEpisode = item.episodes?.[episode - 1]
+        links.push({
+          label: importedEpisode?.title || `${item.name} — الحلقة ${episode}`,
+          url: importedEpisode?.url || youtubeEpisodeUrl(item.url || '', episode),
+        })
       }
     } else {
       const unit = track.quantityUnit.trim()
@@ -379,7 +384,7 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
     const hasSequence = (track.kind === 'quantity' || track.kind === 'playlist') && track.items !== undefined
     const invalidSequence = hasSequence && (!track.items?.length || track.items.some(item => (
       !item.id.trim() || !item.name.trim() || !Number.isInteger(item.totalUnits) || item.totalUnits < 1
-      || (track.kind === 'playlist' && (!item.url?.trim() || !/^https?:\/\//i.test(item.url.trim()) || !/[?&]list=/i.test(item.url.trim())))
+      || (track.kind === 'playlist' && (!item.url?.trim() || !item.episodes?.length || item.episodes.length !== item.totalUnits))
     )) || (track.kind === 'quantity' && (!Number.isInteger(track.startNumber) || track.startNumber < 1 || track.startNumber > (track.items?.[0]?.totalUnits ?? 0))))
     const invalidLegacyQuantity = track.kind === 'quantity' && !hasSequence && (!track.subject.trim() || !track.quantityUnit.trim() || !Number.isInteger(track.startNumber) || track.startNumber < 1)
     const invalidPlaylist = track.kind === 'playlist' && !hasSequence
