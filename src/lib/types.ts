@@ -4,6 +4,7 @@ export interface User {
   role: 'super_admin' | 'admin' | 'sheikh'
   global_role?: 'super_admin' | 'admin' | 'sheikh'
   sheikh_id: number | null
+  attendance_all_students_access?: boolean
   tahfiz_id: number | null
   default_tahfiz_id?: number | null
   capabilities?: string[]
@@ -199,6 +200,7 @@ export interface SheikhInfo {
   name: string
   phone?: string
   whatsapp_group_id?: string
+  attendance_all_students_access?: boolean
   circle_id: number
   circle_name: string
   week_start_day?: number

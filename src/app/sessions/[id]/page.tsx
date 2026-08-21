@@ -366,7 +366,9 @@ export default function SessionAttendancePage() {
       setAttendanceStatusColors(currentUser.tahfiz?.attendance_status_colors || {
         'حاضر': 'green', 'غياب': 'slate', 'غياب بعذر': 'amber', 'لا ينطبق': 'sky',
       })
-      const restrictedSheikh = currentUser.role === 'sheikh' && Boolean(currentUser.tahfiz?.restrict_sheikh_student_access)
+      const restrictedSheikh = currentUser.role === 'sheikh'
+        && Boolean(currentUser.tahfiz?.restrict_sheikh_student_access)
+        && !currentUser.attendance_all_students_access
       setStudentScopeRestricted(restrictedSheikh)
       setSheikhSelectionEnabled(!restrictedSheikh && (currentUser.tahfiz?.attendance_sheikh_selection_enabled ?? true))
       const drafts: ProgressDraftMap = Object.fromEntries((enabled ? progress.entries : []).map((entry) => [progressDraftKey(entry.student_id, entry.category), progressEntryToInput(entry)]))

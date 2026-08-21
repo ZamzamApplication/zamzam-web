@@ -602,12 +602,13 @@ export const api = {
     })
   },
 
-  updateSheikh(id: number, name?: string, phone?: string, whatsappGroupId?: string, circleId?: number) {
+  updateSheikh(id: number, name?: string, phone?: string, whatsappGroupId?: string, circleId?: number, attendanceAllStudentsAccess?: boolean) {
     const body: Record<string, unknown> = {}
     if (name !== undefined) body.name = name
     if (phone !== undefined) body.phone = phone ?? null
     if (whatsappGroupId !== undefined) body.whatsapp_group_id = whatsappGroupId ?? null
     if (circleId !== undefined) body.circle_id = circleId
+    if (attendanceAllStudentsAccess !== undefined) body.attendance_all_students_access = attendanceAllStudentsAccess
     return request(`/sheikhs/${id}`, {
       method: 'PUT',
       body: JSON.stringify(body),

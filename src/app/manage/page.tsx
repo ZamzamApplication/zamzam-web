@@ -357,6 +357,7 @@ function EditSheikhModal({ sheikh, circles: _circles, onClose, onUpdated }: { sh
   const [name, setName] = useState(sheikh.name)
   const [phone, setPhone] = useState(sheikh.phone || '')
   const [whatsappGroupId, setWhatsappGroupId] = useState(sheikh.whatsapp_group_id || '')
+  const [attendanceAllStudentsAccess, setAttendanceAllStudentsAccess] = useState(Boolean(sheikh.attendance_all_students_access))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -366,7 +367,7 @@ function EditSheikhModal({ sheikh, circles: _circles, onClose, onUpdated }: { sh
     setLoading(true)
     setError('')
     try {
-      await api.updateSheikh(sheikh.id, name, phone || undefined, whatsappGroupId || undefined)
+      await api.updateSheikh(sheikh.id, name, phone || undefined, whatsappGroupId || undefined, undefined, attendanceAllStudentsAccess)
       onUpdated()
     } catch (err: any) {
       setError(err.message || 'فشل التحديث')
@@ -382,6 +383,13 @@ function EditSheikhModal({ sheikh, circles: _circles, onClose, onUpdated }: { sh
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="الاسم" required className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
         <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="رقم الهاتف (اختياري)" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
         <WhatsAppGroupSelect value={whatsappGroupId} onChange={setWhatsappGroupId} />
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-water-200 bg-water-50/50 p-3 dark:border-slate-700 dark:bg-slate-800/50">
+          <input type="checkbox" checked={attendanceAllStudentsAccess} onChange={(event) => setAttendanceAllStudentsAccess(event.target.checked)} className="mt-1 rounded" />
+          <span>
+            <span className="block text-sm font-semibold text-deep-800">الوصول إلى جميع الطلاب في تسجيل الحضور</span>
+            <span className="mt-1 block text-xs text-deep-500">يسمح لهذا الشيخ بعرض وتسجيل حضور جميع طلاب التحفيظ، مع بقاء صلاحيات الإدارة الأخرى محدودة بطلابه.</span>
+          </span>
+        </label>
         <div className="flex gap-3 pt-2">
           <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 water-btn-outline rounded-xl text-sm">إلغاء</button>
           <button type="submit" disabled={loading} className="flex-1 px-4 py-2.5 water-btn text-white rounded-xl text-sm font-medium disabled:opacity-50">{loading ? 'جاري...' : 'حفظ'}</button>
