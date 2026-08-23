@@ -2168,7 +2168,9 @@ export default function ManagePage() {
       <h1 className="text-2xl font-bold text-deep-800 mb-1">الإدارة</h1>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-deep-500 text-sm">إجمالي الطلاب المقيدين: {sheikhs.reduce((sum, s) => sum + s.students.filter((st) => st.status === 'مقيد').length, 0)}</p>
-        <div className="flex flex-wrap gap-2"><Link href="/audit-log" className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">📋 سجل التدقيق</Link><Link href="/finance" className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">💰 القسم المالي</Link><Link href="/settings" className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">⚙ إعدادات التحفيظ</Link></div>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/audit-log" className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">📋 سجل التدقيق</Link>
+        </div>
       </div>
 
       <div className="mobile-scroll-tabs flex gap-2 mb-6 border-b border-water-200/30">
