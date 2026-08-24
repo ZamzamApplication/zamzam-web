@@ -750,6 +750,10 @@ select optgroup {
 }
 
 @media (max-width: 767px) {
+  body:has(.app-main .mobile-sheet-backdrop) .app-main {
+    z-index: 50;
+  }
+
   .app-main {
     padding-bottom: calc(5.25rem + env(safe-area-inset-bottom));
   }
@@ -812,6 +816,8 @@ select optgroup {
     margin: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
+    background: rgb(var(--glass-strong-bg));
+    color: rgb(var(--text));
   }
 }
 

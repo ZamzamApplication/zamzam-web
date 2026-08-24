@@ -70,6 +70,21 @@ describe('Quran plan generation', () => {
     expect(plan.totals.books.amount).toBe(9)
   })
 
+  it('uses the configured start page for each book', () => {
+    const books: QuranPlanTrack = {
+      ...quranTrack('books', { surah: 1, ayah: 1 }, 3),
+      name: 'قراءة', kind: 'quantity', quantityUnit: 'صفحة', startNumber: 1,
+      items: [
+        { id: 'book-1', name: 'الكتاب الأول', startUnit: 4, totalUnits: 5 },
+        { id: 'book-2', name: 'الكتاب الثاني', startUnit: 10, totalUnits: 14 },
+      ],
+    }
+    const plan = generateQuranPlan({ startDate: '2026-08-16', endDate: '2026-08-18', weekdays: [0, 1, 2], tracks: [books] })
+    expect(plan.days[0].assignments.books?.text).toContain('الكتاب الأول — من صفحة 4 إلى 5')
+    expect(plan.days[0].assignments.books?.text).toContain('الكتاب الثاني — صفحة 10')
+    expect(plan.days[1].assignments.books?.text).toContain('الكتاب الثاني — من صفحة 11 إلى 13')
+  })
+
   it('sequences YouTube playlists and includes an episode link for every assignment', () => {
     const playlists: QuranPlanTrack = {
       ...quranTrack('lessons', { surah: 1, ayah: 1 }, 2),

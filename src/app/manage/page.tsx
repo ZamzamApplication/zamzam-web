@@ -29,9 +29,9 @@ function excusedPeriodStatusLabel(status: ExcusedPeriodInfo['status']): string {
 
 function Modal({ title, onClose, children, wide = false }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean }) {
   return (
-    <div className="mobile-sheet-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={onClose}>
+    <div className="mobile-sheet-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/35 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="management-modal-title" onClick={onClose}>
       <div className={`mobile-sheet glass-strong rounded-2xl p-6 w-full ${wide ? 'max-w-5xl' : 'max-w-sm'} mx-4 max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-xl font-bold text-deep-800 mb-4">{title}</h2>
+        <h2 id="management-modal-title" className="text-xl font-bold text-deep-800 mb-4">{title}</h2>
         {children}
       </div>
     </div>
@@ -864,7 +864,7 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
             {editingPeriodId && <button type="button" disabled={periodBusy} onClick={resetPeriodForm} className="water-btn-outline rounded-xl px-4 py-2 text-xs">إلغاء التعديل</button>}
           </div>
           <div className="mt-4 max-h-52 space-y-2 overflow-y-auto">
-            {excusedPeriods.length === 0 ? <p className="text-xs text-deep-400">لا توجد فترات عذر مسجلة.</p> : excusedPeriods.map(period => <article key={period.id} className="rounded-xl border border-water-200 bg-white/35 p-3 dark:bg-slate-800/30">
+            {excusedPeriods.length === 0 ? <p className="text-xs font-medium text-deep-600">لا توجد فترات عذر مسجلة.</p> : excusedPeriods.map(period => <article key={period.id} className="rounded-xl border border-water-200 bg-white/35 p-3 dark:bg-slate-800/30">
               <div className="flex items-start justify-between gap-2"><div><p className="text-xs font-bold text-deep-800">{period.reason}</p><p className="mt-1 text-[11px] text-deep-500">{period.start_date} — {period.end_date}</p></div><span className="rounded-full bg-water-50 px-2 py-1 text-[10px] text-deep-700 dark:bg-slate-800">{excusedPeriodStatusLabel(period.status)}</span></div>
               {period.status !== 'cancelled' && <div className="mt-2 flex flex-wrap gap-2"><button type="button" disabled={periodBusy} onClick={() => startEditingPeriod(period)} className="text-xs font-semibold text-blue-700 dark:text-blue-300">تعديل</button>{period.status === 'active' && <button type="button" disabled={periodBusy} onClick={() => void endExcusedPeriodEarly(period)} className="text-xs font-semibold text-amber-700 dark:text-amber-300">عودة مبكرة</button>}{(period.status === 'active' || period.status === 'upcoming') && <button type="button" disabled={periodBusy} onClick={() => void cancelExcusedPeriod(period)} className="text-xs font-semibold text-red-600 dark:text-red-300">إلغاء الفترة</button>}</div>}
             </article>)}
@@ -879,7 +879,7 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
             <button type="button" onClick={handleAddWarning} disabled={addingWarning || !newWarningReason.trim()} className="water-btn text-white px-3 py-1.5 rounded-xl text-sm font-medium disabled:opacity-50 whitespace-nowrap">{addingWarning ? 'جاري...' : '+ إنذار'}</button>
           </div>
           {warnings.length === 0 ? (
-            <p className="text-xs text-deep-400 text-center py-2">لا يوجد إنذارات</p>
+            <p className="py-2 text-center text-xs font-medium text-deep-600">لا يوجد إنذارات</p>
           ) : (
             <div className="space-y-1.5 max-h-40 overflow-y-auto">
               {warnings.map((w) => (

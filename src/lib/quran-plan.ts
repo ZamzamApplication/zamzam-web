@@ -8,6 +8,7 @@ export type QuranPlanSequenceItem = {
   id: string
   name: string
   totalUnits: number
+  startUnit?: number
   url?: string
   episodes?: { title: string; url: string }[]
 }
@@ -275,6 +276,11 @@ function allocateQuantity(start: number, track: QuranPlanTrack): { assignment: Q
 
 type SequenceCursor = { itemIndex: number; unitNumber: number } | null
 
+function sequenceItemStart(track: QuranPlanTrack, itemIndex: number): number {
+  if (track.kind !== 'quantity') return 1
+  return track.items?.[itemIndex]?.startUnit ?? (itemIndex === 0 ? track.startNumber : 1)
+}
+
 function youtubeEpisodeUrl(value: string, episode: number): string {
   try {
     const url = new URL(value.trim())
@@ -316,7 +322,7 @@ function allocateSequence(cursor: SequenceCursor, track: QuranPlanTrack): { assi
     const available = item.totalUnits - unitNumber + 1
     if (available <= 0) {
       itemIndex += 1
-      unitNumber = 1
+      unitNumber = sequenceItemStart(track, itemIndex)
       continue
     }
     const count = Math.min(remaining, available)
@@ -345,7 +351,7 @@ function allocateSequence(cursor: SequenceCursor, track: QuranPlanTrack): { assi
     unitNumber = endNumber + 1
     if (unitNumber > item.totalUnits) {
       itemIndex += 1
-      unitNumber = 1
+      unitNumber = sequenceItemStart(track, itemIndex)
     }
   }
 
@@ -382,10 +388,11 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
   for (const track of enabledTracks) {
     const invalidQuran = track.kind === 'quran' && (!isValidQuranPoint(track.start) || !['ayahs', 'lines', 'juz', 'hizb', 'quarter', 'page', 'half_page'].includes(track.unit))
     const hasSequence = (track.kind === 'quantity' || track.kind === 'playlist') && track.items !== undefined
-    const invalidSequence = hasSequence && (!track.items?.length || track.items.some(item => (
+    const invalidSequence = hasSequence && (!track.items?.length || track.items.some((item, itemIndex) => (
       !item.id.trim() || !item.name.trim() || !Number.isInteger(item.totalUnits) || item.totalUnits < 1
+      || (track.kind === 'quantity' && (!Number.isInteger(sequenceItemStart(track, itemIndex)) || sequenceItemStart(track, itemIndex) < 1 || sequenceItemStart(track, itemIndex) > item.totalUnits))
       || (track.kind === 'playlist' && (!item.url?.trim() || !item.episodes?.length || item.episodes.length !== item.totalUnits))
-    )) || (track.kind === 'quantity' && (!Number.isInteger(track.startNumber) || track.startNumber < 1 || track.startNumber > (track.items?.[0]?.totalUnits ?? 0))))
+    )))
     const invalidLegacyQuantity = track.kind === 'quantity' && !hasSequence && (!track.subject.trim() || !track.quantityUnit.trim() || !Number.isInteger(track.startNumber) || track.startNumber < 1)
     const invalidPlaylist = track.kind === 'playlist' && !hasSequence
     if (!track.id.trim() || ids.has(track.id) || !track.name.trim() || invalidQuran || invalidSequence || invalidLegacyQuantity || invalidPlaylist || !Number.isInteger(track.dailyAmount) || track.dailyAmount < 1) {
@@ -397,7 +404,7 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
 
   const nextPoints = new Map(enabledTracks.filter(track => track.kind === 'quran').map(track => [track.id, track.start as QuranPoint | null]))
   const nextNumbers = new Map(enabledTracks.filter(track => track.kind === 'quantity' && track.items === undefined).map(track => [track.id, track.startNumber]))
-  const sequenceCursors = new Map(enabledTracks.filter(track => track.kind !== 'quran' && track.items !== undefined).map(track => [track.id, { itemIndex: 0, unitNumber: track.kind === 'quantity' ? track.startNumber : 1 } as SequenceCursor]))
+  const sequenceCursors = new Map(enabledTracks.filter(track => track.kind !== 'quran' && track.items !== undefined).map(track => [track.id, { itemIndex: 0, unitNumber: sequenceItemStart(track, 0) } as SequenceCursor]))
   const totals: Record<string, QuranPlanTrackTotal> = Object.fromEntries(
     enabledTracks.map(track => [track.id, { ayahs: 0, amount: 0, end: null, endNumber: null }]),
   )
