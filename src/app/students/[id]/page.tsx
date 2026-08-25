@@ -117,7 +117,7 @@ export default function StudentProfilePage() {
         </div>
       </section>
 
-      {profile.can_manage && <StudentQuranPlanEditor studentId={profile.id} />}
+      {profile.can_manage && profile.progress.enabled && <StudentQuranPlanEditor studentId={profile.id} initiallyEnabled={profile.progress.student_enabled} configuredCategories={profile.progress.categories} />}
 
       <div className="grid gap-5 lg:grid-cols-2">
         <section className="glass-card rounded-2xl p-5">

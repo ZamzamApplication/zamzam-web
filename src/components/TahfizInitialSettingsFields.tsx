@@ -1,9 +1,15 @@
 'use client'
 
 import { useState } from 'react'
+import type { WardCategory } from '@/lib/types'
 
 export const DEFAULT_ATTENDANCE_STATUSES = ['حاضر', 'غياب', 'غياب بعذر', 'لا ينطبق']
 export const DEFAULT_SESSION_NAMES = ['الصباحية', 'المسائية']
+export const PROGRESS_CATEGORY_OPTIONS: { key: WardCategory; label: string; description: string }[] = [
+  { key: 'new_memorization', label: 'الحفظ', description: 'المقدار الجديد الذي يسمّعه الطالب.' },
+  { key: 'recent_revision', label: 'المراجعة القريبة', description: 'مراجعة المحفوظ الحديث.' },
+  { key: 'old_revision', label: 'المراجعة البعيدة', description: 'مراجعة المحفوظ السابق.' },
+]
 
 export type TahfizInitialSettings = {
   attendanceStatuses: string[]
@@ -14,6 +20,8 @@ export type TahfizInitialSettings = {
   subscriptionDefaultFeeMinor: number
   subscriptionCurrency: string
   monthStartDay: number
+  progressTrackingEnabled: boolean
+  progressCategories: WardCategory[]
 }
 
 export const DEFAULT_INITIAL_TAHFIZ_SETTINGS: TahfizInitialSettings = {
@@ -25,6 +33,8 @@ export const DEFAULT_INITIAL_TAHFIZ_SETTINGS: TahfizInitialSettings = {
   subscriptionDefaultFeeMinor: 0,
   subscriptionCurrency: 'EGP',
   monthStartDay: 1,
+  progressTrackingEnabled: false,
+  progressCategories: ['new_memorization'],
 }
 
 export default function TahfizInitialSettingsFields({ value, onChange }: {
@@ -49,6 +59,24 @@ export default function TahfizInitialSettingsFields({ value, onChange }: {
   }
 
   return <div className="space-y-4">
+    <section className="rounded-2xl border border-water-200/80 bg-white/45 p-4 dark:border-slate-700 dark:bg-slate-900/45">
+      <h3 className="text-sm font-bold text-deep-900">متابعة القرآن</h3>
+      <p className="mt-1 text-xs leading-5 text-deep-500">فعّل تسجيل التقدم، ثم اختر الأقسام المتاحة. ستحدد الطلاب الذين تريد متابعتهم لاحقاً.</p>
+      <label className="mt-3 flex items-center gap-3 rounded-xl border border-water-200 bg-white/60 p-3 text-sm font-semibold text-deep-800 dark:border-slate-700 dark:bg-slate-800/60">
+        <input type="checkbox" checked={value.progressTrackingEnabled} onChange={event => onChange({ ...value, progressTrackingEnabled: event.target.checked })} />
+        تفعيل متابعة القرآن
+      </label>
+      {value.progressTrackingEnabled && <div className="mt-3 grid gap-2 sm:grid-cols-3">
+        {PROGRESS_CATEGORY_OPTIONS.map(option => {
+          const checked = value.progressCategories.includes(option.key)
+          return <label key={option.key} className={`cursor-pointer rounded-xl border p-3 ${checked ? 'border-cyan-500 bg-cyan-50 dark:bg-cyan-950/30' : 'border-water-200 bg-white/50 dark:bg-slate-800/50'}`}>
+            <span className="flex items-center gap-2 text-xs font-bold text-deep-800"><input type="checkbox" checked={checked} disabled={option.key === 'new_memorization'} onChange={() => onChange({ ...value, progressCategories: checked ? value.progressCategories.filter(item => item !== option.key) : [...value.progressCategories, option.key] })} />{option.label}</span>
+            <span className="mt-1 block text-[11px] leading-5 text-deep-500">{option.description}</span>
+          </label>
+        })}
+      </div>}
+    </section>
+
     <section className="rounded-2xl border border-water-200/80 bg-white/45 p-4 dark:border-slate-700 dark:bg-slate-900/45">
       <h3 className="text-sm font-bold text-deep-900">حالات الحضور الأساسية</h3>
       <p className="mt-1 text-xs leading-5 text-deep-500">أضف الحالات التي ستستخدمها، ثم عيّن الحالة التي تعني الحضور والحالة التي تعني الغياب في النظام كله.</p>

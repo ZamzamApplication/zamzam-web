@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { getArabicDay, mediaUrl } from '@/lib/format'
 import type { AttendanceThresholdAlert, ProgressCategory, QuranProgressInput, Session, SessionAttendance, SheikhGroup } from '@/lib/types'
-import InlineQuranProgress, { createRequiredProgressDraft, INLINE_PROGRESS_CATEGORIES, isSurahAyahRangeComplete, type ProgressDraftMap, progressDraftKey, progressEntryToInput } from '@/components/InlineQuranProgress'
+import InlineQuranProgress, { isSurahAyahRangeComplete, type ProgressDraftMap, progressDraftKey, progressEntryToInput } from '@/components/InlineQuranProgress'
 import AttendanceStatusControl, { attendanceStatusColorClass } from '@/components/AttendanceStatusControl'
 import { configuredAbsentStatus, configuredAttendanceStatuses, configuredPresentStatus, countStudentsExceptAbsent, DEFAULT_ATTENDANCE_STATUSES } from '@/lib/attendance'
 import { sessionDescriptor } from '@/lib/session-label'
@@ -38,6 +38,8 @@ function StudentRow({
   progressEnabled,
   progressDrafts,
   previousProgressDrafts,
+  suggestedProgressDrafts,
+  progressCategories,
   savedProgressKeys,
   dirtyProgressKeys,
   progressSaving,
@@ -48,7 +50,7 @@ function StudentRow({
   sheikhSelectionEnabled,
   presentStatus,
 }: {
-  student: { id: number; name: string; status: string; notes?: string; sheikh_id: number | null; profile_pic?: string | null }
+  student: { id: number; name: string; status: string; notes?: string; sheikh_id: number | null; profile_pic?: string | null; quran_progress_enabled?: boolean }
   circleSheikhs: { id: number; name: string }[]
   onStatusChange: (status: string) => void
   onNotesChange: (notes: string) => void
@@ -60,6 +62,8 @@ function StudentRow({
   progressEnabled: boolean
   progressDrafts: ProgressDraftMap
   previousProgressDrafts: ProgressDraftMap
+  suggestedProgressDrafts: ProgressDraftMap
+  progressCategories: ProgressCategory[]
   savedProgressKeys: Set<string>
   dirtyProgressKeys: Set<string>
   progressSaving: boolean
@@ -138,11 +142,13 @@ function StudentRow({
       />
         </label>
       </div>
-      {progressEnabled && student.status === presentStatus && (
+      {progressEnabled && student.quran_progress_enabled && student.status === presentStatus && (
         <InlineQuranProgress
           student={student}
           drafts={progressDrafts}
           previousDrafts={previousProgressDrafts}
+          suggestedDrafts={suggestedProgressDrafts}
+          categories={progressCategories}
           savedKeys={savedProgressKeys}
           dirtyKeys={dirtyProgressKeys}
           disabled={disabled}
@@ -170,6 +176,8 @@ function SheikhAccordion({
   progressEnabled,
   progressDrafts,
   previousProgressDrafts,
+  suggestedProgressDrafts,
+  progressCategories,
   savedProgressKeys,
   dirtyProgressKeys,
   progressSaving,
@@ -195,6 +203,8 @@ function SheikhAccordion({
   progressEnabled: boolean
   progressDrafts: ProgressDraftMap
   previousProgressDrafts: ProgressDraftMap
+  suggestedProgressDrafts: ProgressDraftMap
+  progressCategories: ProgressCategory[]
   savedProgressKeys: Set<string>
   dirtyProgressKeys: Set<string>
   progressSaving: boolean
@@ -243,6 +253,8 @@ function SheikhAccordion({
               progressEnabled={progressEnabled}
               progressDrafts={progressDrafts}
               previousProgressDrafts={previousProgressDrafts}
+              suggestedProgressDrafts={suggestedProgressDrafts}
+              progressCategories={progressCategories}
               savedProgressKeys={savedProgressKeys}
               dirtyProgressKeys={dirtyProgressKeys}
               progressSaving={progressSaving}
@@ -303,6 +315,7 @@ export default function SessionAttendancePage() {
   const [persistedProgressDrafts, setPersistedProgressDrafts] = useState<ProgressDraftMap>({})
   const [previousProgressDrafts, setPreviousProgressDrafts] = useState<ProgressDraftMap>({})
   const [suggestedProgressDrafts, setSuggestedProgressDrafts] = useState<ProgressDraftMap>({})
+  const [progressCategories, setProgressCategories] = useState<ProgressCategory[]>(['new_memorization'])
   const [savedProgressKeys, setSavedProgressKeys] = useState<Set<string>>(new Set())
   const [dirtyProgressKeys, setDirtyProgressKeys] = useState<Set<string>>(new Set())
   const [progressSaving, setProgressSaving] = useState(false)
@@ -357,6 +370,7 @@ export default function SessionAttendancePage() {
       setAllSessions(sessions)
       setUserRole(currentUser.role || '')
       const enabled = Boolean(progress.enabled)
+      setProgressCategories(progress.categories?.length ? progress.categories : ['new_memorization'])
       setTahfizProgressEnabled(Boolean(currentUser.tahfiz?.progress_tracking_enabled))
       setProgressEnabled(enabled)
       setAttendanceStatuses(configuredAttendanceStatuses(currentUser.tahfiz?.attendance_statuses))
@@ -374,27 +388,13 @@ export default function SessionAttendancePage() {
       const drafts: ProgressDraftMap = Object.fromEntries((enabled ? progress.entries : []).map((entry) => [progressDraftKey(entry.student_id, entry.category), progressEntryToInput(entry)]))
       const previousDrafts: ProgressDraftMap = Object.fromEntries((progress.previous_entries || []).map((entry) => [progressDraftKey(entry.student_id, entry.category), progressEntryToInput(entry)]))
       const suggestedDrafts: ProgressDraftMap = Object.fromEntries((progress.suggested_entries || []).map((entry) => [progressDraftKey(entry.student_id, entry.category), entry]))
-      const requiredKeys = new Set<string>()
-      if (enabled && !sessionData.is_confirmed) {
-        sessionData.sheikh_groups.flatMap((group: SheikhGroup) => group.students).filter((student: SheikhGroup['students'][number]) => student.status === effectivePresentStatus).forEach((student: SheikhGroup['students'][number]) => {
-          INLINE_PROGRESS_CATEGORIES.forEach(({ key: category }) => {
-            const key = progressDraftKey(student.id, category)
-            if (drafts[key]) return
-            drafts[key] = suggestedDrafts[key]
-              ? { ...suggestedDrafts[key], sheikh_id: student.sheikh_id }
-              : createRequiredProgressDraft(student.id, student.sheikh_id, category, previousDrafts[key])
-            requiredKeys.add(key)
-          })
-        })
-      }
       setProgressDrafts(drafts)
       const persistedDrafts: ProgressDraftMap = Object.fromEntries((enabled ? progress.entries : []).map((entry) => [progressDraftKey(entry.student_id, entry.category), progressEntryToInput(entry)]))
       setPersistedProgressDrafts(persistedDrafts)
       setPreviousProgressDrafts(previousDrafts)
       setSuggestedProgressDrafts(suggestedDrafts)
       setSavedProgressKeys(new Set(Object.keys(persistedDrafts)))
-      setDirtyProgressKeys(requiredKeys)
-      if (requiredKeys.size > 0) setSaveState('pending')
+      setDirtyProgressKeys(new Set())
     }).catch((err: any) => {
       if (!cancelled) setLoadError(err.message || 'تعذر تحميل الحلقة')
     }).finally(() => {
@@ -495,21 +495,21 @@ export default function SessionAttendancePage() {
   const saveProgressDrafts = useCallback(async (): Promise<boolean> => {
     const sessionData = dataRef.current
     if (!sessionData) return true
-    if (progressEnabled && !sessionData.is_confirmed) {
-      const presentStudents = sessionData.sheikh_groups.flatMap((group) => group.students).filter((student) => student.status === presentStatus)
-      const incompleteStudent = presentStudents.find((student) => INLINE_PROGRESS_CATEGORIES.some(({ key: category }) => !isProgressDraftComplete(progressDrafts[progressDraftKey(student.id, category)])))
+    const keys = Array.from(dirtyProgressKeys)
+    const updates = keys.map((key) => progressDrafts[key]).filter(Boolean)
+    const incompleteDraft = updates.find((draft) => !isProgressDraftComplete(draft))
+    if (incompleteDraft) {
+      const incompleteStudent = sessionData.sheikh_groups.flatMap((group) => group.students).find((student) => student.id === incompleteDraft.student_id)
       if (incompleteStudent) {
         const group = sessionData.sheikh_groups.find((item) => item.students.some((student) => student.id === incompleteStudent.id))
         if (group) setExpandedSheikhs((current) => new Set(current).add(group.sheikh.id))
-        setSaveError(`أكمل الحفظ والمراجعتين والتقييم للطالب: ${incompleteStudent.name}`)
+        setSaveError(`أكمل المقدار والتقييم للسجل الذي بدأته للطالب: ${incompleteStudent.name}`)
         setSaveState('error')
         window.setTimeout(() => document.getElementById(`student-row-${incompleteStudent.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 0)
-        return false
       }
+      return false
     }
     if (dirtyProgressKeys.size === 0) return true
-    const keys = Array.from(dirtyProgressKeys)
-    const updates = keys.map((key) => progressDrafts[key]).filter(Boolean)
     if (updates.length === 0) return true
     const editedSavedRanges = keys.filter((key) => (
       persistedProgressDrafts[key]
@@ -526,8 +526,11 @@ export default function SessionAttendancePage() {
       await api.saveSessionProgress(sessionData.session_id, updates)
       const refreshed = await api.getSessionProgress(sessionData.session_id)
       const refreshedDrafts = Object.fromEntries(refreshed.entries.map((entry) => [progressDraftKey(entry.student_id, entry.category), progressEntryToInput(entry)]))
+      const refreshedSuggestions = Object.fromEntries((refreshed.suggested_entries || []).map((entry) => [progressDraftKey(entry.student_id, entry.category), entry]))
       setProgressDrafts((current) => ({ ...current, ...refreshedDrafts }))
       setPersistedProgressDrafts(refreshedDrafts)
+      setSuggestedProgressDrafts(refreshedSuggestions)
+      setProgressCategories(refreshed.categories?.length ? refreshed.categories : ['new_memorization'])
       setSavedProgressKeys(new Set(Object.keys(refreshedDrafts)))
       setDirtyProgressKeys((current) => {
         const next = new Set(current)
@@ -543,13 +546,13 @@ export default function SessionAttendancePage() {
     } finally {
       setProgressSaving(false)
     }
-  }, [dirtyProgressKeys, persistedProgressDrafts, progressDrafts, progressEnabled, presentStatus])
+  }, [dirtyProgressKeys, persistedProgressDrafts, progressDrafts])
 
   const saveProgressAndOpenNext = useCallback(async (studentId: number) => {
     if (!(await saveProgressDrafts())) return
     const students = dataRef.current?.sheikh_groups.flatMap((group) => group.students) || []
     const currentIndex = students.findIndex((student) => student.id === studentId)
-    const next = students.slice(currentIndex + 1).find((student) => student.status === presentStatus)
+    const next = students.slice(currentIndex + 1).find((student) => student.status === presentStatus && student.quran_progress_enabled)
     if (next) document.getElementById(`student-row-${next.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }, [saveProgressDrafts, presentStatus])
 
@@ -569,7 +572,7 @@ export default function SessionAttendancePage() {
     if (newStatus !== presentStatus) {
       setProgressDrafts((current) => {
         const next = { ...current }
-        INLINE_PROGRESS_CATEGORIES.forEach(({ key: category }) => {
+        progressCategories.forEach((category) => {
           const key = progressDraftKey(studentId, category)
           if (persistedProgressDrafts[key]) next[key] = persistedProgressDrafts[key]
           else delete next[key]
@@ -578,35 +581,12 @@ export default function SessionAttendancePage() {
       })
       setDirtyProgressKeys((current) => {
         const next = new Set(current)
-        INLINE_PROGRESS_CATEGORIES.forEach(({ key: category }) => next.delete(progressDraftKey(studentId, category)))
+        progressCategories.forEach((category) => next.delete(progressDraftKey(studentId, category)))
         return next
       })
-    } else if (progressEnabled && !dataRef.current?.is_confirmed) {
-      const student = dataRef.current?.sheikh_groups.flatMap((group) => group.students).find((item) => item.id === studentId)
-      if (student) {
-        const additions: ProgressDraftMap = {}
-        const keys: string[] = []
-        INLINE_PROGRESS_CATEGORIES.forEach(({ key: category }) => {
-          const key = progressDraftKey(studentId, category)
-          if (progressDrafts[key]) return
-          additions[key] = suggestedProgressDrafts[key]
-            ? { ...suggestedProgressDrafts[key], sheikh_id: student.sheikh_id }
-            : createRequiredProgressDraft(studentId, student.sheikh_id, category, previousProgressDrafts[key])
-          keys.push(key)
-        })
-        if (keys.length > 0) {
-          setProgressDrafts((current) => ({ ...additions, ...current }))
-          setDirtyProgressKeys((current) => {
-            const next = new Set(current)
-            keys.forEach((key) => next.add(key))
-            return next
-          })
-          setSaveState('pending')
-        }
-      }
     }
     queueUpdate(studentId, { status: newStatus })
-  }, [persistedProgressDrafts, previousProgressDrafts, progressDrafts, progressEnabled, queueUpdate, presentStatus, suggestedProgressDrafts])
+  }, [persistedProgressDrafts, progressCategories, queueUpdate, presentStatus])
 
   const handleUpdateNotes = useCallback((studentId: number, notes: string) => {
     setData((prev) => {
@@ -905,8 +885,8 @@ export default function SessionAttendancePage() {
             <p className="text-sm font-bold text-deep-800">متابعة القرآن لهذه الحلقة</p>
             <p className="mt-0.5 text-xs text-deep-500">
               {data.quran_progress_enabled
-                ? 'الحفظ والمراجعتان مطلوبان للحاضرين في هذه الحلقة.'
-                : 'حلقة استثنائية: لن تظهر حقول الحفظ والمراجعة ولن تكون مطلوبة.'}
+                ? 'المتابعة اختيارية، وتظهر فقط للطلاب المفعّلين من صفحة الطالب.'
+                : 'حلقة استثنائية: لن تظهر حقول متابعة القرآن.'}
             </p>
           </div>
           <button
@@ -982,6 +962,8 @@ export default function SessionAttendancePage() {
             progressEnabled={progressEnabled}
             progressDrafts={progressDrafts}
             previousProgressDrafts={previousProgressDrafts}
+            suggestedProgressDrafts={suggestedProgressDrafts}
+            progressCategories={progressCategories}
             savedProgressKeys={savedProgressKeys}
             dirtyProgressKeys={dirtyProgressKeys}
             progressSaving={progressSaving}

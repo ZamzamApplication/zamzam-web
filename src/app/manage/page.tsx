@@ -415,6 +415,7 @@ function AddStudentModal({ sheikhId, sheikhName, onClose, onCreated }: { sheikhI
   const [error, setError] = useState('')
   const [categoryIds, setCategoryIds] = useState<number[]>([])
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({})
+  const [quranProgressEnabled, setQuranProgressEnabled] = useState(false)
 
   const addParentPhone = () => {
     setParentPhones([...parentPhones, { phone_number: '', parent_type: 'أب', name: '' }])
@@ -445,7 +446,7 @@ function AddStudentModal({ sheikhId, sheikhName, onClose, onCreated }: { sheikhI
     setError('')
     try {
       const filteredPhones = parentPhones.filter((p) => p.phone_number)
-      const result = await api.createStudent(name, sheikhId, phone || undefined, birthday || undefined, studentId || undefined, status, filteredPhones.length ? filteredPhones : undefined, registrationDate || undefined, categoryIds, customFieldValues)
+      const result = await api.createStudent(name, sheikhId, phone || undefined, birthday || undefined, studentId || undefined, status, filteredPhones.length ? filteredPhones : undefined, registrationDate || undefined, categoryIds, customFieldValues, quranProgressEnabled)
       if (profilePicFile) {
         await api.uploadStudentPic(result.id, profilePicFile)
       }
@@ -491,6 +492,10 @@ function AddStudentModal({ sheikhId, sheikhName, onClose, onCreated }: { sheikhI
             <option value="غير مقيد">غير مقيد</option>
           </select>
         </div>
+        <label className="flex items-center gap-3 rounded-xl border border-cyan-200 bg-cyan-50/60 p-3 text-sm font-semibold text-deep-800 dark:border-cyan-900 dark:bg-cyan-950/25">
+          <input type="checkbox" checked={quranProgressEnabled} onChange={event => setQuranProgressEnabled(event.target.checked)} />
+          متابعة حفظ هذا الطالب
+        </label>
         <StudentCategoryPicker selected={categoryIds} onChange={setCategoryIds} />
         <StudentCustomFieldsEditor values={customFieldValues} onChange={setCustomFieldValues} />
         <div className="border-t border-water-200/30 pt-3">
@@ -555,6 +560,7 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
   const [periodError, setPeriodError] = useState('')
   const [categoryIds, setCategoryIds] = useState<number[]>(student.category_ids || student.categories?.map(category => category.id) || [])
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>(student.custom_field_values || {})
+  const [quranProgressEnabled, setQuranProgressEnabled] = useState(Boolean(student.quran_progress_enabled))
 
   useEffect(() => {
     if (!student.excused_weekdays) {
@@ -729,7 +735,7 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
     setError('')
     try {
       await Promise.all([
-        api.updateStudent(student.id, name, phone || undefined, birthday || undefined, studentId || undefined, profilePic || undefined, status, parentPhones, registrationDate || undefined, categoryIds, customFieldValues),
+        api.updateStudent(student.id, name, phone || undefined, birthday || undefined, studentId || undefined, profilePic || undefined, status, parentPhones, registrationDate || undefined, categoryIds, customFieldValues, quranProgressEnabled),
         api.updateExcusedWeekdays(student.id, excusedWeekdays),
       ])
       onUpdated()
@@ -809,6 +815,10 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
             <option value="غير مقيد">غير مقيد</option>
           </select>
         </div>
+        <label className="flex items-center gap-3 rounded-xl border border-cyan-200 bg-cyan-50/60 p-3 text-sm font-semibold text-deep-800 dark:border-cyan-900 dark:bg-cyan-950/25">
+          <input type="checkbox" checked={quranProgressEnabled} onChange={event => setQuranProgressEnabled(event.target.checked)} />
+          متابعة حفظ هذا الطالب
+        </label>
         <StudentCategoryPicker selected={categoryIds} onChange={setCategoryIds} />
         <StudentCustomFieldsEditor values={customFieldValues} onChange={setCustomFieldValues} />
         <div className="border-t border-water-200/30 pt-3">

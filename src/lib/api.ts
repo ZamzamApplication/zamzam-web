@@ -110,7 +110,7 @@ export const api = {
     return request<void>('/auth/logout', { method: 'POST' })
   },
 
-  signup(tahfizName: string, username: string, password: string, contactPhone: string | undefined, setup: { attendanceStatuses: string[]; presentStatus: string; absentStatus: string; sessionNames: string[]; subscriptionsEnabled: boolean; subscriptionDefaultFeeMinor: number; subscriptionCurrency: string; monthStartDay: number }) {
+  signup(tahfizName: string, username: string, password: string, contactPhone: string | undefined, setup: { attendanceStatuses: string[]; presentStatus: string; absentStatus: string; sessionNames: string[]; subscriptionsEnabled: boolean; subscriptionDefaultFeeMinor: number; subscriptionCurrency: string; monthStartDay: number; progressTrackingEnabled: boolean; progressCategories: import('./types').WardCategory[] }) {
     return request<{ message: string; tahfiz_id: number; status: 'pending' }>('/auth/signup', {
       method: 'POST',
       body: JSON.stringify({
@@ -126,6 +126,8 @@ export const api = {
         subscription_default_fee_minor: setup.subscriptionDefaultFeeMinor,
         subscription_currency: setup.subscriptionCurrency,
         month_start_day: setup.monthStartDay,
+        progress_tracking_enabled: setup.progressTrackingEnabled,
+        progress_categories: setup.progressCategories,
       }),
     })
   },
@@ -141,7 +143,7 @@ export const api = {
     })
   },
 
-  createTahfiz(name: string, contactPhone: string | undefined, setup: { attendanceStatuses: string[]; presentStatus: string; absentStatus: string; sessionNames: string[]; subscriptionsEnabled: boolean; subscriptionDefaultFeeMinor: number; subscriptionCurrency: string; monthStartDay: number }) {
+  createTahfiz(name: string, contactPhone: string | undefined, setup: { attendanceStatuses: string[]; presentStatus: string; absentStatus: string; sessionNames: string[]; subscriptionsEnabled: boolean; subscriptionDefaultFeeMinor: number; subscriptionCurrency: string; monthStartDay: number; progressTrackingEnabled: boolean; progressCategories: import('./types').WardCategory[] }) {
     return request<{ message: string; tahfiz_id: number; membership_id: number; status: 'pending'; role: 'admin' }>('/auth/tahfiz', {
       method: 'POST',
       body: JSON.stringify({
@@ -155,6 +157,8 @@ export const api = {
         subscription_default_fee_minor: setup.subscriptionDefaultFeeMinor,
         subscription_currency: setup.subscriptionCurrency,
         month_start_day: setup.monthStartDay,
+        progress_tracking_enabled: setup.progressTrackingEnabled,
+        progress_categories: setup.progressCategories,
       }),
     })
   },
@@ -420,6 +424,7 @@ export const api = {
       entries: import('./types').QuranProgressEntry[]
       previous_entries: import('./types').QuranProgressEntry[]
       suggested_entries: QuranProgressInput[]
+      categories: import('./types').ProgressCategory[]
     }>(`/sessions/${sessionId}/progress`)
   },
 
@@ -442,13 +447,20 @@ export const api = {
   },
 
   getStudentQuranPlans(studentId: number) {
-    return request<{ plans: import('./types').StudentQuranPlan[] }>(`/students/${studentId}/quran-plans`)
+    return request<{ plans: import('./types').StudentQuranPlan[]; student_enabled: boolean; categories: import('./types').WardCategory[] }>(`/students/${studentId}/quran-plans`)
   },
 
   updateStudentQuranPlans(studentId: number, plans: Omit<import('./types').StudentQuranPlan, 'id' | 'student_id' | 'updated_at'>[]) {
     return request<{ plans: import('./types').StudentQuranPlan[] }>(`/students/${studentId}/quran-plans`, {
       method: 'PUT',
       body: JSON.stringify({ plans }),
+    })
+  },
+
+  setStudentProgressTracking(studentId: number, enabled: boolean) {
+    return request<{ id: number; name: string }>(`/students/${studentId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ quran_progress_enabled: enabled }),
     })
   },
 
@@ -657,7 +669,7 @@ export const api = {
     return request<StudentProfile>(`/students/${studentId}/profile`)
   },
 
-  createStudent(name: string, sheikhId: number, phone?: string, birthday?: string, customStudentId?: string, status?: string, parentPhones?: { phone_number: string; parent_type: string }[], registrationDate?: string, categoryIds?: number[], customFieldValues?: Record<string, string | boolean | number | null>) {
+  createStudent(name: string, sheikhId: number, phone?: string, birthday?: string, customStudentId?: string, status?: string, parentPhones?: { phone_number: string; parent_type: string }[], registrationDate?: string, categoryIds?: number[], customFieldValues?: Record<string, string | boolean | number | null>, quranProgressEnabled?: boolean) {
     return request('/students', {
       method: 'POST',
       body: JSON.stringify({
@@ -671,6 +683,7 @@ export const api = {
         parent_phones: parentPhones || [],
         category_ids: categoryIds || [],
         custom_field_values: customFieldValues || {},
+        quran_progress_enabled: Boolean(quranProgressEnabled),
       }),
     })
   },
@@ -724,7 +737,7 @@ export const api = {
     })
   },
 
-  updateStudent(id: number, name?: string, phone?: string, birthday?: string, customStudentId?: string, profilePic?: string, status?: string, parentPhones?: { phone_number?: string; parent_type?: string }[], registrationDate?: string, categoryIds?: number[], customFieldValues?: Record<string, string | boolean | number | null>) {
+  updateStudent(id: number, name?: string, phone?: string, birthday?: string, customStudentId?: string, profilePic?: string, status?: string, parentPhones?: { phone_number?: string; parent_type?: string }[], registrationDate?: string, categoryIds?: number[], customFieldValues?: Record<string, string | boolean | number | null>, quranProgressEnabled?: boolean) {
     const body: Record<string, unknown> = {}
     if (name !== undefined) body.name = name
     if (phone !== undefined) body.phone = phone ?? null
@@ -736,6 +749,7 @@ export const api = {
     if (parentPhones !== undefined) body.parent_phones = parentPhones
     if (categoryIds !== undefined) body.category_ids = categoryIds
     if (customFieldValues !== undefined) body.custom_field_values = customFieldValues
+    if (quranProgressEnabled !== undefined) body.quran_progress_enabled = quranProgressEnabled
     return request(`/students/${id}`, {
       method: 'PUT',
       body: JSON.stringify(body),

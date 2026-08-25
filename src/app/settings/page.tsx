@@ -7,6 +7,8 @@ import { api } from '@/lib/api'
 import { configuredAbsentStatus, configuredAttendanceStatuses, configuredPresentStatus } from '@/lib/attendance'
 import { configuredExcelExportTemplates, DEFAULT_EXCEL_EXPORT_TEMPLATES, type ExcelExportTemplates } from '@/lib/excel-templates'
 import type { Circle, SheikhInfo, StudentCategory, TahfizInvitation } from '@/lib/types'
+import type { WardCategory } from '@/lib/types'
+import { PROGRESS_CATEGORY_OPTIONS } from '@/components/TahfizInitialSettingsFields'
 import AsyncState from '@/components/AsyncState'
 import ExcelTemplateSettings from '@/components/ExcelTemplateSettings'
 
@@ -44,6 +46,7 @@ export default function TahfizSettingsPage() {
   const [weekStartDay, setWeekStartDay] = useState(6)
   const [monthStartDay, setMonthStartDay] = useState(1)
   const [progressTrackingEnabled, setProgressTrackingEnabled] = useState(false)
+  const [progressCategories, setProgressCategories] = useState<WardCategory[]>(['new_memorization'])
   const [sheikhSelectionEnabled, setSheikhSelectionEnabled] = useState(true)
   const [restrictSheikhStudentAccess, setRestrictSheikhStudentAccess] = useState(true)
   const [attendanceStatuses, setAttendanceStatuses] = useState<string[]>([])
@@ -102,6 +105,7 @@ export default function TahfizSettingsPage() {
         setWeekStartDay(data.week_start_day ?? 6)
         setMonthStartDay(data.month_start_day ?? 1)
         setProgressTrackingEnabled(Boolean(data.progress_tracking_enabled))
+        setProgressCategories(data.progress_categories?.length ? data.progress_categories : ['new_memorization'])
         setSheikhSelectionEnabled(data.attendance_sheikh_selection_enabled ?? true)
         setRestrictSheikhStudentAccess(data.restrict_sheikh_student_access ?? true)
         setAttendanceStatuses(configuredAttendanceStatuses(data.attendance_statuses))
@@ -357,7 +361,7 @@ export default function TahfizSettingsPage() {
           session_name_options: sessionNameOptions,
           sheikh_custom_fields_enabled: sheikhCustomFieldsEnabled,
         },
-        progress: { progress_tracking_enabled: progressTrackingEnabled },
+        progress: { progress_tracking_enabled: progressTrackingEnabled, progress_categories: progressCategories },
         excel: { excel_export_templates: excelExportTemplates },
         integrations: {
           whatsend_enabled: whatsendEnabled,
@@ -713,6 +717,16 @@ export default function TahfizSettingsPage() {
             title="متابعة الحفظ والمراجعة"
             description="إيقافها يخفي الميزة دون حذف البيانات السابقة."
           />
+          {progressTrackingEnabled && <div className="mt-4 grid gap-3 md:grid-cols-3">
+            {PROGRESS_CATEGORY_OPTIONS.map(option => {
+              const checked = progressCategories.includes(option.key)
+              return <label key={option.key} className={`cursor-pointer rounded-xl border p-4 ${checked ? 'border-cyan-500 bg-cyan-50 dark:bg-cyan-950/30' : 'border-water-200 bg-white/50 dark:bg-slate-800/50'}`}>
+                <span className="flex items-center gap-2 text-sm font-bold text-deep-800"><input type="checkbox" checked={checked} disabled={option.key === 'new_memorization'} onChange={() => setProgressCategories(current => checked ? current.filter(item => item !== option.key) : [...current, option.key])} />{option.label}</span>
+                <span className="mt-1 block text-xs leading-5 text-deep-500">{option.description}</span>
+              </label>
+            })}
+          </div>}
+          <p className="mt-3 text-xs leading-5 text-deep-500">الحفظ متاح افتراضياً. تعطيل قسم إضافي يخفيه من الإدخال الجديد دون حذف سجلاته السابقة.</p>
         </SettingsSection>}
 
         {section === 'excel' && <SettingsSection title="قوالب Excel" description="اختر الأعمدة وعناوينها مرة واحدة لجميع ملفات الحضور والتقارير.">

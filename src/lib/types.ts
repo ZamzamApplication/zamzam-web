@@ -34,6 +34,7 @@ export interface User {
     sheikh_custom_fields_enabled?: boolean
     whatsend_enabled?: boolean
     progress_tracking_enabled?: boolean
+    progress_categories?: WardCategory[]
   } | null
 }
 
@@ -141,6 +142,7 @@ export interface Circle {
   whatsend_api_key_configured?: boolean
   whatsend_enabled?: boolean
   progress_tracking_enabled?: boolean
+  progress_categories?: WardCategory[]
   subscriptions_enabled?: boolean
   subscription_default_fee_minor?: number
   subscription_currency?: string
@@ -171,6 +173,7 @@ export interface StudentAttendance {
   status: string
   notes?: string
   sheikh_id: number | null
+  quran_progress_enabled?: boolean
 }
 
 export interface SheikhGroup {
@@ -410,6 +413,7 @@ export interface StudentInfo {
   categories?: StudentCategory[]
   category_ids?: number[]
   custom_field_values?: Record<string, string>
+  quran_progress_enabled?: boolean
 }
 
 export type StudentCustomFieldType = 'text' | 'number' | 'date' | 'checkbox' | 'select'
@@ -458,6 +462,8 @@ export interface StudentProfile extends StudentInfo {
   }
   progress: {
     enabled: boolean
+    student_enabled: boolean
+    categories: WardCategory[]
     entries: number
     average_quality: number
     active_goals: number
@@ -586,6 +592,7 @@ export interface StudentQuranPlan {
   next_ayah: number | null
   next_page: number | null
   updated_at?: string
+  completed_at?: string | null
 }
 
 export interface QuranProgressEntry {
