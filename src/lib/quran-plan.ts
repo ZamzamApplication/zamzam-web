@@ -277,6 +277,7 @@ function allocateQuantity(start: number, track: QuranPlanTrack): { assignment: Q
 type SequenceCursor = { itemIndex: number; unitNumber: number } | null
 
 function sequenceItemStart(track: QuranPlanTrack, itemIndex: number): number {
+  if (track.kind === 'playlist') return track.items?.[itemIndex]?.startUnit ?? 1
   if (track.kind !== 'quantity') return 1
   return track.items?.[itemIndex]?.startUnit ?? (itemIndex === 0 ? track.startNumber : 1)
 }
@@ -391,7 +392,7 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
     const invalidSequence = hasSequence && (!track.items?.length || track.items.some((item, itemIndex) => (
       !item.id.trim() || !item.name.trim() || !Number.isInteger(item.totalUnits) || item.totalUnits < 1
       || (track.kind === 'quantity' && (!Number.isInteger(sequenceItemStart(track, itemIndex)) || sequenceItemStart(track, itemIndex) < 1 || sequenceItemStart(track, itemIndex) > item.totalUnits))
-      || (track.kind === 'playlist' && (!item.url?.trim() || !item.episodes?.length || item.episodes.length !== item.totalUnits))
+      || (track.kind === 'playlist' && (!item.url?.trim() || !item.episodes?.length || item.episodes.length !== item.totalUnits || !Number.isInteger(sequenceItemStart(track, itemIndex)) || sequenceItemStart(track, itemIndex) < 1 || sequenceItemStart(track, itemIndex) > item.totalUnits))
     )))
     const invalidLegacyQuantity = track.kind === 'quantity' && !hasSequence && (!track.subject.trim() || !track.quantityUnit.trim() || !Number.isInteger(track.startNumber) || track.startNumber < 1)
     const invalidPlaylist = track.kind === 'playlist' && !hasSequence
