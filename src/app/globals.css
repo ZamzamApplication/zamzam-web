@@ -196,12 +196,13 @@
 
   .print-plan .plan-table th:first-child,
   .print-plan .plan-table td:first-child {
-    width: 32mm !important;
+    width: 24mm !important;
+    text-align: center !important;
   }
 
   .print-plan .plan-table th:nth-child(2),
   .print-plan .plan-table td:nth-child(2) {
-    width: 18mm !important;
+    width: 16mm !important;
     text-align: center !important;
   }
 

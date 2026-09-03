@@ -114,6 +114,8 @@ describe('Quran plan generation', () => {
     }
     const plan = generateQuranPlan({ startDate: '2026-08-16', endDate: '2026-08-18', weekdays: [0, 1, 2], tracks: [playlists] })
     expect(plan.days[0].assignments.lessons?.links).toHaveLength(2)
+    expect(plan.days[0].assignments.lessons?.links?.[0].label).toBe('مقطع 1')
+    expect(plan.days[0].assignments.lessons?.links?.[1].label).toBe('مقطع 2')
     expect(plan.days[0].assignments.lessons?.links?.[1].url).toBe('https://youtube.com/watch?v=two')
     expect(plan.days[1].assignments.lessons?.text).toContain('السلسلة الثانية')
     expect(plan.days[2].assignments.lessons).toBeNull()

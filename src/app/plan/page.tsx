@@ -284,7 +284,7 @@ export default function QuranPlanPage() {
           ? formatCompactPlanRange(assignment.from, assignment.to)
           : assignment?.text
         lines.push(`${TRACK_STYLES[index % TRACK_STYLES.length].emoji} *${track.name}:* ${assignmentText || 'اكتمل الورد ✅'}`)
-        assignment?.links?.forEach((link, linkIndex) => lines.push(`🔗 مقطع ${linkIndex + 1}: ${link.url}`))
+        assignment?.links?.forEach(link => lines.push(`🔗 ${link.label}: ${link.url}`))
       })
       lines.push('', '──────────────────', '')
     })
@@ -324,7 +324,7 @@ export default function QuranPlanPage() {
           const value = !day.isStudyDay
             ? 'راحة'
             : assignment
-              ? `${assignment.text}${assignment.to ? completedMushafText(assignment.to) : ''}${assignment.links?.length ? `\n${assignment.links.map((link, linkIndex) => `مقطع ${linkIndex + 1}: ${link.url}`).join('\n')}` : ''}`
+              ? `${assignment.text}${assignment.to ? completedMushafText(assignment.to) : ''}${assignment.links?.length ? `\n${assignment.links.map(link => `${link.label}: ${link.url}`).join('\n')}` : ''}`
               : 'اكتمل الورد'
           return [`track_${index}`, value]
         })),
@@ -338,7 +338,7 @@ export default function QuranPlanPage() {
   const assignmentCell = (assignment: QuranAssignment | null, isStudyDay: boolean) => {
     if (!isStudyDay) return 'راحة'
     if (!assignment) return 'اكتمل الورد'
-    if (assignment.links?.length) return <span className="flex flex-col gap-0.5">{assignment.links.map((link, linkIndex) => <a key={`${link.label}-${link.url}`} href={link.url} target="_blank" rel="noreferrer" className="font-semibold text-blue-700 underline underline-offset-2 dark:text-blue-300">مقطع {linkIndex + 1}</a>)}</span>
+    if (assignment.links?.length) return <span className="flex flex-col gap-0.5">{assignment.links.map(link => <a key={`${link.label}-${link.url}`} href={link.url} target="_blank" rel="noreferrer" className="font-semibold text-blue-700 underline underline-offset-2 dark:text-blue-300">{link.label}</a>)}</span>
     return <><span>{assignment.text}</span>{assignment.to ? completedMushafText(assignment.to) : ''}</>
   }
 

@@ -442,7 +442,7 @@ function allocateSequence(cursor: SequenceCursor, track: QuranPlanTrack): { assi
       for (let episode = unitNumber; episode <= endNumber; episode += 1) {
         const importedEpisode = item.episodes?.[episode - 1]
         links.push({
-          label: importedEpisode?.title || `حلقة ${episode}`,
+          label: `مقطع ${episode}`,
           url: importedEpisode?.url || youtubeEpisodeUrl(item.url || '', episode),
         })
       }
