@@ -332,12 +332,14 @@ function allocateSequence(cursor: SequenceCursor, track: QuranPlanTrack): { assi
     lastNumber = endNumber
     if (track.kind === 'playlist') {
       parts.push(count === 1
-        ? `${item.name} — الحلقة ${unitNumber}: ${item.episodes?.[unitNumber - 1]?.title || ''}`.trim()
-        : `${item.name} — الحلقات ${unitNumber}–${endNumber}`)
+        ? (item.episodes?.[unitNumber - 1]?.title
+          ? `${item.name} — ${item.episodes[unitNumber - 1].title}`
+          : `${item.name} — حلقة ${unitNumber}`)
+        : `${item.name} — حلقات ${unitNumber}–${endNumber}`)
       for (let episode = unitNumber; episode <= endNumber; episode += 1) {
         const importedEpisode = item.episodes?.[episode - 1]
         links.push({
-          label: importedEpisode?.title || `${item.name} — الحلقة ${episode}`,
+          label: importedEpisode?.title || `حلقة ${episode}`,
           url: importedEpisode?.url || youtubeEpisodeUrl(item.url || '', episode),
         })
       }

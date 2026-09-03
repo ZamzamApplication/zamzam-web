@@ -65,6 +65,9 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove }: {
 }) {
   const style = TRACK_STYLES[index % TRACK_STYLES.length]
   const ayahCount = surahInfo(track.start.surah).ayahs
+  const startLabelMap: Record<QuranPlanTrack['unit'], string> = { ayahs: 'آية البداية', lines: 'سطر البداية', half_page: 'صفحة البداية', page: 'صفحة البداية', quarter: 'ربع البداية', hizb: 'حزب البداية', juz: 'جزء البداية' }
+  const startMaxMap: Record<QuranPlanTrack['unit'], number> = { ayahs: ayahCount, lines: 15, half_page: 2, page: 1, quarter: 4, hizb: 2, juz: 1 }
+  const startMax = startMaxMap[track.unit]
   const [playlistLoadingId, setPlaylistLoadingId] = useState<string | null>(null)
   const [playlistImportError, setPlaylistImportError] = useState('')
 
@@ -114,9 +117,9 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove }: {
             {SURAHS.map(surah => <option key={surah.number} value={surah.number}>{surah.number}. {surah.name} — {surah.ayahs} آية</option>)}
           </select>
         </label>
-        <label className="text-xs font-semibold text-deep-700">آية البداية
-          <select value={Math.min(track.start.ayah, ayahCount)} onChange={event => onChange({ ...track, start: { ...track.start, ayah: Number(event.target.value) } })} className="surface-field mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm font-normal">
-            {Array.from({ length: ayahCount }, (_, index) => index + 1).map(ayah => <option key={ayah} value={ayah}>{ayah}</option>)}
+        <label className="text-xs font-semibold text-deep-700">{startLabelMap[track.unit]}
+          <select value={Math.min(track.start.ayah, startMax)} onChange={event => onChange({ ...track, start: { ...track.start, ayah: Number(event.target.value) } })} className="surface-field mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm font-normal">
+            {Array.from({ length: startMax }, (_, index) => index + 1).map(value => <option key={value} value={value}>{value}</option>)}
           </select>
         </label>
         <label className="text-xs font-semibold text-deep-700">الوحدة
@@ -266,7 +269,7 @@ export default function QuranPlanPage() {
   const assignmentCell = (assignment: QuranAssignment | null, isStudyDay: boolean) => {
     if (!isStudyDay) return 'راحة'
     if (!assignment) return 'اكتمل الورد'
-    return <><span>{assignment.text}</span>{assignment.to ? completedMushafText(assignment.to) : ''}{assignment.links?.length ? <span className="mt-1.5 flex flex-col gap-1">{assignment.links.map(link => <a key={`${link.label}-${link.url}`} href={link.url} target="_blank" rel="noreferrer" className="font-semibold text-blue-700 underline underline-offset-2 dark:text-blue-300">▶ {link.label}</a>)}</span> : null}</>
+    return <><span>{assignment.text}</span>{assignment.to ? completedMushafText(assignment.to) : ''}{assignment.links?.length ? <span className="mt-1.5 flex flex-col gap-1">{assignment.links.map(link => <a key={`${link.label}-${link.url}`} href={link.url} target="_blank" rel="noreferrer" className="font-semibold text-blue-700 underline underline-offset-2 dark:text-blue-300">{link.label}</a>)}</span> : null}</>
   }
 
   return <div className="min-h-screen bg-[rgb(var(--bg))] px-3 py-6 sm:px-5 sm:py-10"><div className="mx-auto max-w-6xl">

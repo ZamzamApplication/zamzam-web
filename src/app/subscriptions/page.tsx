@@ -540,12 +540,12 @@ export default function SubscriptionsPage() {
     {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300">{error}</div>}
     {notice && <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">{notice}</div>}
 
-    <section className="grid gap-3 sm:grid-cols-3">
+    <section className="grid grid-cols-3 gap-2">
       {[
-        ['المحصل نقديًا', overview?.cash_collected_minor ?? 0, 'text-emerald-600'],
+        ['المحصل', overview?.cash_collected_minor ?? 0, 'text-emerald-600'],
         ['المصروفات', overview?.expenses_minor ?? 0, 'text-red-600'],
         ['صافي الوضع المالي', overview?.net_cash_minor ?? 0, (overview?.net_cash_minor ?? 0) >= 0 ? 'text-blue-700' : 'text-red-600'],
-      ].map(([label, value, color]) => <div key={String(label)} className="glass-card rounded-2xl p-4"><p className="text-xs text-deep-500">{label}</p><p className={`mt-2 text-lg font-bold ${color}`}>{formatSubscriptionMoney(Number(value), currency)}</p></div>)}
+      ].map(([label, value, color]) => <div key={String(label)} className="glass-card rounded-xl px-3 py-2"><p className="text-[11px] text-deep-500">{label}</p><p className={`mt-1 text-sm font-bold ${color}`}>{formatSubscriptionMoney(Number(value), currency)}</p></div>)}
     </section>
 
     <section className="glass-card rounded-2xl p-4">
