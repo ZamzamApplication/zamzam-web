@@ -106,6 +106,7 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove }: {
   }
 
   const selectClass = 'surface-field mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm font-normal'
+  const startPointLabel = (point: QuranPlanTrack['start']) => `${surahInfo(point.surah).name}، آية ${point.ayah}`
 
   const quranStartFields = track.unit === 'page' || track.unit === 'half_page'
     ? <label className="text-xs font-semibold text-deep-700">صفحة البداية
@@ -117,7 +118,7 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove }: {
           <select value={quarterLocation.juz} onChange={event => onChange({ ...track, start: quranQuarterStartPoint(Number(event.target.value), quarterLocation.quarter) })} className={selectClass}>{Array.from({ length: QURAN_JUZ_COUNT }, (_, index) => <option key={index + 1} value={index + 1}>جزء {index + 1}</option>)}</select>
         </label>
         <label className="text-xs font-semibold text-deep-700">رقم الربع
-          <select value={quarterLocation.quarter} onChange={event => onChange({ ...track, start: quranQuarterStartPoint(quarterLocation.juz, Number(event.target.value)) })} className={selectClass}>{Array.from({ length: QURAN_QUARTERS_PER_JUZ }, (_, index) => <option key={index + 1} value={index + 1}>الربع {index + 1}</option>)}</select>
+          <select value={quarterLocation.quarter} onChange={event => onChange({ ...track, start: quranQuarterStartPoint(quarterLocation.juz, Number(event.target.value)) })} className={selectClass}>{Array.from({ length: QURAN_QUARTERS_PER_JUZ }, (_, index) => { const quarter = index + 1; return <option key={quarter} value={quarter}>الربع {quarter} — {startPointLabel(quranQuarterStartPoint(quarterLocation.juz, quarter))}</option> })}</select>
         </label>
         <label className="text-xs font-semibold text-deep-700">آية البداية
           <select value={Math.min(Math.max(track.start.ayah, unitStart.ayah), unitStartAyahMax)} onChange={event => onChange({ ...track, start: { surah: unitStart.surah, ayah: Number(event.target.value) } })} className={selectClass}>{Array.from({ length: unitStartAyahMax - unitStart.ayah + 1 }, (_, index) => unitStart.ayah + index).map(value => <option key={value} value={value}>{value}</option>)}</select>
@@ -129,7 +130,7 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove }: {
             <select value={hizbLocation.juz} onChange={event => onChange({ ...track, start: quranHizbStartPoint(Number(event.target.value), hizbLocation.hizb) })} className={selectClass}>{Array.from({ length: QURAN_JUZ_COUNT }, (_, index) => <option key={index + 1} value={index + 1}>جزء {index + 1}</option>)}</select>
           </label>
           <label className="text-xs font-semibold text-deep-700">رقم الحزب
-            <select value={hizbLocation.hizb} onChange={event => onChange({ ...track, start: quranHizbStartPoint(hizbLocation.juz, Number(event.target.value)) })} className={selectClass}>{Array.from({ length: QURAN_HIZBS_PER_JUZ }, (_, index) => <option key={index + 1} value={index + 1}>الحزب {index + 1}</option>)}</select>
+            <select value={hizbLocation.hizb} onChange={event => onChange({ ...track, start: quranHizbStartPoint(hizbLocation.juz, Number(event.target.value)) })} className={selectClass}>{Array.from({ length: QURAN_HIZBS_PER_JUZ }, (_, index) => { const hizb = index + 1; return <option key={hizb} value={hizb}>الحزب {hizb} — {startPointLabel(quranHizbStartPoint(hizbLocation.juz, hizb))}</option> })}</select>
           </label>
           <label className="text-xs font-semibold text-deep-700">آية البداية
             <select value={Math.min(Math.max(track.start.ayah, unitStart.ayah), unitStartAyahMax)} onChange={event => onChange({ ...track, start: { surah: unitStart.surah, ayah: Number(event.target.value) } })} className={selectClass}>{Array.from({ length: unitStartAyahMax - unitStart.ayah + 1 }, (_, index) => unitStart.ayah + index).map(value => <option key={value} value={value}>{value}</option>)}</select>
