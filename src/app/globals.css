@@ -43,7 +43,7 @@
 @media print {
   @page plan {
     size: A4 landscape;
-    margin: 10mm;
+    margin: 8mm 10mm 10mm 10mm;
   }
 
   body * {
@@ -86,6 +86,8 @@
 
   .print-plan .plan-header {
     display: block !important;
+    padding-top: 0 !important;
+    margin-top: -1mm !important;
     padding-bottom: 5mm !important;
     border-bottom: 2px solid #0891b2 !important;
   }
@@ -118,7 +120,8 @@
 
   .print-plan .plan-summary {
     display: grid !important;
-    grid-template-columns: repeat(auto-fit, minmax(38mm, 1fr)) !important;
+    grid-auto-flow: column !important;
+    grid-auto-columns: 1fr !important;
     gap: 3mm !important;
     margin: 5mm 0 !important;
   }
