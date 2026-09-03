@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatCompactPlanRange, formatPlanRange, generateQuranPlan, type QuranPlanTrack } from './quran-plan'
+import { formatCompactPlanRange, formatPlanRange, generateQuranPlan, quranHizbForPoint, quranHizbStartPoint, quranJuzStartPoint, quranPageForPoint, quranPageStartPoint, quranQuarterForPoint, quranQuarterStartPoint, type QuranPlanTrack } from './quran-plan'
 import { QURAN_QUARTER_STARTS } from './quran-quarter-data'
 
 function quranTrack(id: string, start: { surah: number; ayah: number }, dailyAmount: number, unit: QuranPlanTrack['unit'] = 'ayahs'): QuranPlanTrack {
@@ -15,6 +15,24 @@ describe('Quran plan generation', () => {
     expect(plan.days[0].assignments.memorization?.unit).toBe('half_page')
     expect(plan.days[0].assignments.memorization?.unitAmount).toBe(1)
     expect(plan.days[0].assignments.memorization?.ayahCount).toBeGreaterThan(0)
+  })
+  it('maps page, juz, quarter, and hizb starts to Quran points', () => {
+    expect(quranPageStartPoint(2)).toEqual({ surah: 2, ayah: 1 })
+    expect(quranPageForPoint({ surah: 2, ayah: 5 })).toBe(2)
+    expect(quranJuzStartPoint(2)).toEqual({ surah: 2, ayah: 142 })
+    expect(quranQuarterStartPoint(2, 3)).toEqual({ surah: 2, ayah: 177 })
+    expect(quranQuarterForPoint({ surah: 2, ayah: 177 })).toEqual({ juz: 2, quarter: 3 })
+    expect(quranHizbStartPoint(2, 2)).toEqual({ surah: 2, ayah: 203 })
+    expect(quranHizbForPoint({ surah: 2, ayah: 203 })).toEqual({ juz: 2, hizb: 2 })
+  })
+  it('allocates complete mushaf pages when page is the selected unit', () => {
+    const plan = generateQuranPlan({
+      startDate: '2026-01-04', endDate: '2026-01-04', weekdays: [0],
+      tracks: [quranTrack('memorization', quranPageStartPoint(2), 1, 'page')],
+    })
+    expect(plan.days[0].assignments.memorization?.from).toEqual({ surah: 2, ayah: 1 })
+    expect(plan.days[0].assignments.memorization?.to).toEqual({ surah: 2, ayah: 5 })
+    expect(plan.days[0].assignments.memorization?.unit).toBe('page')
   })
   it('allocates inclusive daily ayah ranges across surahs', () => {
     const plan = generateQuranPlan({

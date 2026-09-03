@@ -5,7 +5,27 @@ import { useMemo, useState } from 'react'
 
 import ExcelPreviewModal, { type SpreadsheetSheet } from '@/components/ExcelPreviewModal'
 import { SURAHS, surahInfo } from '@/lib/quran'
-import { completedMushafText, formatCompactPlanRange, generateQuranPlan, type GeneratedQuranPlan, type QuranAssignment, type QuranPlanTrack } from '@/lib/quran-plan'
+import {
+  completedMushafText,
+  formatCompactPlanRange,
+  generateQuranPlan,
+  QURAN_HIZBS_PER_JUZ,
+  QURAN_JUZ_COUNT,
+  QURAN_QUARTERS_PER_JUZ,
+  QURAN_PAGE_COUNT,
+  quranHizbEndPoint,
+  quranHizbForPoint,
+  quranHizbStartPoint,
+  quranJuzStartPoint,
+  quranPageForPoint,
+  quranPageStartPoint,
+  quranQuarterEndPoint,
+  quranQuarterForPoint,
+  quranQuarterStartPoint,
+  type GeneratedQuranPlan,
+  type QuranAssignment,
+  type QuranPlanTrack,
+} from '@/lib/quran-plan'
 import type { ImportedYoutubePlaylist } from '@/lib/youtube-playlist'
 
 const WEEKDAYS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
@@ -65,11 +85,68 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove }: {
 }) {
   const style = TRACK_STYLES[index % TRACK_STYLES.length]
   const ayahCount = surahInfo(track.start.surah).ayahs
-  const startLabelMap: Record<QuranPlanTrack['unit'], string> = { ayahs: 'آية البداية', lines: 'سطر البداية', half_page: 'صفحة البداية', page: 'صفحة البداية', quarter: 'ربع البداية', hizb: 'حزب البداية', juz: 'جزء البداية' }
-  const startMaxMap: Record<QuranPlanTrack['unit'], number> = { ayahs: ayahCount, lines: 15, half_page: 2, page: 1, quarter: 4, hizb: 2, juz: 1 }
-  const startMax = startMaxMap[track.unit]
+  const quarterLocation = quranQuarterForPoint(track.start)
+  const hizbLocation = quranHizbForPoint(track.start)
+  const selectedQuarterStart = quranQuarterStartPoint(quarterLocation.juz, quarterLocation.quarter)
+  const selectedHizbStart = quranHizbStartPoint(hizbLocation.juz, hizbLocation.hizb)
+  const selectedQuarterEnd = quranQuarterEndPoint(quarterLocation.juz, quarterLocation.quarter)
+  const selectedHizbEnd = quranHizbEndPoint(hizbLocation.juz, hizbLocation.hizb)
+  const unitStart = track.unit === 'quarter' ? selectedQuarterStart : track.unit === 'hizb' ? selectedHizbStart : track.start
+  const unitEnd = track.unit === 'quarter' ? selectedQuarterEnd : track.unit === 'hizb' ? selectedHizbEnd : track.start
+  const unitStartAyahMax = unitEnd.surah === unitStart.surah ? unitEnd.ayah : surahInfo(unitStart.surah).ayahs
   const [playlistLoadingId, setPlaylistLoadingId] = useState<string | null>(null)
   const [playlistImportError, setPlaylistImportError] = useState('')
+
+  const normalizeStartForUnit = (unit: QuranPlanTrack['unit']): QuranPlanTrack['start'] => {
+    if (unit === 'page' || unit === 'half_page') return quranPageStartPoint(quranPageForPoint(track.start))
+    if (unit === 'quarter') return quranQuarterStartPoint(quarterLocation.juz, quarterLocation.quarter)
+    if (unit === 'hizb') return quranHizbStartPoint(hizbLocation.juz, hizbLocation.hizb)
+    if (unit === 'juz') return quranJuzStartPoint(quarterLocation.juz)
+    return { surah: track.start.surah, ayah: Math.min(track.start.ayah, surahInfo(track.start.surah).ayahs) }
+  }
+
+  const selectClass = 'surface-field mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm font-normal'
+
+  const quranStartFields = track.unit === 'page' || track.unit === 'half_page'
+    ? <label className="text-xs font-semibold text-deep-700">صفحة البداية
+      <input type="number" min={1} max={QURAN_PAGE_COUNT} value={quranPageForPoint(track.start)} onChange={event => onChange({ ...track, start: quranPageStartPoint(Number(event.target.value)) })} className={selectClass} />
+    </label>
+    : track.unit === 'quarter'
+      ? <>
+        <label className="text-xs font-semibold text-deep-700">جزء البداية
+          <select value={quarterLocation.juz} onChange={event => onChange({ ...track, start: quranQuarterStartPoint(Number(event.target.value), quarterLocation.quarter) })} className={selectClass}>{Array.from({ length: QURAN_JUZ_COUNT }, (_, index) => <option key={index + 1} value={index + 1}>جزء {index + 1}</option>)}</select>
+        </label>
+        <label className="text-xs font-semibold text-deep-700">رقم الربع
+          <select value={quarterLocation.quarter} onChange={event => onChange({ ...track, start: quranQuarterStartPoint(quarterLocation.juz, Number(event.target.value)) })} className={selectClass}>{Array.from({ length: QURAN_QUARTERS_PER_JUZ }, (_, index) => <option key={index + 1} value={index + 1}>الربع {index + 1}</option>)}</select>
+        </label>
+        <label className="text-xs font-semibold text-deep-700">آية البداية
+          <select value={Math.min(Math.max(track.start.ayah, unitStart.ayah), unitStartAyahMax)} onChange={event => onChange({ ...track, start: { surah: unitStart.surah, ayah: Number(event.target.value) } })} className={selectClass}>{Array.from({ length: unitStartAyahMax - unitStart.ayah + 1 }, (_, index) => unitStart.ayah + index).map(value => <option key={value} value={value}>{value}</option>)}</select>
+        </label>
+      </>
+      : track.unit === 'hizb'
+        ? <>
+          <label className="text-xs font-semibold text-deep-700">جزء البداية
+            <select value={hizbLocation.juz} onChange={event => onChange({ ...track, start: quranHizbStartPoint(Number(event.target.value), hizbLocation.hizb) })} className={selectClass}>{Array.from({ length: QURAN_JUZ_COUNT }, (_, index) => <option key={index + 1} value={index + 1}>جزء {index + 1}</option>)}</select>
+          </label>
+          <label className="text-xs font-semibold text-deep-700">رقم الحزب
+            <select value={hizbLocation.hizb} onChange={event => onChange({ ...track, start: quranHizbStartPoint(hizbLocation.juz, Number(event.target.value)) })} className={selectClass}>{Array.from({ length: QURAN_HIZBS_PER_JUZ }, (_, index) => <option key={index + 1} value={index + 1}>الحزب {index + 1}</option>)}</select>
+          </label>
+          <label className="text-xs font-semibold text-deep-700">آية البداية
+            <select value={Math.min(Math.max(track.start.ayah, unitStart.ayah), unitStartAyahMax)} onChange={event => onChange({ ...track, start: { surah: unitStart.surah, ayah: Number(event.target.value) } })} className={selectClass}>{Array.from({ length: unitStartAyahMax - unitStart.ayah + 1 }, (_, index) => unitStart.ayah + index).map(value => <option key={value} value={value}>{value}</option>)}</select>
+          </label>
+        </>
+        : track.unit === 'juz'
+          ? <label className="text-xs font-semibold text-deep-700">جزء البداية
+            <select value={quarterLocation.juz} onChange={event => onChange({ ...track, start: quranJuzStartPoint(Number(event.target.value)) })} className={selectClass}>{Array.from({ length: QURAN_JUZ_COUNT }, (_, index) => <option key={index + 1} value={index + 1}>جزء {index + 1}</option>)}</select>
+          </label>
+          : <>
+            <label className="text-xs font-semibold text-deep-700">السورة
+              <select value={track.start.surah} onChange={event => onChange({ ...track, start: { surah: Number(event.target.value), ayah: 1 } })} className={selectClass}>{SURAHS.map(surah => <option key={surah.number} value={surah.number}>{surah.number}. {surah.name} — {surah.ayahs} آية</option>)}</select>
+            </label>
+            <label className="text-xs font-semibold text-deep-700">آية البداية
+              <select value={Math.min(track.start.ayah, ayahCount)} onChange={event => onChange({ ...track, start: { ...track.start, ayah: Number(event.target.value) } })} className={selectClass}>{Array.from({ length: ayahCount }, (_, index) => index + 1).map(value => <option key={value} value={value}>{value}</option>)}</select>
+            </label>
+          </>
 
   const loadPlaylist = async (itemId: string, url: string) => {
     setPlaylistLoadingId(itemId)
@@ -111,22 +188,13 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove }: {
     </div>
 
     {track.enabled && <>
-      {track.kind === 'quran' ? <><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_7rem_7rem_7rem]">
-        <label className="text-xs font-semibold text-deep-700">سورة البداية
-          <select value={track.start.surah} onChange={event => onChange({ ...track, start: { surah: Number(event.target.value), ayah: 1 } })} className="surface-field mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm font-normal">
-            {SURAHS.map(surah => <option key={surah.number} value={surah.number}>{surah.number}. {surah.name} — {surah.ayahs} آية</option>)}
-          </select>
-        </label>
-        <label className="text-xs font-semibold text-deep-700">{startLabelMap[track.unit]}
-          <select value={Math.min(track.start.ayah, startMax)} onChange={event => onChange({ ...track, start: { ...track.start, ayah: Number(event.target.value) } })} className="surface-field mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm font-normal">
-            {Array.from({ length: startMax }, (_, index) => index + 1).map(value => <option key={value} value={value}>{value}</option>)}
-          </select>
-        </label>
+      {track.kind === 'quran' ? <><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {quranStartFields}
         <label className="text-xs font-semibold text-deep-700">الوحدة
-          <select value={track.unit} onChange={event => onChange({ ...track, unit: event.target.value as QuranPlanTrack['unit'] })} className="surface-field mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm font-normal"><option value="ayahs">آيات</option><option value="lines">أسطر</option><option value="half_page">نصف صفحة</option><option value="page">صفحة</option><option value="quarter">ربع</option><option value="hizb">حزب</option><option value="juz">جزء</option></select>
+          <select value={track.unit} onChange={event => { const unit = event.target.value as QuranPlanTrack['unit']; onChange({ ...track, unit, start: normalizeStartForUnit(unit) }) }} className={selectClass}><option value="ayahs">آيات</option><option value="lines">أسطر</option><option value="half_page">نصف صفحة</option><option value="page">صفحة</option><option value="quarter">ربع</option><option value="hizb">حزب</option><option value="juz">جزء</option></select>
         </label>
         <label className="text-xs font-semibold text-deep-700">المعدل اليومي
-          <input type="number" min={1} max={1000} required value={track.dailyAmount} onChange={event => onChange({ ...track, dailyAmount: Number(event.target.value) })} className="surface-field mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm font-normal" />
+          <input type="number" min={1} max={1000} required value={track.dailyAmount} onChange={event => onChange({ ...track, dailyAmount: Number(event.target.value) })} className={selectClass} />
         </label>
       </div><label className="mt-3 flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white/60 px-3 py-2.5 text-xs font-semibold text-deep-700 dark:border-slate-700 dark:bg-slate-900/40"><input type="checkbox" checked={Boolean(track.cyclic)} onChange={event => onChange({ ...track, cyclic: event.target.checked })} className="h-4 w-4 accent-blue-700" />تكرار الورد من أول المصحف بعد ختمه</label></> : <div className="mt-4 space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
@@ -215,7 +283,7 @@ export default function QuranPlanPage() {
           ? formatCompactPlanRange(assignment.from, assignment.to)
           : assignment?.text
         lines.push(`${TRACK_STYLES[index % TRACK_STYLES.length].emoji} *${track.name}:* ${assignmentText || 'اكتمل الورد ✅'}`)
-        assignment?.links?.forEach(link => lines.push(`🔗 ${link.label}: ${link.url}`))
+        assignment?.links?.forEach((link, linkIndex) => lines.push(`🔗 مقطع ${linkIndex + 1}: ${link.url}`))
       })
       lines.push('', '──────────────────', '')
     })
@@ -255,7 +323,7 @@ export default function QuranPlanPage() {
           const value = !day.isStudyDay
             ? 'راحة'
             : assignment
-              ? `${assignment.text}${assignment.to ? completedMushafText(assignment.to) : ''}${assignment.links?.length ? `\n${assignment.links.map(link => `${link.label}: ${link.url}`).join('\n')}` : ''}`
+              ? `${assignment.text}${assignment.to ? completedMushafText(assignment.to) : ''}${assignment.links?.length ? `\n${assignment.links.map((link, linkIndex) => `مقطع ${linkIndex + 1}: ${link.url}`).join('\n')}` : ''}`
               : 'اكتمل الورد'
           return [`track_${index}`, value]
         })),
@@ -269,7 +337,7 @@ export default function QuranPlanPage() {
   const assignmentCell = (assignment: QuranAssignment | null, isStudyDay: boolean) => {
     if (!isStudyDay) return 'راحة'
     if (!assignment) return 'اكتمل الورد'
-    if (assignment.links?.length) return <span className="flex flex-col gap-1">{assignment.links.map(link => <a key={`${link.label}-${link.url}`} href={link.url} target="_blank" rel="noreferrer" className="font-semibold text-blue-700 underline underline-offset-2 dark:text-blue-300">{link.label}</a>)}</span>
+    if (assignment.links?.length) return <span className="flex flex-col gap-0.5">{assignment.links.map((link, linkIndex) => <a key={`${link.label}-${link.url}`} href={link.url} target="_blank" rel="noreferrer" className="font-semibold text-blue-700 underline underline-offset-2 dark:text-blue-300">مقطع {linkIndex + 1}</a>)}</span>
     return <><span>{assignment.text}</span>{assignment.to ? completedMushafText(assignment.to) : ''}</>
   }
 

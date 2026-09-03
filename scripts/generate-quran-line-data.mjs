@@ -20,14 +20,27 @@ for (const count of ayahCounts) {
 }
 
 const values = []
+const pageStarts = []
+let lastPage = 0
 for (const match of source.matchAll(/^\s*\((\d+), (\d+), (\d+), (\d+), (\d+), (\d+)\),$/gm)) {
+  const page = Number(match[1])
+  if (page !== lastPage) {
+    pageStarts.push(starts[Number(match[3]) - 1] + Number(match[4]) - 1)
+    lastPage = page
+  }
   const endSurah = Number(match[5])
   const endAyah = Number(match[6])
   values.push(starts[endSurah - 1] + endAyah - 1)
 }
 if (values.length !== 8820) throw new Error(`Expected 8820 Quran lines, found ${values.length}`)
+if (pageStarts.length !== 604) throw new Error(`Expected 604 Quran pages, found ${pageStarts.length}`)
 
 const bytes = Buffer.alloc(values.length * 2)
 values.forEach((value, index) => bytes.writeUInt16LE(value, index * 2))
 const encoded = bytes.toString('base64')
 writeFileSync(outputPath, `/** Generated from the QCF4 Madani 15-line Mushaf reference in zamzam-api. */\nexport const QURAN_LINE_END_OFFSETS_BASE64 = '${encoded}'\n`)
+
+const pageBytes = Buffer.alloc(pageStarts.length * 2)
+pageStarts.forEach((value, index) => pageBytes.writeUInt16LE(value, index * 2))
+const pageOutputPath = new URL('../src/lib/quran-page-data.ts', import.meta.url)
+writeFileSync(pageOutputPath, `/** Generated from the QCF4 Madani 15-line Mushaf reference in zamzam-api. */\nexport const QURAN_PAGE_START_OFFSETS_BASE64 = '${pageBytes.toString('base64')}'\n`)
