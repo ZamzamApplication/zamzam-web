@@ -563,14 +563,14 @@ export default function SubscriptionsPage() {
 
     <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-bold text-deep-900">اشتراكات الطلاب</h2><p className="text-sm text-deep-500">الرسوم والسداد للدورة المختارة</p></div>{settings?.enabled && <button type="button" onClick={() => setShowBulkCorrection(true)} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">تصحيح رسوم الشهر جماعيًا</button>}</div>
 
-    <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+    <section className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
       {[
         ['المتوقع', summary.expected_minor, 'text-deep-900'],
         ['المحصل', summary.collected_minor, 'text-emerald-600'],
         ['غير المحصل', summary.unpaid_minor, 'text-amber-600'],
-      ].map(([label, value, color]) => <div key={String(label)} className="glass-card rounded-2xl p-4"><p className="text-xs text-deep-500">{label}</p><p className={`mt-2 text-xl font-bold ${color}`}>{formatSubscriptionMoney(Number(value), currency)}</p></div>)}
-      <div className="glass-card rounded-2xl p-4"><p className="text-xs text-deep-500">مدفوع</p><p className="mt-2 text-xl font-bold text-emerald-600">{summary.paid_count}</p></div>
-      <div className="glass-card rounded-2xl p-4"><p className="text-xs text-deep-500">غير مدفوع</p><p className="mt-2 text-xl font-bold text-amber-600">{summary.unpaid_count}</p></div>
+      ].map(([label, value, color]) => <div key={String(label)} className="glass-card rounded-xl px-3 py-2"><p className="text-[11px] text-deep-500">{label}</p><p className={`mt-0.5 text-sm font-bold ${color}`}>{formatSubscriptionMoney(Number(value), currency)}</p></div>)}
+      <div className="glass-card rounded-xl px-3 py-2"><p className="text-[11px] text-deep-500">مدفوع</p><p className="mt-0.5 text-sm font-bold text-emerald-600">{summary.paid_count}</p></div>
+      <div className="glass-card rounded-xl px-3 py-2"><p className="text-[11px] text-deep-500">غير مدفوع</p><p className="mt-0.5 text-sm font-bold text-amber-600">{summary.unpaid_count}</p></div>
     </section>
 
     <section className="glass-card rounded-2xl p-4">
