@@ -553,10 +553,13 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
   const quranSequenceCursors = new Map<string, { trackIndex: number; point: QuranPoint }>(
     Array.from(quranSequenceGroups.entries()).map(([id, group]) => [id, { trackIndex: 0, point: group[0].start }]),
   )
+  const outputTracks = enabledTracks.filter(track => (
+    !track.quranSequenceId || quranSequenceGroups.get(track.quranSequenceId)?.[0]?.id === track.id
+  ))
   const nextNumbers = new Map(enabledTracks.filter(track => track.kind === 'quantity' && track.items === undefined).map(track => [track.id, track.startNumber]))
   const sequenceCursors = new Map(enabledTracks.filter(track => track.kind !== 'quran' && track.items !== undefined).map(track => [track.id, { itemIndex: 0, unitNumber: sequenceItemStart(track, 0) } as SequenceCursor]))
   const totals: Record<string, QuranPlanTrackTotal> = Object.fromEntries(
-    enabledTracks.map(track => [track.id, { ayahs: 0, amount: 0, end: null, endNumber: null }]),
+    outputTracks.map(track => [track.id, { ayahs: 0, amount: 0, end: null, endNumber: null }]),
   )
   let studyDays = 0
   const selectedDays = new Set(input.weekdays)
@@ -567,7 +570,7 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
     date.setDate(start.getDate() + index)
     const isStudyDay = selectedDays.has(date.getDay())
     const assignments: Record<string, QuranAssignment | null> = Object.fromEntries(
-      enabledTracks.map(track => [track.id, null]),
+      outputTracks.map(track => [track.id, null]),
     )
     if (isStudyDay) {
       studyDays += 1
@@ -579,12 +582,13 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
           const group = quranSequenceGroups.get(track.quranSequenceId)
           const cursor = quranSequenceCursors.get(track.quranSequenceId)
           if (!group || !cursor) continue
+          const outputTrack = group[0]
           const currentTrack = group[cursor.trackIndex]
           const result = allocate(cursor.point, currentTrack, currentTrack.hifzEnd ?? LAST_POINT)
-          assignments[currentTrack.id] = result.assignment
-          totals[currentTrack.id].end = result.assignment.to
-          totals[currentTrack.id].ayahs += result.assignment.ayahCount
-          totals[currentTrack.id].amount += result.assignment.unitAmount
+          assignments[outputTrack.id] = result.assignment
+          totals[outputTrack.id].end = result.assignment.to
+          totals[outputTrack.id].ayahs += result.assignment.ayahCount
+          totals[outputTrack.id].amount += result.assignment.unitAmount
           if (result.next) {
             quranSequenceCursors.set(track.quranSequenceId, { ...cursor, point: result.next })
           } else if (cursor.trackIndex + 1 < group.length) {
@@ -628,7 +632,7 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
     days.push({ date: isoDate(date), weekday: date.getDay(), isStudyDay, assignments })
   }
 
-  return { tracks: enabledTracks.map(track => ({ ...track, start: { ...track.start } })), days, studyDays, totals }
+  return { tracks: outputTracks.map(track => ({ ...track, start: { ...track.start } })), days, studyDays, totals }
 }
 
 export function completedMushafText(point: QuranPoint | null): string {

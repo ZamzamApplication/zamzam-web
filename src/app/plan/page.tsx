@@ -78,7 +78,7 @@ function amountLabel(track: QuranPlanTrack, amount: number) {
   return `${amount} ${unitLabels[track.unit][amount === 1 ? 0 : 1]}`
 }
 
-function TrackFields({ track, index, count, onChange, onMove, onRemove, onAddWerd }: {
+function TrackFields({ track, index, count, onChange, onMove, onRemove, onAddWerd, embedded = false, sequencePosition = 0, styleIndex = index }: {
   track: QuranPlanTrack
   index: number
   count: number
@@ -86,8 +86,11 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove, onAddWer
   onMove(direction: -1 | 1): void
   onRemove(): void
   onAddWerd(): void
+  embedded?: boolean
+  sequencePosition?: number
+  styleIndex?: number
 }) {
-  const style = TRACK_STYLES[index % TRACK_STYLES.length]
+  const style = TRACK_STYLES[styleIndex % TRACK_STYLES.length]
   const ayahCount = surahInfo(track.start.surah).ayahs
   const quarterLocation = quranQuarterForPoint(track.start)
   const hizbLocation = quranHizbForPoint(track.start)
@@ -129,66 +132,56 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove, onAddWer
   const hifzEnd = track.hifzEnd ?? lastHifzPoint
   const repeatFromMushafStart = Boolean(track.cyclic && !track.hifzStart)
   const repeatFromSpecificStart = Boolean(track.cyclic && track.hifzStart)
-  const hifzPointFields = (label: string, point: QuranPlanTrack['start'], key: 'hifzStart' | 'hifzEnd') => {
+  const hifzPointFields = (point: QuranPlanTrack['start'], key: 'hifzStart' | 'hifzEnd') => {
     const isEnd = key === 'hifzEnd'
     const updatePoint = (next: QuranPlanTrack['start']) => onChange({ ...track, [key]: next })
-    const pointLabel = (value: QuranPlanTrack['start']) => `${surahInfo(value.surah).name}، آية ${value.ayah}`
+    const boundary = isEnd ? 'النهاية' : 'البداية'
 
     if (track.unit === 'page' || track.unit === 'half_page') {
-      return <label className="rounded-xl border border-slate-200 bg-white/55 p-3 text-xs font-bold text-deep-700 dark:border-slate-700 dark:bg-slate-900/35">{label}
+      return <label className="text-xs font-semibold text-deep-700">صفحة {boundary}
         <input type="number" min={1} max={QURAN_PAGE_COUNT} value={quranPageForPoint(point)} onChange={event => updatePoint(isEnd ? quranPageEndPoint(Number(event.target.value)) : quranPageStartPoint(Number(event.target.value)))} className={selectClass} />
       </label>
     }
 
     if (track.unit === 'quarter') {
       const location = quranQuarterForPoint(point)
-      return <div className="rounded-xl border border-slate-200 bg-white/55 p-3 dark:border-slate-700 dark:bg-slate-900/35">
-        <p className="text-xs font-bold text-deep-700">{label}</p>
-        <div className="mt-2 grid gap-2 sm:grid-cols-2">
-          <label className="text-xs font-semibold text-deep-700">جزء
-            <select value={location.juz} onChange={event => updatePoint(isEnd ? quranQuarterEndPoint(Number(event.target.value), location.quarter) : quranQuarterStartPoint(Number(event.target.value), location.quarter))} className={selectClass}>{Array.from({ length: QURAN_JUZ_COUNT }, (_, index) => <option key={index + 1} value={index + 1}>جزء {index + 1}</option>)}</select>
-          </label>
-          <label className="text-xs font-semibold text-deep-700">رقم الربع
-            <select value={location.quarter} onChange={event => updatePoint(isEnd ? quranQuarterEndPoint(location.juz, Number(event.target.value)) : quranQuarterStartPoint(location.juz, Number(event.target.value)))} className={selectClass}>{Array.from({ length: QURAN_QUARTERS_PER_JUZ }, (_, index) => { const quarter = index + 1; return <option key={quarter} value={quarter}>الربع {quarter}</option> })}</select>
-          </label>
-        </div>
-      </div>
+      return <>
+        <label className="text-xs font-semibold text-deep-700">جزء {boundary}
+          <select value={location.juz} onChange={event => updatePoint(isEnd ? quranQuarterEndPoint(Number(event.target.value), location.quarter) : quranQuarterStartPoint(Number(event.target.value), location.quarter))} className={selectClass}>{Array.from({ length: QURAN_JUZ_COUNT }, (_, index) => <option key={index + 1} value={index + 1}>جزء {index + 1}</option>)}</select>
+        </label>
+        <label className="text-xs font-semibold text-deep-700">ربع {boundary}
+          <select value={location.quarter} onChange={event => updatePoint(isEnd ? quranQuarterEndPoint(location.juz, Number(event.target.value)) : quranQuarterStartPoint(location.juz, Number(event.target.value)))} className={selectClass}>{Array.from({ length: QURAN_QUARTERS_PER_JUZ }, (_, index) => { const quarter = index + 1; return <option key={quarter} value={quarter}>الربع {quarter}</option> })}</select>
+        </label>
+      </>
     }
 
     if (track.unit === 'hizb') {
       const location = quranHizbForPoint(point)
-      return <div className="rounded-xl border border-slate-200 bg-white/55 p-3 dark:border-slate-700 dark:bg-slate-900/35">
-        <p className="text-xs font-bold text-deep-700">{label}</p>
-        <div className="mt-2 grid gap-2 sm:grid-cols-2">
-          <label className="text-xs font-semibold text-deep-700">جزء
-            <select value={location.juz} onChange={event => updatePoint(isEnd ? quranHizbEndPoint(Number(event.target.value), location.hizb) : quranHizbStartPoint(Number(event.target.value), location.hizb))} className={selectClass}>{Array.from({ length: QURAN_JUZ_COUNT }, (_, index) => <option key={index + 1} value={index + 1}>جزء {index + 1}</option>)}</select>
-          </label>
-          <label className="text-xs font-semibold text-deep-700">رقم الحزب
-            <select value={location.hizb} onChange={event => updatePoint(isEnd ? quranHizbEndPoint(location.juz, Number(event.target.value)) : quranHizbStartPoint(location.juz, Number(event.target.value)))} className={selectClass}>{Array.from({ length: QURAN_HIZBS_PER_JUZ }, (_, index) => { const hizb = index + 1; return <option key={hizb} value={hizb}>الحزب {hizb}</option> })}</select>
-          </label>
-        </div>
-      </div>
+      return <>
+        <label className="text-xs font-semibold text-deep-700">جزء {boundary}
+          <select value={location.juz} onChange={event => updatePoint(isEnd ? quranHizbEndPoint(Number(event.target.value), location.hizb) : quranHizbStartPoint(Number(event.target.value), location.hizb))} className={selectClass}>{Array.from({ length: QURAN_JUZ_COUNT }, (_, index) => <option key={index + 1} value={index + 1}>جزء {index + 1}</option>)}</select>
+        </label>
+        <label className="text-xs font-semibold text-deep-700">حزب {boundary}
+          <select value={location.hizb} onChange={event => updatePoint(isEnd ? quranHizbEndPoint(location.juz, Number(event.target.value)) : quranHizbStartPoint(location.juz, Number(event.target.value)))} className={selectClass}>{Array.from({ length: QURAN_HIZBS_PER_JUZ }, (_, index) => { const hizb = index + 1; return <option key={hizb} value={hizb}>الحزب {hizb}</option> })}</select>
+        </label>
+      </>
     }
 
     if (track.unit === 'juz') {
       const juz = quranQuarterForPoint(point).juz
-      return <label className="rounded-xl border border-slate-200 bg-white/55 p-3 text-xs font-bold text-deep-700 dark:border-slate-700 dark:bg-slate-900/35">{label}
+      return <label className="text-xs font-semibold text-deep-700">جزء {boundary}
         <select value={juz} onChange={event => updatePoint(isEnd ? quranJuzEndPoint(Number(event.target.value)) : quranJuzStartPoint(Number(event.target.value)))} className={selectClass}>{Array.from({ length: QURAN_JUZ_COUNT }, (_, index) => <option key={index + 1} value={index + 1}>جزء {index + 1}</option>)}</select>
       </label>
     }
 
-    return <div className="rounded-xl border border-slate-200 bg-white/55 p-3 dark:border-slate-700 dark:bg-slate-900/35">
-      <p className="text-xs font-bold text-deep-700">{label}</p>
-      <div className="mt-2 grid gap-2 sm:grid-cols-2">
-        <label className="text-xs font-semibold text-deep-700">السورة
-          <select value={point.surah} onChange={event => updatePoint({ surah: Number(event.target.value), ayah: 1 })} className={selectClass}>{SURAHS.map(surah => <option key={surah.number} value={surah.number}>{surah.number}. {surah.name}</option>)}</select>
-        </label>
-        <label className="text-xs font-semibold text-deep-700">الآية
-          <select value={Math.min(point.ayah, surahInfo(point.surah).ayahs)} onChange={event => updatePoint({ ...point, ayah: Number(event.target.value) })} className={selectClass}>{Array.from({ length: surahInfo(point.surah).ayahs }, (_, index) => index + 1).map(value => <option key={value} value={value}>{value}</option>)}</select>
-        </label>
-      </div>
-      <p className="mt-2 text-[11px] font-normal text-deep-500">{pointLabel(point)}</p>
-    </div>
+    return <>
+      <label className="text-xs font-semibold text-deep-700">سورة {boundary}
+        <select value={point.surah} onChange={event => updatePoint({ surah: Number(event.target.value), ayah: 1 })} className={selectClass}>{SURAHS.map(surah => <option key={surah.number} value={surah.number}>{surah.number}. {surah.name}</option>)}</select>
+      </label>
+      <label className="text-xs font-semibold text-deep-700">آية {boundary}
+        <select value={Math.min(point.ayah, surahInfo(point.surah).ayahs)} onChange={event => updatePoint({ ...point, ayah: Number(event.target.value) })} className={selectClass}>{Array.from({ length: surahInfo(point.surah).ayahs }, (_, index) => index + 1).map(value => <option key={value} value={value}>{value}</option>)}</select>
+      </label>
+    </>
   }
 
   const quranStartFields = track.unit === 'page' || track.unit === 'half_page'
@@ -200,7 +193,7 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove, onAddWer
         <label className="text-xs font-semibold text-deep-700">جزء البداية
           <select value={quarterLocation.juz} onChange={event => onChange({ ...track, start: quranQuarterStartPoint(Number(event.target.value), quarterLocation.quarter) })} className={selectClass}>{Array.from({ length: QURAN_JUZ_COUNT }, (_, index) => <option key={index + 1} value={index + 1}>جزء {index + 1}</option>)}</select>
         </label>
-        <label className="text-xs font-semibold text-deep-700">رقم الربع
+        <label className="text-xs font-semibold text-deep-700">ربع البداية
           <select value={quarterLocation.quarter} onChange={event => onChange({ ...track, start: quranQuarterStartPoint(quarterLocation.juz, Number(event.target.value)) })} className={selectClass}>{Array.from({ length: QURAN_QUARTERS_PER_JUZ }, (_, index) => { const quarter = index + 1; return <option key={quarter} value={quarter}>الربع {quarter} — {startPointLabel(quranQuarterStartPoint(quarterLocation.juz, quarter))}</option> })}</select>
         </label>
       </>
@@ -209,7 +202,7 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove, onAddWer
           <label className="text-xs font-semibold text-deep-700">جزء البداية
             <select value={hizbLocation.juz} onChange={event => onChange({ ...track, start: quranHizbStartPoint(Number(event.target.value), hizbLocation.hizb) })} className={selectClass}>{Array.from({ length: QURAN_JUZ_COUNT }, (_, index) => <option key={index + 1} value={index + 1}>جزء {index + 1}</option>)}</select>
           </label>
-          <label className="text-xs font-semibold text-deep-700">رقم الحزب
+          <label className="text-xs font-semibold text-deep-700">حزب البداية
             <select value={hizbLocation.hizb} onChange={event => onChange({ ...track, start: quranHizbStartPoint(hizbLocation.juz, Number(event.target.value)) })} className={selectClass}>{Array.from({ length: QURAN_HIZBS_PER_JUZ }, (_, index) => { const hizb = index + 1; return <option key={hizb} value={hizb}>الحزب {hizb} — {startPointLabel(quranHizbStartPoint(hizbLocation.juz, hizb))}</option> })}</select>
           </label>
         </>
@@ -248,7 +241,8 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove, onAddWer
       setPlaylistLoadingId(null)
     }
   }
-  return <fieldset className={`rounded-2xl border p-4 ${style.border} ${style.background}`}>
+  const content = <>
+    {embedded && <p className="mb-3 text-xs font-bold text-blue-700 dark:text-blue-300">الورد {sequencePosition + 1}</p>}
     <div className="flex flex-wrap items-center gap-3">
       <input value={track.name} onChange={event => onChange({ ...track, name: event.target.value })} required maxLength={40} aria-label="اسم البند" className="surface-field min-w-0 flex-1 rounded-xl px-3 py-2 text-base font-bold" />
       <div className="flex items-center gap-1">
@@ -266,9 +260,9 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove, onAddWer
     </div>
 
     {track.enabled && <>
-      {track.kind === 'quran' ? <><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {track.kind === 'quran' ? <><div className={`mt-4 grid gap-3 sm:grid-cols-2 ${(track.unit === 'page' || track.unit === 'half_page' || track.unit === 'juz') ? 'lg:grid-cols-4' : 'lg:grid-cols-6'}`}>
         {quranStartFields}
-        {hifzPointFields('نهاية الحفظ', hifzEnd, 'hifzEnd')}
+        {hifzPointFields(hifzEnd, 'hifzEnd')}
         <label className="text-xs font-semibold text-deep-700">الوحدة
           <select value={track.unit} onChange={event => { const unit = event.target.value as QuranPlanTrack['unit']; onChange({ ...track, unit, start: normalizeStartForUnit(unit), hifzStart: track.hifzStart ? normalizeHifzPointForUnit(track.hifzStart, unit, false) : undefined, hifzEnd: track.hifzEnd ? normalizeHifzPointForUnit(track.hifzEnd, unit, true) : undefined }) }} className={selectClass}><option value="ayahs">آيات</option><option value="lines">أسطر</option><option value="half_page">نصف صفحة</option><option value="page">صفحة</option><option value="quarter">ربع</option><option value="hizb">حزب</option><option value="juz">جزء</option></select>
         </label>
@@ -281,9 +275,12 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove, onAddWer
           <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white/60 px-3 py-2.5 text-xs font-semibold text-deep-700 dark:border-slate-700 dark:bg-slate-900/40"><input type="checkbox" checked={repeatFromMushafStart} onChange={() => onChange({ ...track, cyclic: !repeatFromMushafStart, hifzStart: undefined })} className="h-4 w-4 accent-blue-700" />تكرار من أول المصحف</label>
           <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white/60 px-3 py-2.5 text-xs font-semibold text-deep-700 dark:border-slate-700 dark:bg-slate-900/40"><input type="checkbox" checked={repeatFromSpecificStart} onChange={() => onChange({ ...track, cyclic: !repeatFromSpecificStart, hifzStart: !repeatFromSpecificStart ? { ...track.start } : undefined })} className="h-4 w-4 accent-blue-700" />تكرار من نقطة بداية معينة</label>
         </div>
-        {repeatFromSpecificStart && <div className="mt-3">{hifzPointFields('بداية الحفظ', hifzStart, 'hifzStart')}</div>}
+        {repeatFromSpecificStart && <div className="mt-3 rounded-xl border border-slate-200 bg-white/45 p-3 dark:border-slate-700 dark:bg-slate-900/25">
+          <p className="mb-2 text-xs font-bold text-deep-700">نقطة بداية التكرار</p>
+          <div className="grid gap-3 sm:grid-cols-2">{hifzPointFields(hifzStart, 'hifzStart')}</div>
+        </div>}
       </>}
-      {track.quranSequenceId && <p className="mt-3 rounded-xl border border-blue-200 bg-blue-50/55 px-3 py-2 text-xs font-semibold text-blue-800 dark:border-blue-900 dark:bg-blue-950/20 dark:text-blue-200">ينتقل الورد تلقائياً إلى الورد التالي عند بلوغ نهايته.</p>}
+      {track.quranSequenceId && !embedded && <p className="mt-3 rounded-xl border border-blue-200 bg-blue-50/55 px-3 py-2 text-xs font-semibold text-blue-800 dark:border-blue-900 dark:bg-blue-950/20 dark:text-blue-200">ينتقل الورد تلقائياً إلى الورد التالي عند بلوغ نهايته.</p>}
       <button type="button" onClick={onAddWerd} className="water-btn-outline mt-3 rounded-xl px-4 py-2 text-sm font-bold">+ إضافة ورد بعده</button>
       </> : <div className="mt-4 space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
@@ -312,7 +309,10 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove, onAddWer
         <button type="button" onClick={() => onChange({ ...track, items: [...(track.items || []), { id: `${track.id}-${Date.now()}-${(track.items || []).length}`, name: '', totalUnits: track.kind === 'playlist' ? 0 : 100, startUnit: 1, url: track.kind === 'playlist' ? '' : undefined, episodes: track.kind === 'playlist' ? [] : undefined }] })} className="water-btn-outline rounded-lg px-3 py-2 text-xs font-bold">+ {track.kind === 'playlist' ? 'إضافة قائمة أخرى' : 'إضافة كتاب آخر'}</button>
       </div>}
     </>}
-  </fieldset>
+  </>
+
+  if (embedded) return <section className={sequencePosition > 0 ? 'mt-5 border-t border-blue-200/80 pt-5 dark:border-blue-900/70' : ''}>{content}</section>
+  return <fieldset className={`rounded-2xl border p-4 ${style.border} ${style.background}`}>{content}</fieldset>
 }
 
 export default function QuranPlanPage() {
@@ -451,6 +451,22 @@ export default function QuranPlanPage() {
     return <><span>{assignment.text}</span>{assignment.to ? completedMushafText(assignment.to) : ''}</>
   }
 
+  const trackGroups: Array<{ key: string; sequenceId?: string; members: Array<{ track: QuranPlanTrack; index: number }> }> = []
+  const groupedSequenceIds = new Set<string>()
+  tracks.forEach((track, index) => {
+    if (!track.quranSequenceId) {
+      trackGroups.push({ key: track.id, members: [{ track, index }] })
+      return
+    }
+    if (groupedSequenceIds.has(track.quranSequenceId)) return
+    groupedSequenceIds.add(track.quranSequenceId)
+    trackGroups.push({
+      key: track.quranSequenceId,
+      sequenceId: track.quranSequenceId,
+      members: tracks.map((member, memberIndex) => ({ track: member, index: memberIndex })).filter(member => member.track.quranSequenceId === track.quranSequenceId),
+    })
+  })
+
   return <div className="min-h-screen bg-[rgb(var(--bg))] px-3 py-6 sm:px-5 sm:py-10"><div className="mx-auto max-w-6xl">
     <header className="mb-6 flex flex-wrap items-center justify-between gap-3"><Link href="/" className="text-lg font-bold text-blue-700 dark:text-blue-300">💧 زمزم</Link><span className="rounded-full border border-water-200 bg-white/60 px-3 py-1.5 text-xs font-semibold text-deep-600 dark:border-slate-700 dark:bg-slate-900/60">أداة مستقلة · لا تحفظ بيانات</span></header>
     <section className="glass-strong overflow-hidden rounded-3xl">
@@ -463,7 +479,22 @@ export default function QuranPlanPage() {
           <label className="text-sm font-semibold text-deep-700">تاريخ النهاية<input type="date" required min={startDate} value={endDate} onChange={event => setEndDate(event.target.value)} className="surface-field mt-1.5 w-full rounded-xl px-4 py-2.5 font-normal" /></label>
         </div>
         <fieldset><legend className="text-sm font-bold text-deep-800">أيام الدراسة</legend><div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-7">{WEEKDAYS.map((day, index) => { const selected = weekdays.includes(index); return <label key={day} className={`cursor-pointer rounded-xl border px-2 py-2.5 text-center text-xs font-semibold transition ${selected ? 'border-cyan-500 bg-cyan-600 text-white' : 'border-water-200 bg-white/50 text-deep-600 dark:border-slate-700 dark:bg-slate-900/50'}`}><input type="checkbox" checked={selected} onChange={() => setWeekdays(current => selected ? current.filter(item => item !== index) : [...current, index])} className="sr-only" />{day}</label> })}</div></fieldset>
-        <div className="space-y-4">{tracks.map((track, index) => <TrackFields key={track.id} track={track} index={index} count={tracks.length} onChange={value => updateTrack(track.id, value)} onMove={direction => moveTrack(index, direction)} onRemove={() => setTracks(current => current.filter(item => item.id !== track.id))} onAddWerd={() => addFollowingWerd(index)} />)}</div>
+        <div className="space-y-4">{trackGroups.map(group => {
+          if (!group.sequenceId) {
+            const { track, index } = group.members[0]
+            return <TrackFields key={track.id} track={track} index={index} count={tracks.length} onChange={value => updateTrack(track.id, value)} onMove={direction => moveTrack(index, direction)} onRemove={() => setTracks(current => current.filter(item => item.id !== track.id))} onAddWerd={() => addFollowingWerd(index)} />
+          }
+          const firstIndex = group.members[0].index
+          const style = TRACK_STYLES[firstIndex % TRACK_STYLES.length]
+          return <fieldset key={group.key} className={`rounded-2xl border p-4 ${style.border} ${style.background}`}>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/55 px-3 py-2 dark:bg-slate-900/30">
+              <p className="text-sm font-bold text-deep-800">سلسلة أوراد قرآنية</p>
+              <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-bold text-blue-800 dark:bg-blue-950/60 dark:text-blue-200">{group.members.length} أوراد · عمود واحد</span>
+            </div>
+            <p className="mb-4 text-xs font-semibold text-blue-800 dark:text-blue-200">ينتقل الورد تلقائياً إلى التالي عند بلوغ نهايته، ويظهر الجميع في عمود واحد في الخطة.</p>
+            {group.members.map(({ track, index }, sequencePosition) => <TrackFields key={track.id} track={track} index={index} count={tracks.length} embedded sequencePosition={sequencePosition} styleIndex={firstIndex} onChange={value => updateTrack(track.id, value)} onMove={direction => moveTrack(index, direction)} onRemove={() => setTracks(current => current.filter(item => item.id !== track.id))} onAddWerd={() => addFollowingWerd(index)} />)}
+          </fieldset>
+        })}</div>
         <div className="flex flex-wrap gap-2"><button type="button" onClick={() => addTrack('quran')} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-bold">+ إضافة ورد قرآني</button><button type="button" onClick={() => addTrack('quantity')} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-bold">+ إضافة كتب</button><button type="button" onClick={() => addTrack('playlist')} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-bold">+ إضافة قوائم YouTube</button></div>
         {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 dark:border-red-800 dark:bg-red-950/35 dark:text-red-200">{error}</p>}
         <button type="submit" className="water-btn w-full rounded-xl px-5 py-3.5 font-bold text-white sm:w-auto">إنشاء الخطة</button>

@@ -172,10 +172,11 @@ describe('Quran plan generation', () => {
     const secondStart = quranQuarterStartPoint(1, 1)
     const second = { ...quranTrack('second', secondStart, 1, 'quarter'), hifzEnd: quranQuarterEndPoint(1, 1), quranSequenceId: sequenceId }
     const plan = generateQuranPlan({ startDate: '2026-08-16', endDate: '2026-08-18', weekdays: [0, 1, 2], tracks: [first, second] })
+    expect(plan.tracks.map(track => track.id)).toEqual(['first'])
     expect(plan.days[0].assignments.first?.to).toEqual({ surah: 2, ayah: 1 })
-    expect(plan.days[1].assignments.first).toBeNull()
-    expect(plan.days[1].assignments.second?.unit).toBe('quarter')
-    expect(plan.days[2].assignments.second).toBeNull()
+    expect(plan.days[1].assignments.first?.unit).toBe('quarter')
+    expect(plan.days[1].assignments.second).toBeUndefined()
+    expect(plan.days[2].assignments.first).toBeNull()
   })
 
   it('uses the offline Madani Mushaf mapping for line-based plans', () => {
