@@ -13,11 +13,15 @@ import {
   QURAN_JUZ_COUNT,
   QURAN_QUARTERS_PER_JUZ,
   QURAN_PAGE_COUNT,
+  quranHizbEndPoint,
   quranHizbForPoint,
   quranHizbStartPoint,
+  quranJuzEndPoint,
   quranJuzStartPoint,
   quranPageForPoint,
+  quranPageEndPoint,
   quranPageStartPoint,
+  quranQuarterEndPoint,
   quranQuarterForPoint,
   quranQuarterStartPoint,
   type GeneratedQuranPlan,
@@ -101,17 +105,67 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove }: {
   const lastHifzPoint = { surah: SURAHS.length, ayah: surahInfo(SURAHS.length).ayahs }
   const hifzStart = track.hifzStart ?? { surah: 1, ayah: 1 }
   const hifzEnd = track.hifzEnd ?? lastHifzPoint
-  const hifzPointFields = (label: string, point: QuranPlanTrack['start'], key: 'hifzStart' | 'hifzEnd') => <div className="rounded-xl border border-slate-200 bg-white/55 p-3 dark:border-slate-700 dark:bg-slate-900/35">
-    <p className="text-xs font-bold text-deep-700">{label}</p>
-    <div className="mt-2 grid gap-2 sm:grid-cols-2">
-      <label className="text-xs font-semibold text-deep-700">السورة
-        <select value={point.surah} onChange={event => onChange({ ...track, [key]: { surah: Number(event.target.value), ayah: 1 } })} className={selectClass}>{SURAHS.map(surah => <option key={surah.number} value={surah.number}>{surah.number}. {surah.name}</option>)}</select>
+  const hifzPointFields = (label: string, point: QuranPlanTrack['start'], key: 'hifzStart' | 'hifzEnd') => {
+    const isEnd = key === 'hifzEnd'
+    const updatePoint = (next: QuranPlanTrack['start']) => onChange({ ...track, [key]: next })
+    const pointLabel = (value: QuranPlanTrack['start']) => `${surahInfo(value.surah).name}، آية ${value.ayah}`
+
+    if (track.unit === 'page' || track.unit === 'half_page') {
+      return <label className="rounded-xl border border-slate-200 bg-white/55 p-3 text-xs font-bold text-deep-700 dark:border-slate-700 dark:bg-slate-900/35">{label}
+        <input type="number" min={1} max={QURAN_PAGE_COUNT} value={quranPageForPoint(point)} onChange={event => updatePoint(isEnd ? quranPageEndPoint(Number(event.target.value)) : quranPageStartPoint(Number(event.target.value)))} className={selectClass} />
       </label>
-      <label className="text-xs font-semibold text-deep-700">الآية
-        <select value={Math.min(point.ayah, surahInfo(point.surah).ayahs)} onChange={event => onChange({ ...track, [key]: { ...point, ayah: Number(event.target.value) } })} className={selectClass}>{Array.from({ length: surahInfo(point.surah).ayahs }, (_, index) => index + 1).map(value => <option key={value} value={value}>{value}</option>)}</select>
+    }
+
+    if (track.unit === 'quarter') {
+      const location = quranQuarterForPoint(point)
+      return <div className="rounded-xl border border-slate-200 bg-white/55 p-3 dark:border-slate-700 dark:bg-slate-900/35">
+        <p className="text-xs font-bold text-deep-700">{label}</p>
+        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          <label className="text-xs font-semibold text-deep-700">جزء
+            <select value={location.juz} onChange={event => updatePoint(isEnd ? quranQuarterEndPoint(Number(event.target.value), location.quarter) : quranQuarterStartPoint(Number(event.target.value), location.quarter))} className={selectClass}>{Array.from({ length: QURAN_JUZ_COUNT }, (_, index) => <option key={index + 1} value={index + 1}>جزء {index + 1}</option>)}</select>
+          </label>
+          <label className="text-xs font-semibold text-deep-700">رقم الربع
+            <select value={location.quarter} onChange={event => updatePoint(isEnd ? quranQuarterEndPoint(location.juz, Number(event.target.value)) : quranQuarterStartPoint(location.juz, Number(event.target.value)))} className={selectClass}>{Array.from({ length: QURAN_QUARTERS_PER_JUZ }, (_, index) => { const quarter = index + 1; return <option key={quarter} value={quarter}>الربع {quarter}</option> })}</select>
+          </label>
+        </div>
+      </div>
+    }
+
+    if (track.unit === 'hizb') {
+      const location = quranHizbForPoint(point)
+      return <div className="rounded-xl border border-slate-200 bg-white/55 p-3 dark:border-slate-700 dark:bg-slate-900/35">
+        <p className="text-xs font-bold text-deep-700">{label}</p>
+        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          <label className="text-xs font-semibold text-deep-700">جزء
+            <select value={location.juz} onChange={event => updatePoint(isEnd ? quranHizbEndPoint(Number(event.target.value), location.hizb) : quranHizbStartPoint(Number(event.target.value), location.hizb))} className={selectClass}>{Array.from({ length: QURAN_JUZ_COUNT }, (_, index) => <option key={index + 1} value={index + 1}>جزء {index + 1}</option>)}</select>
+          </label>
+          <label className="text-xs font-semibold text-deep-700">رقم الحزب
+            <select value={location.hizb} onChange={event => updatePoint(isEnd ? quranHizbEndPoint(location.juz, Number(event.target.value)) : quranHizbStartPoint(location.juz, Number(event.target.value)))} className={selectClass}>{Array.from({ length: QURAN_HIZBS_PER_JUZ }, (_, index) => { const hizb = index + 1; return <option key={hizb} value={hizb}>الحزب {hizb}</option> })}</select>
+          </label>
+        </div>
+      </div>
+    }
+
+    if (track.unit === 'juz') {
+      const juz = quranQuarterForPoint(point).juz
+      return <label className="rounded-xl border border-slate-200 bg-white/55 p-3 text-xs font-bold text-deep-700 dark:border-slate-700 dark:bg-slate-900/35">{label
+        }<select value={juz} onChange={event => updatePoint(isEnd ? quranJuzEndPoint(Number(event.target.value)) : quranJuzStartPoint(Number(event.target.value)))} className={selectClass}>{Array.from({ length: QURAN_JUZ_COUNT }, (_, index) => <option key={index + 1} value={index + 1}>جزء {index + 1}</option>)}</select>
       </label>
+    }
+
+    return <div className="rounded-xl border border-slate-200 bg-white/55 p-3 dark:border-slate-700 dark:bg-slate-900/35">
+      <p className="text-xs font-bold text-deep-700">{label}</p>
+      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+        <label className="text-xs font-semibold text-deep-700">السورة
+          <select value={point.surah} onChange={event => updatePoint({ surah: Number(event.target.value), ayah: 1 })} className={selectClass}>{SURAHS.map(surah => <option key={surah.number} value={surah.number}>{surah.number}. {surah.name}</option>)}</select>
+        </label>
+        <label className="text-xs font-semibold text-deep-700">الآية
+          <select value={Math.min(point.ayah, surahInfo(point.surah).ayahs)} onChange={event => updatePoint({ ...point, ayah: Number(event.target.value) })} className={selectClass}>{Array.from({ length: surahInfo(point.surah).ayahs }, (_, index) => index + 1).map(value => <option key={value} value={value}>{value}</option>)}</select>
+        </label>
+      </div>
+      <p className="mt-2 text-[11px] font-normal text-deep-500">{pointLabel(point)}</p>
     </div>
-  </div>
+  }
 
   const quranStartFields = track.unit === 'page' || track.unit === 'half_page'
     ? <label className="text-xs font-semibold text-deep-700">صفحة البداية
@@ -196,15 +250,15 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove }: {
         <label className="text-xs font-semibold text-deep-700">المعدل اليومي
           <input type="number" min={1} max={1000} required value={track.dailyAmount} onChange={event => onChange({ ...track, dailyAmount: Number(event.target.value) })} className={selectClass} />
         </label>
-      </div><label className="mt-3 flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white/60 px-3 py-2.5 text-xs font-semibold text-deep-700 dark:border-slate-700 dark:bg-slate-900/40"><input type="checkbox" checked={Boolean(track.cyclic)} onChange={event => onChange({ ...track, cyclic: event.target.checked })} className="h-4 w-4 accent-blue-700" />تكرار الورد ضمن نطاق حفظ الطالب</label>
-      {track.cyclic && <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50/55 p-3 dark:border-blue-900 dark:bg-blue-950/20">
+      </div><label className="mt-3 flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white/60 px-3 py-2.5 text-xs font-semibold text-deep-700 dark:border-slate-700 dark:bg-slate-900/40"><input type="checkbox" checked={Boolean(track.cyclic)} onChange={event => onChange({ ...track, cyclic: event.target.checked })} className="h-4 w-4 accent-blue-700" />تكرار الورد من بداية نطاق الحفظ عند نهايته</label>
+      <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50/55 p-3 dark:border-blue-900 dark:bg-blue-950/20">
         <p className="text-xs font-bold text-deep-700">نطاق حفظ الطالب</p>
-        <p className="mt-1 text-xs text-deep-500">بعد بلوغ نهاية هذا النطاق، يبدأ الورد من بدايته مرة أخرى.</p>
+        <p className="mt-1 text-xs text-deep-500">ينتهي الورد عند نهاية هذا النطاق. فعّل التكرار للعودة إلى بدايته بعد ذلك.</p>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           {hifzPointFields('بداية الحفظ', hifzStart, 'hifzStart')}
           {hifzPointFields('نهاية الحفظ', hifzEnd, 'hifzEnd')}
         </div>
-      </div>}
+      </div>
       </> : <div className="mt-4 space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
           {track.kind === 'quantity' && <label className="text-xs font-semibold text-deep-700">اسم الوحدة<input value={track.quantityUnit} onChange={event => onChange({ ...track, quantityUnit: event.target.value })} required maxLength={20} placeholder="صفحة" className="surface-field mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm font-normal" /></label>}

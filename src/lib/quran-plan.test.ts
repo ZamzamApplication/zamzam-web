@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatCompactPlanRange, formatPlanRange, generateQuranPlan, quranHizbForPoint, quranHizbStartPoint, quranJuzStartPoint, quranPageForPoint, quranPageStartPoint, quranQuarterForPoint, quranQuarterStartPoint, type QuranPlanTrack } from './quran-plan'
+import { formatCompactPlanRange, formatPlanRange, generateQuranPlan, quranHizbForPoint, quranHizbStartPoint, quranJuzStartPoint, quranPageForPoint, quranPageStartPoint, quranQuarterEndPoint, quranQuarterForPoint, quranQuarterStartPoint, type QuranPlanTrack } from './quran-plan'
 import { QURAN_QUARTER_STARTS } from './quran-quarter-data'
 
 function quranTrack(id: string, start: { surah: number; ayah: number }, dailyAmount: number, unit: QuranPlanTrack['unit'] = 'ayahs'): QuranPlanTrack {
@@ -151,6 +151,19 @@ describe('Quran plan generation', () => {
     expect(plan.days[1].assignments.revision?.from).toEqual({ surah: 2, ayah: 3 })
     expect(plan.days[1].assignments.revision?.to).toEqual({ surah: 2, ayah: 3 })
     expect(plan.days[2].assignments.revision?.from).toEqual({ surah: 2, ayah: 1 })
+  })
+
+  it('stops a Quran entry at the configured Hifz end when repetition is disabled', () => {
+    const hifzStart = quranQuarterStartPoint(1, 1)
+    const hifzEnd = quranQuarterEndPoint(1, 1)
+    const track = {
+      ...quranTrack('memorization', hifzStart, 2, 'quarter'),
+      hifzStart,
+      hifzEnd,
+    }
+    const plan = generateQuranPlan({ startDate: '2026-08-16', endDate: '2026-08-17', weekdays: [0, 1], tracks: [track] })
+    expect(plan.days[0].assignments.memorization?.to).toEqual(hifzEnd)
+    expect(plan.days[1].assignments.memorization).toBeNull()
   })
 
   it('uses the offline Madani Mushaf mapping for line-based plans', () => {

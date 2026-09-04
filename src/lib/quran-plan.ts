@@ -193,9 +193,18 @@ export function quranJuzStartPoint(juz: number): QuranPoint {
   return quranQuarterStartPoint(juz, 1)
 }
 
+export function quranJuzEndPoint(juz: number): QuranPoint {
+  return quranQuarterEndPoint(juz, QURAN_QUARTERS_PER_JUZ)
+}
+
 function quranPageEndOffset(pageIndex: number): number {
   const starts = quranPageStartOffsets()
   return pageIndex + 1 < starts.length ? starts[pageIndex + 1] - 1 : globalOffset(LAST_POINT)
+}
+
+export function quranPageEndPoint(page: number): QuranPoint {
+  const safePage = Math.min(QURAN_PAGE_COUNT, Math.max(1, Math.trunc(page)))
+  return pointAtOffset(quranPageEndOffset(safePage - 1))
 }
 
 const arabicAyahNumber = new Intl.NumberFormat('ar-EG', { useGrouping: false })
@@ -501,12 +510,13 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
   for (const track of enabledTracks) {
     const hifzStart = track.hifzStart ?? { surah: 1, ayah: 1 }
     const hifzEnd = track.hifzEnd ?? LAST_POINT
-    const invalidHifzRange = track.kind === 'quran' && track.cyclic && (
+    const usesHifzRange = track.kind === 'quran' && (track.cyclic || track.hifzStart !== undefined || track.hifzEnd !== undefined)
+    const invalidHifzRange = usesHifzRange && (
       !isValidQuranPoint(hifzStart)
       || !isValidQuranPoint(hifzEnd)
       || globalOffset(hifzStart) > globalOffset(hifzEnd)
-      || globalOffset(track.start) < globalOffset(hifzStart)
       || globalOffset(track.start) > globalOffset(hifzEnd)
+      || (track.cyclic && globalOffset(track.start) < globalOffset(hifzStart))
     )
     const invalidQuran = track.kind === 'quran' && (
       !isValidQuranPoint(track.start)
@@ -568,7 +578,8 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
           const next = nextPoints.get(track.id)
           if (!next) continue
           const hifzEnd = track.hifzEnd ?? LAST_POINT
-          const result = allocate(next, track, track.cyclic ? hifzEnd : LAST_POINT)
+          const hasHifzEnd = track.cyclic || track.hifzStart !== undefined || track.hifzEnd !== undefined
+          const result = allocate(next, track, hasHifzEnd ? hifzEnd : LAST_POINT)
           assignments[track.id] = result.assignment
           nextPoints.set(track.id, result.next ?? (track.cyclic ? (track.hifzStart ?? { surah: 1, ayah: 1 }) : null))
           totals[track.id].end = result.assignment.to
