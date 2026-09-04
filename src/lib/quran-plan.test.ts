@@ -138,6 +138,21 @@ describe('Quran plan generation', () => {
     expect(plan.days[1].assignments.revision?.from).toEqual({ surah: 1, ayah: 1 })
   })
 
+  it('restarts a cyclic Quran entry within the student Hifz range', () => {
+    const track = {
+      ...quranTrack('revision', { surah: 2, ayah: 1 }, 2),
+      cyclic: true,
+      hifzStart: { surah: 2, ayah: 1 },
+      hifzEnd: { surah: 2, ayah: 3 },
+    }
+    const plan = generateQuranPlan({ startDate: '2026-08-16', endDate: '2026-08-18', weekdays: [0, 1, 2], tracks: [track] })
+    expect(plan.days[0].assignments.revision?.from).toEqual({ surah: 2, ayah: 1 })
+    expect(plan.days[0].assignments.revision?.to).toEqual({ surah: 2, ayah: 2 })
+    expect(plan.days[1].assignments.revision?.from).toEqual({ surah: 2, ayah: 3 })
+    expect(plan.days[1].assignments.revision?.to).toEqual({ surah: 2, ayah: 3 })
+    expect(plan.days[2].assignments.revision?.from).toEqual({ surah: 2, ayah: 1 })
+  })
+
   it('uses the offline Madani Mushaf mapping for line-based plans', () => {
     const plan = generateQuranPlan({
       startDate: '2026-08-16', endDate: '2026-08-16', weekdays: [0],

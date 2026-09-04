@@ -13,13 +13,11 @@ import {
   QURAN_JUZ_COUNT,
   QURAN_QUARTERS_PER_JUZ,
   QURAN_PAGE_COUNT,
-  quranHizbEndPoint,
   quranHizbForPoint,
   quranHizbStartPoint,
   quranJuzStartPoint,
   quranPageForPoint,
   quranPageStartPoint,
-  quranQuarterEndPoint,
   quranQuarterForPoint,
   quranQuarterStartPoint,
   type GeneratedQuranPlan,
@@ -87,13 +85,6 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove }: {
   const ayahCount = surahInfo(track.start.surah).ayahs
   const quarterLocation = quranQuarterForPoint(track.start)
   const hizbLocation = quranHizbForPoint(track.start)
-  const selectedQuarterStart = quranQuarterStartPoint(quarterLocation.juz, quarterLocation.quarter)
-  const selectedHizbStart = quranHizbStartPoint(hizbLocation.juz, hizbLocation.hizb)
-  const selectedQuarterEnd = quranQuarterEndPoint(quarterLocation.juz, quarterLocation.quarter)
-  const selectedHizbEnd = quranHizbEndPoint(hizbLocation.juz, hizbLocation.hizb)
-  const unitStart = track.unit === 'quarter' ? selectedQuarterStart : track.unit === 'hizb' ? selectedHizbStart : track.start
-  const unitEnd = track.unit === 'quarter' ? selectedQuarterEnd : track.unit === 'hizb' ? selectedHizbEnd : track.start
-  const unitStartAyahMax = unitEnd.surah === unitStart.surah ? unitEnd.ayah : surahInfo(unitStart.surah).ayahs
   const [playlistLoadingId, setPlaylistLoadingId] = useState<string | null>(null)
   const [playlistImportError, setPlaylistImportError] = useState('')
 
@@ -107,6 +98,20 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove }: {
 
   const selectClass = 'surface-field mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm font-normal'
   const startPointLabel = (point: QuranPlanTrack['start']) => `${surahInfo(point.surah).name}، آية ${point.ayah}`
+  const lastHifzPoint = { surah: SURAHS.length, ayah: surahInfo(SURAHS.length).ayahs }
+  const hifzStart = track.hifzStart ?? { surah: 1, ayah: 1 }
+  const hifzEnd = track.hifzEnd ?? lastHifzPoint
+  const hifzPointFields = (label: string, point: QuranPlanTrack['start'], key: 'hifzStart' | 'hifzEnd') => <div className="rounded-xl border border-slate-200 bg-white/55 p-3 dark:border-slate-700 dark:bg-slate-900/35">
+    <p className="text-xs font-bold text-deep-700">{label}</p>
+    <div className="mt-2 grid gap-2 sm:grid-cols-2">
+      <label className="text-xs font-semibold text-deep-700">السورة
+        <select value={point.surah} onChange={event => onChange({ ...track, [key]: { surah: Number(event.target.value), ayah: 1 } })} className={selectClass}>{SURAHS.map(surah => <option key={surah.number} value={surah.number}>{surah.number}. {surah.name}</option>)}</select>
+      </label>
+      <label className="text-xs font-semibold text-deep-700">الآية
+        <select value={Math.min(point.ayah, surahInfo(point.surah).ayahs)} onChange={event => onChange({ ...track, [key]: { ...point, ayah: Number(event.target.value) } })} className={selectClass}>{Array.from({ length: surahInfo(point.surah).ayahs }, (_, index) => index + 1).map(value => <option key={value} value={value}>{value}</option>)}</select>
+      </label>
+    </div>
+  </div>
 
   const quranStartFields = track.unit === 'page' || track.unit === 'half_page'
     ? <label className="text-xs font-semibold text-deep-700">صفحة البداية
@@ -120,9 +125,6 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove }: {
         <label className="text-xs font-semibold text-deep-700">رقم الربع
           <select value={quarterLocation.quarter} onChange={event => onChange({ ...track, start: quranQuarterStartPoint(quarterLocation.juz, Number(event.target.value)) })} className={selectClass}>{Array.from({ length: QURAN_QUARTERS_PER_JUZ }, (_, index) => { const quarter = index + 1; return <option key={quarter} value={quarter}>الربع {quarter} — {startPointLabel(quranQuarterStartPoint(quarterLocation.juz, quarter))}</option> })}</select>
         </label>
-        <label className="text-xs font-semibold text-deep-700">آية البداية
-          <select value={Math.min(Math.max(track.start.ayah, unitStart.ayah), unitStartAyahMax)} onChange={event => onChange({ ...track, start: { surah: unitStart.surah, ayah: Number(event.target.value) } })} className={selectClass}>{Array.from({ length: unitStartAyahMax - unitStart.ayah + 1 }, (_, index) => unitStart.ayah + index).map(value => <option key={value} value={value}>{value}</option>)}</select>
-        </label>
       </>
       : track.unit === 'hizb'
         ? <>
@@ -131,9 +133,6 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove }: {
           </label>
           <label className="text-xs font-semibold text-deep-700">رقم الحزب
             <select value={hizbLocation.hizb} onChange={event => onChange({ ...track, start: quranHizbStartPoint(hizbLocation.juz, Number(event.target.value)) })} className={selectClass}>{Array.from({ length: QURAN_HIZBS_PER_JUZ }, (_, index) => { const hizb = index + 1; return <option key={hizb} value={hizb}>الحزب {hizb} — {startPointLabel(quranHizbStartPoint(hizbLocation.juz, hizb))}</option> })}</select>
-          </label>
-          <label className="text-xs font-semibold text-deep-700">آية البداية
-            <select value={Math.min(Math.max(track.start.ayah, unitStart.ayah), unitStartAyahMax)} onChange={event => onChange({ ...track, start: { surah: unitStart.surah, ayah: Number(event.target.value) } })} className={selectClass}>{Array.from({ length: unitStartAyahMax - unitStart.ayah + 1 }, (_, index) => unitStart.ayah + index).map(value => <option key={value} value={value}>{value}</option>)}</select>
           </label>
         </>
         : track.unit === 'juz'
@@ -197,7 +196,16 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove }: {
         <label className="text-xs font-semibold text-deep-700">المعدل اليومي
           <input type="number" min={1} max={1000} required value={track.dailyAmount} onChange={event => onChange({ ...track, dailyAmount: Number(event.target.value) })} className={selectClass} />
         </label>
-      </div><label className="mt-3 flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white/60 px-3 py-2.5 text-xs font-semibold text-deep-700 dark:border-slate-700 dark:bg-slate-900/40"><input type="checkbox" checked={Boolean(track.cyclic)} onChange={event => onChange({ ...track, cyclic: event.target.checked })} className="h-4 w-4 accent-blue-700" />تكرار الورد من أول المصحف بعد ختمه</label></> : <div className="mt-4 space-y-3">
+      </div><label className="mt-3 flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white/60 px-3 py-2.5 text-xs font-semibold text-deep-700 dark:border-slate-700 dark:bg-slate-900/40"><input type="checkbox" checked={Boolean(track.cyclic)} onChange={event => onChange({ ...track, cyclic: event.target.checked })} className="h-4 w-4 accent-blue-700" />تكرار الورد ضمن نطاق حفظ الطالب</label>
+      {track.cyclic && <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50/55 p-3 dark:border-blue-900 dark:bg-blue-950/20">
+        <p className="text-xs font-bold text-deep-700">نطاق حفظ الطالب</p>
+        <p className="mt-1 text-xs text-deep-500">بعد بلوغ نهاية هذا النطاق، يبدأ الورد من بدايته مرة أخرى.</p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          {hifzPointFields('بداية الحفظ', hifzStart, 'hifzStart')}
+          {hifzPointFields('نهاية الحفظ', hifzEnd, 'hifzEnd')}
+        </div>
+      </div>}
+      </> : <div className="mt-4 space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
           {track.kind === 'quantity' && <label className="text-xs font-semibold text-deep-700">اسم الوحدة<input value={track.quantityUnit} onChange={event => onChange({ ...track, quantityUnit: event.target.value })} required maxLength={20} placeholder="صفحة" className="surface-field mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm font-normal" /></label>}
           <label className="text-xs font-semibold text-deep-700">{track.kind === 'playlist' ? 'عدد الحلقات يومياً' : 'المعدل اليومي'}<input type="number" min={1} required value={track.dailyAmount} onChange={event => onChange({ ...track, dailyAmount: Number(event.target.value) })} className="surface-field mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm font-normal" /></label>
@@ -233,7 +241,7 @@ export default function QuranPlanPage() {
   const [studentName, setStudentName] = useState('')
   const [startDate, setStartDate] = useState(defaults.start)
   const [endDate, setEndDate] = useState(defaults.end)
-  const [weekdays, setWeekdays] = useState<number[]>([0, 1, 2, 3, 4])
+  const [weekdays, setWeekdays] = useState<number[]>([0, 1, 2, 3, 4, 5, 6])
   const [tracks, setTracks] = useState<QuranPlanTrack[]>([defaultTrack('memorization', 'الحفظ', 5), defaultTrack('revision', 'المراجعة', 20)])
   const [plan, setPlan] = useState<GeneratedQuranPlan | null>(null)
   const [excelSheets, setExcelSheets] = useState<SpreadsheetSheet[] | null>(null)
@@ -266,7 +274,7 @@ export default function QuranPlanPage() {
     } catch (reason) {
       const code = reason instanceof Error ? reason.message : ''
       setPlan(null)
-      setError(code === 'plan_period_too_long' ? 'أقصى مدة للخطة سنتان.' : code === 'study_days_required' ? 'اختر يوم دراسة واحداً على الأقل.' : code === 'track_required' ? 'فعّل بنداً واحداً على الأقل.' : code === 'invalid_date_range' ? 'تاريخ النهاية يجب أن يساوي أو يلي تاريخ البداية.' : 'راجع أسماء البنود ونقاط البداية والمعدلات اليومية.')
+      setError(code === 'plan_period_too_long' ? 'أقصى مدة للخطة سنتان.' : code === 'study_days_required' ? 'اختر يوم دراسة واحداً على الأقل.' : code === 'track_required' ? 'فعّل بنداً واحداً على الأقل.' : code === 'invalid_date_range' ? 'تاريخ النهاية يجب أن يساوي أو يلي تاريخ البداية.' : code === 'invalid_hifz_range' ? 'تأكد أن نطاق الحفظ صحيح وأن بداية الورد تقع داخله.' : 'راجع أسماء البنود ونقاط البداية والمعدلات اليومية.')
     }
   }
 
