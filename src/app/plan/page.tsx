@@ -132,6 +132,7 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove, onAddWer
   const hifzEnd = track.hifzEnd ?? lastHifzPoint
   const repeatFromMushafStart = Boolean(track.cyclic && !track.hifzStart)
   const repeatFromSpecificStart = Boolean(track.cyclic && track.hifzStart)
+  const isSequenceChild = embedded && sequencePosition > 0
   const hifzPointFields = (point: QuranPlanTrack['start'], key: 'hifzStart' | 'hifzEnd') => {
     const isEnd = key === 'hifzEnd'
     const updatePoint = (next: QuranPlanTrack['start']) => onChange({ ...track, [key]: next })
@@ -244,19 +245,20 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove, onAddWer
   const content = <>
     {embedded && <p className="mb-3 text-xs font-bold text-blue-700 dark:text-blue-300">الورد {sequencePosition + 1}</p>}
     <div className="flex flex-wrap items-center gap-3">
-      <input value={track.name} onChange={event => onChange({ ...track, name: event.target.value })} required maxLength={40} aria-label="اسم البند" className="surface-field min-w-0 flex-1 rounded-xl px-3 py-2 text-base font-bold" />
+      {!isSequenceChild && <input value={track.name} onChange={event => onChange({ ...track, name: event.target.value })} required maxLength={40} aria-label="اسم البند" className="surface-field min-w-0 flex-1 rounded-xl px-3 py-2 text-base font-bold" />}
+      {isSequenceChild && <span className="flex-1" aria-hidden="true" />}
       <div className="flex items-center gap-1">
         <button type="button" disabled={index === 0} onClick={() => onMove(-1)} title="تحريك لأعلى" className="water-btn-outline grid h-8 w-8 place-items-center rounded-lg disabled:opacity-30">↑</button>
         <button type="button" disabled={index === count - 1} onClick={() => onMove(1)} title="تحريك لأسفل" className="water-btn-outline grid h-8 w-8 place-items-center rounded-lg disabled:opacity-30">↓</button>
         <button type="button" onClick={onRemove} className="grid h-8 place-items-center rounded-lg px-2 text-xs font-semibold text-red-600 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950/30">حذف</button>
       </div>
-      <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-deep-600">
+      {!isSequenceChild && <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-deep-600">
         مفعّل
         <span className={`relative h-7 w-12 shrink-0 rounded-full transition ${track.enabled ? style.toggle : 'bg-slate-300 dark:bg-slate-700'}`}>
           <input type="checkbox" checked={track.enabled} onChange={event => onChange({ ...track, enabled: event.target.checked })} className="sr-only" />
           <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition ${track.enabled ? 'right-6' : 'right-1'}`} />
         </span>
-      </label>
+      </label>}
     </div>
 
     {track.enabled && <>
@@ -329,7 +331,15 @@ export default function QuranPlanPage() {
   const [copied, setCopied] = useState(false)
   const ownerLabel = planOwnerType === 'student' ? 'الطالب' : 'الأستاذ'
 
-  const updateTrack = (id: string, value: QuranPlanTrack) => setTracks(current => current.map(track => track.id === id ? value : track))
+  const updateTrack = (id: string, value: QuranPlanTrack) => setTracks(current => {
+    const previous = current.find(track => track.id === id)
+    const sequenceEnabledChanged = previous?.quranSequenceId && previous.enabled !== value.enabled
+    return current.map(track => {
+      if (track.id === id) return value
+      if (sequenceEnabledChanged && track.quranSequenceId === previous.quranSequenceId) return { ...track, enabled: value.enabled }
+      return track
+    })
+  })
   const moveTrack = (index: number, direction: -1 | 1) => setTracks(current => {
     const next = [...current]
     const target = index + direction
