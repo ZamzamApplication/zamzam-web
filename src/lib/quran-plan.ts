@@ -27,6 +27,7 @@ export type QuranPlanTrack = {
   cyclic?: boolean
   hifzStart?: QuranPoint
   hifzEnd?: QuranPoint
+  quranSequenceId?: string
   items?: QuranPlanSequenceItem[]
 }
 export type QuranPlanInput = {
@@ -114,6 +115,10 @@ function nextPoint(point: QuranPoint): QuranPoint | null {
   if (point.ayah < surahInfo(point.surah).ayahs) return { surah: point.surah, ayah: point.ayah + 1 }
   if (point.surah < SURAHS.length) return { surah: point.surah + 1, ayah: 1 }
   return null
+}
+
+export function quranNextPoint(point: QuranPoint): QuranPoint | null {
+  return nextPoint(point)
 }
 
 function globalOffset(point: QuranPoint): number {
@@ -539,6 +544,15 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
   if (enabledTracks.length === 0) throw new Error('track_required')
 
   const nextPoints = new Map(enabledTracks.filter(track => track.kind === 'quran').map(track => [track.id, track.start as QuranPoint | null]))
+  const quranSequenceGroups = new Map<string, QuranPlanTrack[]>()
+  enabledTracks.filter(track => track.kind === 'quran' && track.quranSequenceId).forEach(track => {
+    const group = quranSequenceGroups.get(track.quranSequenceId as string) ?? []
+    group.push(track)
+    quranSequenceGroups.set(track.quranSequenceId as string, group)
+  })
+  const quranSequenceCursors = new Map<string, { trackIndex: number; point: QuranPoint }>(
+    Array.from(quranSequenceGroups.entries()).map(([id, group]) => [id, { trackIndex: 0, point: group[0].start }]),
+  )
   const nextNumbers = new Map(enabledTracks.filter(track => track.kind === 'quantity' && track.items === undefined).map(track => [track.id, track.startNumber]))
   const sequenceCursors = new Map(enabledTracks.filter(track => track.kind !== 'quran' && track.items !== undefined).map(track => [track.id, { itemIndex: 0, unitNumber: sequenceItemStart(track, 0) } as SequenceCursor]))
   const totals: Record<string, QuranPlanTrackTotal> = Object.fromEntries(
@@ -557,7 +571,30 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
     )
     if (isStudyDay) {
       studyDays += 1
+      const handledQuranSequences = new Set<string>()
       for (const track of enabledTracks) {
+        if (track.kind === 'quran' && track.quranSequenceId) {
+          if (handledQuranSequences.has(track.quranSequenceId)) continue
+          handledQuranSequences.add(track.quranSequenceId)
+          const group = quranSequenceGroups.get(track.quranSequenceId)
+          const cursor = quranSequenceCursors.get(track.quranSequenceId)
+          if (!group || !cursor) continue
+          const currentTrack = group[cursor.trackIndex]
+          const result = allocate(cursor.point, currentTrack, currentTrack.hifzEnd ?? LAST_POINT)
+          assignments[currentTrack.id] = result.assignment
+          totals[currentTrack.id].end = result.assignment.to
+          totals[currentTrack.id].ayahs += result.assignment.ayahCount
+          totals[currentTrack.id].amount += result.assignment.unitAmount
+          if (result.next) {
+            quranSequenceCursors.set(track.quranSequenceId, { ...cursor, point: result.next })
+          } else if (cursor.trackIndex + 1 < group.length) {
+            const nextTrack = group[cursor.trackIndex + 1]
+            quranSequenceCursors.set(track.quranSequenceId, { trackIndex: cursor.trackIndex + 1, point: nextTrack.start })
+          } else {
+            quranSequenceCursors.delete(track.quranSequenceId)
+          }
+          continue
+        }
         if (track.kind !== 'quran' && track.items !== undefined) {
           const result = allocateSequence(sequenceCursors.get(track.id) ?? null, track)
           assignments[track.id] = result.assignment
