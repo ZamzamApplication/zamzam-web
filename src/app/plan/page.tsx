@@ -25,6 +25,8 @@ import {
   quranQuarterEndPoint,
   quranQuarterForPoint,
   quranQuarterStartPoint,
+  quranSurahEndPoint,
+  quranSurahStartPoint,
   type GeneratedQuranPlan,
   type QuranAssignment,
   type QuranPlanTrack,
@@ -69,6 +71,7 @@ function amountLabel(track: QuranPlanTrack, amount: number) {
   const unitLabels: Record<QuranPlanTrack['unit'], [string, string]> = {
     ayahs: ['آية', 'آيات'],
     lines: ['سطر', 'أسطر'],
+    surah: ['سورة', 'سور'],
     juz: ['جزء', 'أجزاء'],
     hizb: ['حزب', 'أحزاب'],
     quarter: ['ربع', 'أرباع'],
@@ -98,6 +101,7 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove, onAddWer
   const [playlistImportError, setPlaylistImportError] = useState('')
 
   const normalizeStartForUnit = (unit: QuranPlanTrack['unit']): QuranPlanTrack['start'] => {
+    if (unit === 'surah') return quranSurahStartPoint(track.start.surah)
     if (unit === 'page' || unit === 'half_page') return quranPageStartPoint(quranPageForPoint(track.start))
     if (unit === 'quarter') return quranQuarterStartPoint(quarterLocation.juz, quarterLocation.quarter)
     if (unit === 'hizb') return quranHizbStartPoint(hizbLocation.juz, hizbLocation.hizb)
@@ -106,6 +110,7 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove, onAddWer
   }
 
   const normalizeHifzPointForUnit = (point: QuranPlanTrack['start'], unit: QuranPlanTrack['unit'], end: boolean): QuranPlanTrack['start'] => {
+    if (unit === 'surah') return end ? quranSurahEndPoint(point.surah) : quranSurahStartPoint(point.surah)
     if (unit === 'page' || unit === 'half_page') {
       const page = quranPageForPoint(point)
       return end ? quranPageEndPoint(page) : quranPageStartPoint(page)
@@ -151,7 +156,7 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove, onAddWer
           <select value={location.juz} onChange={event => updatePoint(isEnd ? quranQuarterEndPoint(Number(event.target.value), location.quarter) : quranQuarterStartPoint(Number(event.target.value), location.quarter))} className={selectClass}>{Array.from({ length: QURAN_JUZ_COUNT }, (_, index) => <option key={index + 1} value={index + 1}>جزء {index + 1}</option>)}</select>
         </label>
         <label className="text-xs font-semibold text-deep-700">ربع {boundary}
-          <select value={location.quarter} onChange={event => updatePoint(isEnd ? quranQuarterEndPoint(location.juz, Number(event.target.value)) : quranQuarterStartPoint(location.juz, Number(event.target.value)))} className={selectClass}>{Array.from({ length: QURAN_QUARTERS_PER_JUZ }, (_, index) => { const quarter = index + 1; return <option key={quarter} value={quarter}>الربع {quarter}</option> })}</select>
+          <select value={location.quarter} onChange={event => updatePoint(isEnd ? quranQuarterEndPoint(location.juz, Number(event.target.value)) : quranQuarterStartPoint(location.juz, Number(event.target.value)))} className={selectClass}>{Array.from({ length: QURAN_QUARTERS_PER_JUZ }, (_, index) => { const quarter = index + 1; const point = isEnd ? quranQuarterEndPoint(location.juz, quarter) : quranQuarterStartPoint(location.juz, quarter); return <option key={quarter} value={quarter}>الربع {quarter} — {startPointLabel(point)}</option> })}</select>
         </label>
       </>
     }
@@ -163,7 +168,7 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove, onAddWer
           <select value={location.juz} onChange={event => updatePoint(isEnd ? quranHizbEndPoint(Number(event.target.value), location.hizb) : quranHizbStartPoint(Number(event.target.value), location.hizb))} className={selectClass}>{Array.from({ length: QURAN_JUZ_COUNT }, (_, index) => <option key={index + 1} value={index + 1}>جزء {index + 1}</option>)}</select>
         </label>
         <label className="text-xs font-semibold text-deep-700">حزب {boundary}
-          <select value={location.hizb} onChange={event => updatePoint(isEnd ? quranHizbEndPoint(location.juz, Number(event.target.value)) : quranHizbStartPoint(location.juz, Number(event.target.value)))} className={selectClass}>{Array.from({ length: QURAN_HIZBS_PER_JUZ }, (_, index) => { const hizb = index + 1; return <option key={hizb} value={hizb}>الحزب {hizb}</option> })}</select>
+          <select value={location.hizb} onChange={event => updatePoint(isEnd ? quranHizbEndPoint(location.juz, Number(event.target.value)) : quranHizbStartPoint(location.juz, Number(event.target.value)))} className={selectClass}>{Array.from({ length: QURAN_HIZBS_PER_JUZ }, (_, index) => { const hizb = index + 1; const point = isEnd ? quranHizbEndPoint(location.juz, hizb) : quranHizbStartPoint(location.juz, hizb); return <option key={hizb} value={hizb}>الحزب {hizb} — {startPointLabel(point)}</option> })}</select>
         </label>
       </>
     }
@@ -172,6 +177,12 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove, onAddWer
       const juz = quranQuarterForPoint(point).juz
       return <label className="text-xs font-semibold text-deep-700">جزء {boundary}
         <select value={juz} onChange={event => updatePoint(isEnd ? quranJuzEndPoint(Number(event.target.value)) : quranJuzStartPoint(Number(event.target.value)))} className={selectClass}>{Array.from({ length: QURAN_JUZ_COUNT }, (_, index) => <option key={index + 1} value={index + 1}>جزء {index + 1}</option>)}</select>
+      </label>
+    }
+
+    if (track.unit === 'surah') {
+      return <label className="text-xs font-semibold text-deep-700">سورة {boundary}
+        <select value={point.surah} onChange={event => updatePoint(isEnd ? quranSurahEndPoint(Number(event.target.value)) : quranSurahStartPoint(Number(event.target.value)))} className={selectClass}>{SURAHS.map(surah => <option key={surah.number} value={surah.number}>{surah.number}. {surah.name}</option>)}</select>
       </label>
     }
 
@@ -211,6 +222,10 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove, onAddWer
           ? <label className="text-xs font-semibold text-deep-700">جزء البداية
             <select value={quarterLocation.juz} onChange={event => onChange({ ...track, start: quranJuzStartPoint(Number(event.target.value)) })} className={selectClass}>{Array.from({ length: QURAN_JUZ_COUNT }, (_, index) => <option key={index + 1} value={index + 1}>جزء {index + 1}</option>)}</select>
           </label>
+          : track.unit === 'surah'
+            ? <label className="text-xs font-semibold text-deep-700">سورة البداية
+              <select value={track.start.surah} onChange={event => onChange({ ...track, start: quranSurahStartPoint(Number(event.target.value)) })} className={selectClass}>{SURAHS.map(surah => <option key={surah.number} value={surah.number}>{surah.number}. {surah.name}</option>)}</select>
+            </label>
           : <>
             <label className="text-xs font-semibold text-deep-700">السورة
               <select value={track.start.surah} onChange={event => onChange({ ...track, start: { surah: Number(event.target.value), ayah: 1 } })} className={selectClass}>{SURAHS.map(surah => <option key={surah.number} value={surah.number}>{surah.number}. {surah.name} — {surah.ayahs} آية</option>)}</select>
@@ -237,7 +252,7 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove, onAddWer
         } : item),
       })
     } catch {
-      setPlaylistImportError('تعذر قراءة القائمة. تأكد أنها عامة وأن الرابط يحتوي على list= ثم حاول مرة أخرى.')
+      setPlaylistImportError('تعذر قراءة رابط YouTube. تأكد أن الفيديو أو القائمة عامة ثم حاول مرة أخرى.')
     } finally {
       setPlaylistLoadingId(null)
     }
@@ -262,11 +277,11 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove, onAddWer
     </div>
 
     {track.enabled && <>
-      {track.kind === 'quran' ? <><div className={`mt-4 grid gap-3 sm:grid-cols-2 ${(track.unit === 'page' || track.unit === 'half_page' || track.unit === 'juz') ? 'lg:grid-cols-4' : 'lg:grid-cols-6'}`}>
+      {track.kind === 'quran' ? <><div className={`mt-4 grid gap-3 sm:grid-cols-2 ${(track.unit === 'page' || track.unit === 'half_page' || track.unit === 'surah' || track.unit === 'juz') ? 'lg:grid-cols-4' : 'lg:grid-cols-6'}`}>
         {quranStartFields}
         {hifzPointFields(hifzEnd, 'hifzEnd')}
         <label className="text-xs font-semibold text-deep-700">الوحدة
-          <select value={track.unit} onChange={event => { const unit = event.target.value as QuranPlanTrack['unit']; onChange({ ...track, unit, start: normalizeStartForUnit(unit), hifzStart: track.hifzStart ? normalizeHifzPointForUnit(track.hifzStart, unit, false) : undefined, hifzEnd: track.hifzEnd ? normalizeHifzPointForUnit(track.hifzEnd, unit, true) : undefined }) }} className={selectClass}><option value="ayahs">آيات</option><option value="lines">أسطر</option><option value="half_page">نصف صفحة</option><option value="page">صفحة</option><option value="quarter">ربع</option><option value="hizb">حزب</option><option value="juz">جزء</option></select>
+          <select value={track.unit} onChange={event => { const unit = event.target.value as QuranPlanTrack['unit']; onChange({ ...track, unit, start: normalizeStartForUnit(unit), hifzStart: track.hifzStart ? normalizeHifzPointForUnit(track.hifzStart, unit, false) : undefined, hifzEnd: track.hifzEnd ? normalizeHifzPointForUnit(track.hifzEnd, unit, true) : undefined }) }} className={selectClass}><option value="ayahs">آيات</option><option value="lines">أسطر</option><option value="surah">سورة</option><option value="half_page">نصف صفحة</option><option value="page">صفحة</option><option value="quarter">ربع</option><option value="hizb">حزب</option><option value="juz">جزء</option></select>
         </label>
         <label className="text-xs font-semibold text-deep-700">المعدل اليومي
           <input type="number" min={1} max={1000} required value={track.dailyAmount} onChange={event => onChange({ ...track, dailyAmount: Number(event.target.value) })} className={selectClass} />
@@ -293,12 +308,12 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove, onAddWer
           {(track.items || []).map(item => track.kind === 'playlist'
             ? <div key={item.id} className="rounded-xl border border-slate-200 bg-white/65 p-3 dark:border-slate-700 dark:bg-slate-900/45">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-                <label className="min-w-0 flex-1 text-xs font-semibold text-deep-700">رابط قائمة YouTube<input type="url" value={item.url || ''} onChange={event => onChange({ ...track, items: track.items?.map(entry => entry.id === item.id ? { ...entry, url: event.target.value, name: '', totalUnits: 0, episodes: [], startUnit: 1 } : entry) })} required placeholder="https://www.youtube.com/playlist?list=…" className="surface-field mt-1 w-full rounded-lg px-3 py-2 text-sm font-normal" /></label>
+                <label className="min-w-0 flex-1 text-xs font-semibold text-deep-700">رابط فيديو أو قائمة YouTube<input type="url" value={item.url || ''} onChange={event => onChange({ ...track, items: track.items?.map(entry => entry.id === item.id ? { ...entry, url: event.target.value, name: '', totalUnits: 0, episodes: [], startUnit: 1 } : entry) })} required placeholder="https://www.youtube.com/watch?v=…" className="surface-field mt-1 w-full rounded-lg px-3 py-2 text-sm font-normal" /></label>
                 <label className="text-xs font-semibold text-deep-700">حلقة البداية<input type="number" min={1} value={item.startUnit ?? 1} onChange={event => onChange({ ...track, items: track.items?.map(entry => entry.id === item.id ? { ...entry, startUnit: Math.max(1, Number(event.target.value)), episodes: [] } : entry) })} className="surface-field mt-1 w-full rounded-lg px-3 py-2 text-sm font-normal sm:w-24" /></label>
-                <button type="button" disabled={!item.url?.trim() || playlistLoadingId === item.id} onClick={() => void loadPlaylist(item.id, item.url || '')} className="rounded-lg bg-blue-700 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50 dark:bg-blue-600">{playlistLoadingId === item.id ? 'جاري جلب القائمة…' : 'جلب القائمة'}</button>
+                <button type="button" disabled={!item.url?.trim() || playlistLoadingId === item.id} onClick={() => void loadPlaylist(item.id, item.url || '')} className="rounded-lg bg-blue-700 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50 dark:bg-blue-600">{playlistLoadingId === item.id ? 'جاري جلب الرابط…' : 'جلب المحتوى'}</button>
                 <button type="button" onClick={() => onChange({ ...track, items: track.items?.filter(entry => entry.id !== item.id) })} disabled={(track.items?.length || 0) <= 1} className="rounded-lg px-2 py-2.5 text-xs font-semibold text-red-600 disabled:opacity-30 dark:text-red-300">حذف</button>
               </div>
-              {item.episodes?.length ? <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">✓ {item.name} · {item.episodes.length} حلقة تم جلب عناوينها وروابطها</p> : <p className="mt-2 text-xs text-deep-500">ألصق رابط القائمة ثم اضغط «جلب القائمة».</p>}
+              {item.episodes?.length ? <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">✓ {item.name} · {item.episodes.length === 1 ? 'فيديو واحد' : `${item.episodes.length} حلقة`} تم جلبها</p> : <p className="mt-2 text-xs text-deep-500">ألصق رابط فيديو واحد أو قائمة تشغيل ثم اضغط «جلب المحتوى».</p>}
             </div>
             : <div key={item.id} className="grid gap-2 rounded-xl border border-slate-200 bg-white/65 p-3 dark:border-slate-700 dark:bg-slate-900/45 sm:grid-cols-[minmax(0,1fr)_8rem_8rem_auto]">
               <label className="text-xs font-semibold text-deep-700">اسم الكتاب<input value={item.name} onChange={event => onChange({ ...track, items: track.items?.map(entry => entry.id === item.id ? { ...entry, name: event.target.value } : entry) })} required maxLength={100} placeholder="مثال: الرحيق المختوم" className="surface-field mt-1 w-full rounded-lg px-3 py-2 text-sm font-normal" /></label>
@@ -308,7 +323,7 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove, onAddWer
             </div>)}
         </div>
         {playlistImportError && <p role="alert" className="text-xs font-semibold text-red-700 dark:text-red-300">{playlistImportError}</p>}
-        <button type="button" onClick={() => onChange({ ...track, items: [...(track.items || []), { id: `${track.id}-${Date.now()}-${(track.items || []).length}`, name: '', totalUnits: track.kind === 'playlist' ? 0 : 100, startUnit: 1, url: track.kind === 'playlist' ? '' : undefined, episodes: track.kind === 'playlist' ? [] : undefined }] })} className="water-btn-outline rounded-lg px-3 py-2 text-xs font-bold">+ {track.kind === 'playlist' ? 'إضافة قائمة أخرى' : 'إضافة كتاب آخر'}</button>
+        <button type="button" onClick={() => onChange({ ...track, items: [...(track.items || []), { id: `${track.id}-${Date.now()}-${(track.items || []).length}`, name: '', totalUnits: track.kind === 'playlist' ? 0 : 100, startUnit: 1, url: track.kind === 'playlist' ? '' : undefined, episodes: track.kind === 'playlist' ? [] : undefined }] })} className="water-btn-outline rounded-lg px-3 py-2 text-xs font-bold">+ {track.kind === 'playlist' ? 'إضافة فيديو أو قائمة أخرى' : 'إضافة كتاب آخر'}</button>
       </div>}
     </>}
   </>
@@ -324,8 +339,10 @@ export default function QuranPlanPage() {
   const [startDate, setStartDate] = useState(defaults.start)
   const [endDate, setEndDate] = useState(defaults.end)
   const [weekdays, setWeekdays] = useState<number[]>([0, 1, 2, 3, 4, 5, 6])
+  const [includeCompletionCheckboxes, setIncludeCompletionCheckboxes] = useState(true)
   const [tracks, setTracks] = useState<QuranPlanTrack[]>([defaultTrack('memorization', 'الحفظ', 5), defaultTrack('revision', 'المراجعة', 20)])
   const [plan, setPlan] = useState<GeneratedQuranPlan | null>(null)
+  const [completedDays, setCompletedDays] = useState<Set<string>>(() => new Set())
   const [excelSheets, setExcelSheets] = useState<SpreadsheetSheet[] | null>(null)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
@@ -367,12 +384,19 @@ export default function QuranPlanPage() {
       hifzStart: undefined,
       hifzEnd: undefined,
       quranSequenceId: sequenceId,
+      quranSequenceCyclic: source.quranSequenceCyclic ?? false,
     }
     const tracksWithSequence = current.map((track, trackIndex) => trackIndex === index
-      ? { ...track, cyclic: false, hifzStart: undefined, quranSequenceId: sequenceId }
+      ? { ...track, cyclic: false, hifzStart: undefined, quranSequenceId: sequenceId, quranSequenceCyclic: track.quranSequenceCyclic ?? false }
       : track)
     tracksWithSequence.splice(index + 1, 0, nextWerd)
     return tracksWithSequence
+  })
+  const toggleSequenceLoop = (sequenceId: string) => setTracks(current => {
+    const loopEnabled = current.some(track => track.quranSequenceId === sequenceId && track.quranSequenceCyclic)
+    return current.map(track => track.quranSequenceId === sequenceId
+      ? { ...track, quranSequenceCyclic: !loopEnabled }
+      : track)
   })
 
   const build = (event: React.FormEvent) => {
@@ -381,6 +405,7 @@ export default function QuranPlanPage() {
     setCopied(false)
     try {
       setPlan(generateQuranPlan({ startDate, endDate, weekdays, tracks }))
+      setCompletedDays(new Set())
       setTimeout(() => document.getElementById('plan-preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
     } catch (reason) {
       const code = reason instanceof Error ? reason.message : ''
@@ -399,7 +424,7 @@ export default function QuranPlanPage() {
       if (!day.isStudyDay) lines.push('🌙 راحة')
       else plan.tracks.forEach((track, index) => {
         const assignment = day.assignments[track.id]
-        const assignmentText = assignment?.from && assignment.to
+        const assignmentText = assignment?.from && assignment.to && assignment.unit !== 'surah' && assignment.unit !== 'juz'
           ? formatCompactPlanRange(assignment.from, assignment.to)
           : assignment?.text
         lines.push(`${TRACK_STYLES[index % TRACK_STYLES.length].emoji} *${track.name}:* ${assignmentText || 'اكتمل الورد ✅'}`)
@@ -417,6 +442,15 @@ export default function QuranPlanPage() {
     document.title = ''
     window.addEventListener('afterprint', () => { document.title = previousTitle }, { once: true })
     window.print()
+  }
+
+  const toggleCompletedDay = (date: string) => {
+    setCompletedDays(current => {
+      const next = new Set(current)
+      if (next.has(date)) next.delete(date)
+      else next.add(date)
+      return next
+    })
   }
 
   const openExcelPreview = () => {
@@ -489,6 +523,7 @@ export default function QuranPlanPage() {
           <label className="text-sm font-semibold text-deep-700">تاريخ النهاية<input type="date" required min={startDate} value={endDate} onChange={event => setEndDate(event.target.value)} className="surface-field mt-1.5 w-full rounded-xl px-4 py-2.5 font-normal" /></label>
         </div>
         <fieldset><legend className="text-sm font-bold text-deep-800">أيام الدراسة</legend><div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-7">{WEEKDAYS.map((day, index) => { const selected = weekdays.includes(index); return <label key={day} className={`cursor-pointer rounded-xl border px-2 py-2.5 text-center text-xs font-semibold transition ${selected ? 'border-cyan-500 bg-cyan-600 text-white' : 'border-water-200 bg-white/50 text-deep-600 dark:border-slate-700 dark:bg-slate-900/50'}`}><input type="checkbox" checked={selected} onChange={() => setWeekdays(current => selected ? current.filter(item => item !== index) : [...current, index])} className="sr-only" />{day}</label> })}</div></fieldset>
+        <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-water-200 bg-white/50 px-4 py-3 text-sm font-semibold text-deep-700 dark:border-slate-700 dark:bg-slate-900/50"><input type="checkbox" checked={includeCompletionCheckboxes} onChange={event => setIncludeCompletionCheckboxes(event.target.checked)} className="h-5 w-5 accent-teal-600" />إضافة خانة «تم» إلى الخطة والطباعة</label>
         <div className="space-y-4">{trackGroups.map(group => {
           if (!group.sequenceId) {
             const { track, index } = group.members[0]
@@ -496,16 +531,20 @@ export default function QuranPlanPage() {
           }
           const firstIndex = group.members[0].index
           const style = TRACK_STYLES[firstIndex % TRACK_STYLES.length]
+          const sequenceLoops = group.members.some(({ track }) => track.quranSequenceCyclic)
           return <fieldset key={group.key} className={`rounded-2xl border p-4 ${style.border} ${style.background}`}>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/55 px-3 py-2 dark:bg-slate-900/30">
               <p className="text-sm font-bold text-deep-800">سلسلة أوراد قرآنية</p>
-              <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-bold text-blue-800 dark:bg-blue-950/60 dark:text-blue-200">{group.members.length} أوراد · عمود واحد</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <button type="button" aria-pressed={sequenceLoops} onClick={() => toggleSequenceLoop(group.sequenceId as string)} className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${sequenceLoops ? 'border-blue-700 bg-blue-700 text-white dark:border-blue-500 dark:bg-blue-600' : 'border-blue-200 bg-white/70 text-blue-800 dark:border-blue-800 dark:bg-slate-900/60 dark:text-blue-200'}`}>↻ {sequenceLoops ? 'تكرار السلسلة مفعّل' : 'تكرار السلسلة كاملة'}</button>
+                <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-bold text-blue-800 dark:bg-blue-950/60 dark:text-blue-200">{group.members.length} أوراد · عمود واحد</span>
+              </div>
             </div>
-            <p className="mb-4 text-xs font-semibold text-blue-800 dark:text-blue-200">ينتقل الورد تلقائياً إلى التالي عند بلوغ نهايته، ويظهر الجميع في عمود واحد في الخطة.</p>
+            <p className="mb-4 text-xs font-semibold text-blue-800 dark:text-blue-200">ينتقل الورد تلقائياً إلى التالي عند بلوغ نهايته{sequenceLoops ? '، ثم يبدأ السلسلة كاملة من أولها بعد نهاية آخر ورد' : ''}، ويظهر الجميع في عمود واحد في الخطة.</p>
             {group.members.map(({ track, index }, sequencePosition) => <TrackFields key={track.id} track={track} index={index} count={tracks.length} embedded sequencePosition={sequencePosition} styleIndex={firstIndex} onChange={value => updateTrack(track.id, value)} onMove={direction => moveTrack(index, direction)} onRemove={() => setTracks(current => current.filter(item => item.id !== track.id))} onAddWerd={() => addFollowingWerd(index)} />)}
           </fieldset>
         })}</div>
-        <div className="flex flex-wrap gap-2"><button type="button" onClick={() => addTrack('quran')} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-bold">+ إضافة ورد قرآني</button><button type="button" onClick={() => addTrack('quantity')} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-bold">+ إضافة كتب</button><button type="button" onClick={() => addTrack('playlist')} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-bold">+ إضافة قوائم YouTube</button></div>
+        <div className="flex flex-wrap gap-2"><button type="button" onClick={() => addTrack('quran')} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-bold">+ إضافة ورد قرآني</button><button type="button" onClick={() => addTrack('quantity')} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-bold">+ إضافة كتب</button><button type="button" onClick={() => addTrack('playlist')} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-bold">+ إضافة فيديو أو قائمة YouTube</button></div>
         {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 dark:border-red-800 dark:bg-red-950/35 dark:text-red-200">{error}</p>}
         <button type="submit" className="water-btn w-full rounded-xl px-5 py-3.5 font-bold text-white sm:w-auto">إنشاء الخطة</button>
       </form>
@@ -513,8 +552,8 @@ export default function QuranPlanPage() {
 
     {plan && <section id="plan-preview" className="print-plan mt-7 scroll-mt-5 rounded-3xl border border-water-200 bg-white p-4 shadow-xl dark:border-slate-700 dark:bg-slate-900 sm:p-7">
       <div className="plan-header flex flex-col gap-4 border-b border-water-200 pb-5 dark:border-slate-700 sm:flex-row sm:items-start sm:justify-between"><div className="plan-heading"><p className="plan-kicker text-xs font-bold text-blue-700 dark:text-blue-300">بسم الله الرحمن الرحيم</p><h2 className="plan-title mt-2 text-2xl font-bold text-deep-900">{printTitle}</h2><p className="plan-period mt-2 text-sm text-deep-500">من {displayDate(startDate)} إلى {displayDate(endDate)}</p></div><div className="no-print flex flex-wrap gap-2"><button type="button" onClick={async () => { await navigator.clipboard.writeText(planText()); setCopied(true) }} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">{copied ? 'تم النسخ ✓' : 'نسخ النص'}</button><button type="button" onClick={openExcelPreview} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">تصدير Excel</button><button type="button" onClick={printPlan} className="water-btn rounded-xl px-4 py-2 text-sm font-bold text-white">طباعة الخطة</button></div></div>
-      <div className="plan-summary my-4 flex flex-wrap gap-2"><div className="plan-stat plan-stat-days rounded-lg bg-cyan-50 px-3 py-1.5 text-center dark:bg-cyan-950/35"><strong className="text-base font-bold text-blue-800 dark:text-blue-200">{plan.studyDays}</strong><span className="mr-1.5 text-xs text-blue-700 dark:text-blue-300">يوم دراسة</span></div>{plan.tracks.map((track, index) => { const style = TRACK_STYLES[index % TRACK_STYLES.length]; return <div key={track.id} className="plan-stat rounded-lg px-3 py-1.5 text-center" style={{ backgroundColor: style.soft, color: style.ink }}><strong className="text-base font-bold">{plan.totals[track.id].amount}</strong><span className="mr-1.5 text-xs">{track.name} · {track.kind === 'quantity' ? track.quantityUnit : amountLabel(track, 1).replace(/^1 /, '')}</span></div> })}</div>
-      <div className="plan-table-wrap overflow-x-auto rounded-2xl border border-water-200 dark:border-slate-700"><table className="plan-table w-full border-collapse text-right text-sm" style={{ minWidth: `${Math.max(44, 18 + plan.tracks.length * 14)}rem` }}><thead className="bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-100"><tr><th className="px-4 py-3">التاريخ</th><th className="px-4 py-3">اليوم</th>{plan.tracks.map(track => <th key={track.id} className="px-4 py-3">{track.name}</th>)}</tr></thead><tbody className="divide-y divide-water-100 dark:divide-slate-800">{plan.days.map(day => <tr key={day.date} className={day.isStudyDay ? 'plan-study-row bg-white dark:bg-slate-900' : 'plan-rest-row bg-slate-50/75 text-slate-500 dark:bg-slate-950/45 dark:text-slate-400'}><td className="whitespace-nowrap px-4 py-3">{displayDate(day.date)}</td><td className="px-4 py-3 font-semibold">{WEEKDAYS[day.weekday]}</td>{plan.tracks.map((track, index) => <td key={track.id} className="px-4 py-3" style={{ borderInlineStart: `3px solid ${TRACK_STYLES[index % TRACK_STYLES.length].line}` }}>{assignmentCell(day.assignments[track.id], day.isStudyDay)}</td>)}</tr>)}</tbody></table></div>
+      <div className="plan-summary my-4 flex flex-wrap gap-2"><div className="plan-stat plan-stat-days rounded-lg bg-cyan-50 px-3 py-1.5 text-center dark:bg-cyan-950/35"><span className="plan-stat-label block text-xs font-semibold text-blue-700 dark:text-blue-300">أيام الدراسة</span><strong className="block text-base font-bold text-blue-800 dark:text-blue-200">{plan.studyDays} يوم</strong></div>{plan.tracks.map((track, index) => { const style = TRACK_STYLES[index % TRACK_STYLES.length]; const unitLabel = track.kind === 'quantity' ? track.quantityUnit : amountLabel(track, 1).replace(/^1 /, ''); return <div key={track.id} className="plan-stat rounded-lg px-3 py-1.5 text-center" style={{ backgroundColor: style.soft, color: style.ink }}><span className="plan-stat-label block text-xs font-semibold">إجمالي {track.name}</span><strong className="block text-base font-bold">{plan.totals[track.id].amount} {unitLabel}</strong></div> })}</div>
+      <div className="plan-table-wrap overflow-x-auto rounded-2xl border border-water-200 dark:border-slate-700"><table className="plan-table w-full border-collapse text-right text-sm" style={{ minWidth: `${Math.max(includeCompletionCheckboxes ? 47 : 44, (includeCompletionCheckboxes ? 21 : 18) + plan.tracks.length * 14)}rem` }}><thead className="bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-100"><tr><th className="px-4 py-3">التاريخ</th><th className="px-4 py-3">اليوم</th>{includeCompletionCheckboxes && <th className="plan-completion-cell px-2 py-3">تم</th>}{plan.tracks.map(track => <th key={track.id} className="px-4 py-3">{track.name}</th>)}</tr></thead><tbody className="divide-y divide-water-100 dark:divide-slate-800">{plan.days.map(day => <tr key={day.date} className={day.isStudyDay ? 'plan-study-row bg-white dark:bg-slate-900' : 'plan-rest-row bg-slate-50/75 text-slate-500 dark:bg-slate-950/45 dark:text-slate-400'}><td className="whitespace-nowrap px-4 py-3">{displayDate(day.date)}</td><td className="px-4 py-3 font-semibold">{WEEKDAYS[day.weekday]}</td>{includeCompletionCheckboxes && <td className="plan-completion-cell px-2 py-3">{day.isStudyDay ? <label className="inline-flex cursor-pointer items-center justify-center" aria-label={`تم إنجاز خطة ${displayDate(day.date)}`}><input type="checkbox" checked={completedDays.has(day.date)} onChange={() => toggleCompletedDay(day.date)} className="peer sr-only" /><span aria-hidden="true" className="plan-completion-box flex h-6 w-6 items-center justify-center rounded border-2 border-slate-400 bg-white text-sm font-bold text-transparent transition peer-checked:border-teal-600 peer-checked:bg-teal-600 peer-checked:text-white dark:border-slate-500 dark:bg-slate-900 dark:peer-checked:border-teal-500 dark:peer-checked:bg-teal-600">✓</span></label> : <span aria-hidden="true">—</span>}</td>}{plan.tracks.map((track, index) => <td key={track.id} className="px-4 py-3" style={{ borderInlineStart: `3px solid ${TRACK_STYLES[index % TRACK_STYLES.length].line}` }}>{assignmentCell(day.assignments[track.id], day.isStudyDay)}</td>)}</tr>)}</tbody></table></div>
       <p className="no-print mt-5 text-center text-xs text-deep-400">وُلدت الخطة بواسطة زمزم · يمكن تعديل المدخلات وإعادة إنشائها في أي وقت</p>
     </section>}
     {excelSheets && <ExcelPreviewModal sheets={excelSheets} filename={`zamzam-plan-${startDate}.xlsx`} helpText="راجع جدول الخطة قبل تنزيل ملف Excel." onClose={() => setExcelSheets(null)} />}

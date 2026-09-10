@@ -4,7 +4,7 @@ import { QURAN_PAGE_START_OFFSETS_BASE64 } from './quran-page-data'
 import { QURAN_QUARTER_STARTS } from './quran-quarter-data'
 
 export type QuranPoint = { surah: number; ayah: number }
-export type QuranPlanUnit = 'ayahs' | 'lines' | 'juz' | 'hizb' | 'quarter' | 'page' | 'half_page'
+export type QuranPlanUnit = 'ayahs' | 'lines' | 'surah' | 'juz' | 'hizb' | 'quarter' | 'page' | 'half_page'
 export type QuranPlanSequenceItem = {
   id: string
   name: string
@@ -28,6 +28,7 @@ export type QuranPlanTrack = {
   hifzStart?: QuranPoint
   hifzEnd?: QuranPoint
   quranSequenceId?: string
+  quranSequenceCyclic?: boolean
   items?: QuranPlanSequenceItem[]
 }
 export type QuranPlanInput = {
@@ -202,6 +203,16 @@ export function quranJuzEndPoint(juz: number): QuranPoint {
   return quranQuarterEndPoint(juz, QURAN_QUARTERS_PER_JUZ)
 }
 
+export function quranSurahStartPoint(surah: number): QuranPoint {
+  const safeSurah = Math.min(SURAHS.length, Math.max(1, Math.trunc(surah)))
+  return { surah: safeSurah, ayah: 1 }
+}
+
+export function quranSurahEndPoint(surah: number): QuranPoint {
+  const safeSurah = Math.min(SURAHS.length, Math.max(1, Math.trunc(surah)))
+  return { surah: safeSurah, ayah: surahInfo(safeSurah).ayahs }
+}
+
 function quranPageEndOffset(pageIndex: number): number {
   const starts = quranPageStartOffsets()
   return pageIndex + 1 < starts.length ? starts[pageIndex + 1] - 1 : globalOffset(LAST_POINT)
@@ -238,6 +249,18 @@ export function formatCompactPlanRange(from: QuranPoint, to: QuranPoint): string
       : `سورة ${surahInfo(from.surah).name}: ${fromAyah} : ${toAyah}`
   }
   return `سورة ${surahInfo(from.surah).name}: ${fromAyah} ← سورة ${surahInfo(to.surah).name}: ${toAyah}`
+}
+
+function formatSurahRange(from: QuranPoint, to: QuranPoint): string {
+  const first = surahInfo(from.surah).name
+  const last = surahInfo(to.surah).name
+  return from.surah === to.surah ? `سورة ${first}` : `من سورة ${first} إلى سورة ${last}`
+}
+
+function formatJuzRange(from: QuranPoint, to: QuranPoint): string {
+  const first = quranQuarterForPoint(from).juz
+  const last = quranQuarterForPoint(to).juz
+  return first === last ? `الجزء ${first}` : `من الجزء ${first} إلى الجزء ${last}`
 }
 
 function allocateAyahs(start: QuranPoint, requestedAyahs: number, maximumEnd: QuranPoint = LAST_POINT): { assignment: QuranAssignment; next: QuranPoint | null } {
@@ -357,15 +380,41 @@ function allocatePages(start: QuranPoint, requestedPages: number, maximumEnd: Qu
   }
 }
 
+function allocateSurahs(start: QuranPoint, requestedSurahs: number, maximumEnd: QuranPoint = LAST_POINT): { assignment: QuranAssignment; next: QuranPoint | null } {
+  const lastSurah = Math.min(start.surah + requestedSurahs - 1, maximumEnd.surah)
+  const end = lastSurah === maximumEnd.surah ? maximumEnd : quranSurahEndPoint(lastSurah)
+  const next = globalOffset(end) >= globalOffset(maximumEnd) ? null : nextPoint(end)
+  return {
+    assignment: {
+      from: start,
+      to: end,
+      fromNumber: null,
+      toNumber: null,
+      ayahCount: globalOffset(end) - globalOffset(start) + 1,
+      unit: 'surah',
+      unitAmount: lastSurah - start.surah + 1,
+      text: formatSurahRange(start, end),
+      completedMushaf: next === null && globalOffset(end) === globalOffset(LAST_POINT),
+    },
+    next,
+  }
+}
+
 function allocate(start: QuranPoint, track: QuranPlanTrack, maximumEnd: QuranPoint = LAST_POINT) {
   if (track.unit === 'ayahs') return allocateAyahs(start, track.dailyAmount, maximumEnd)
+  if (track.unit === 'surah') return allocateSurahs(start, track.dailyAmount, maximumEnd)
   if (track.unit === 'page') return allocatePages(start, track.dailyAmount, maximumEnd)
   if (track.unit === 'quarter' || track.unit === 'hizb' || track.unit === 'juz') {
     const quartersPerUnit = track.unit === 'quarter' ? 1 : track.unit === 'hizb' ? 4 : 8
     const result = allocateQuarters(start, track.dailyAmount * quartersPerUnit, maximumEnd)
     return {
       ...result,
-      assignment: { ...result.assignment, unit: track.unit, unitAmount: Math.ceil(result.assignment.unitAmount / quartersPerUnit) },
+      assignment: {
+        ...result.assignment,
+        unit: track.unit,
+        unitAmount: Math.ceil(result.assignment.unitAmount / quartersPerUnit),
+        text: track.unit === 'juz' ? formatJuzRange(result.assignment.from as QuranPoint, result.assignment.to as QuranPoint) : result.assignment.text,
+      },
     }
   }
   const lineAmount = track.unit === 'lines' ? track.dailyAmount : track.dailyAmount * 8
@@ -525,7 +574,7 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
     )
     const invalidQuran = track.kind === 'quran' && (
       !isValidQuranPoint(track.start)
-      || !['ayahs', 'lines', 'juz', 'hizb', 'quarter', 'page', 'half_page'].includes(track.unit)
+      || !['ayahs', 'lines', 'surah', 'juz', 'hizb', 'quarter', 'page', 'half_page'].includes(track.unit)
     )
     const hasSequence = (track.kind === 'quantity' || track.kind === 'playlist') && track.items !== undefined
     const invalidSequence = hasSequence && (!track.items?.length || track.items.some((item, itemIndex) => (
@@ -594,6 +643,8 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
           } else if (cursor.trackIndex + 1 < group.length) {
             const nextTrack = group[cursor.trackIndex + 1]
             quranSequenceCursors.set(track.quranSequenceId, { trackIndex: cursor.trackIndex + 1, point: nextTrack.start })
+          } else if (group.some(item => item.quranSequenceCyclic)) {
+            quranSequenceCursors.set(track.quranSequenceId, { trackIndex: 0, point: group[0].start })
           } else {
             quranSequenceCursors.delete(track.quranSequenceId)
           }

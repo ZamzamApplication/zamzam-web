@@ -27,6 +27,23 @@ export function extractYoutubePlaylistId(value: string): string | null {
   }
 }
 
+export function extractYoutubeVideoId(value: string): string | null {
+  try {
+    const url = new URL(value.trim())
+    const hostname = url.hostname.toLowerCase().replace(/^www\./, '')
+    if (hostname === 'youtu.be') {
+      const id = url.pathname.split('/').filter(Boolean)[0]
+      return id && /^[a-zA-Z0-9_-]{11}$/.test(id) ? id : null
+    }
+    if (hostname !== 'youtube.com' && hostname !== 'm.youtube.com') return null
+    const pathId = url.pathname.match(/^\/(?:shorts|embed)\/([a-zA-Z0-9_-]{11})(?:\/|$)/)?.[1]
+    const id = url.pathname === '/watch' ? url.searchParams.get('v') : pathId
+    return id && /^[a-zA-Z0-9_-]{11}$/.test(id) ? id : null
+  } catch {
+    return null
+  }
+}
+
 function extractInitialData(html: string): unknown {
   const markers = ['var ytInitialData = ', 'window["ytInitialData"] = ', 'ytInitialData = ']
   const marker = markers.map(value => ({ value, index: html.indexOf(value) })).find(entry => entry.index >= 0)
@@ -107,8 +124,23 @@ export function parseYoutubePlaylistHtml(html: string, playlistId: string): Impo
 
 export async function importYoutubePlaylist(value: string): Promise<ImportedYoutubePlaylist> {
   const playlistId = extractYoutubePlaylistId(value)
-  if (!playlistId) throw new Error('invalid_playlist_url')
-  const response = await fetch(`https://www.youtube.com/playlist?list=${encodeURIComponent(playlistId)}&hl=ar&gl=EG`, {
+  if (playlistId) {
+    const response = await fetch(`https://www.youtube.com/playlist?list=${encodeURIComponent(playlistId)}&hl=ar&gl=EG`, {
+      cache: 'no-store',
+      headers: {
+        'Accept-Language': 'ar-EG,ar;q=0.9,en;q=0.7',
+        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36',
+      },
+      signal: AbortSignal.timeout(20_000),
+    })
+    if (!response.ok) throw new Error('playlist_fetch_failed')
+    return parseYoutubePlaylistHtml(await response.text(), playlistId)
+  }
+
+  const videoId = extractYoutubeVideoId(value)
+  if (!videoId) throw new Error('invalid_youtube_url')
+  const videoUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`
+  const response = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(videoUrl)}&format=json`, {
     cache: 'no-store',
     headers: {
       'Accept-Language': 'ar-EG,ar;q=0.9,en;q=0.7',
@@ -116,6 +148,8 @@ export async function importYoutubePlaylist(value: string): Promise<ImportedYout
     },
     signal: AbortSignal.timeout(20_000),
   })
-  if (!response.ok) throw new Error('playlist_fetch_failed')
-  return parseYoutubePlaylistHtml(await response.text(), playlistId)
+  if (!response.ok) throw new Error('video_fetch_failed')
+  const data = await response.json() as { title?: unknown }
+  if (typeof data.title !== 'string' || !data.title.trim()) throw new Error('video_fetch_failed')
+  return { id: videoId, title: data.title.trim(), episodes: [{ title: data.title.trim(), url: videoUrl }] }
 }

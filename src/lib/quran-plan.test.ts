@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatCompactPlanRange, formatPlanRange, generateQuranPlan, quranHizbForPoint, quranHizbStartPoint, quranJuzStartPoint, quranPageForPoint, quranPageStartPoint, quranQuarterEndPoint, quranQuarterForPoint, quranQuarterStartPoint, type QuranPlanTrack } from './quran-plan'
+import { formatCompactPlanRange, formatPlanRange, generateQuranPlan, quranHizbForPoint, quranHizbStartPoint, quranJuzStartPoint, quranPageEndPoint, quranPageForPoint, quranPageStartPoint, quranQuarterEndPoint, quranQuarterForPoint, quranQuarterStartPoint, quranSurahEndPoint, type QuranPlanTrack } from './quran-plan'
 import { QURAN_QUARTER_STARTS } from './quran-quarter-data'
 
 function quranTrack(id: string, start: { surah: number; ayah: number }, dailyAmount: number, unit: QuranPlanTrack['unit'] = 'ayahs'): QuranPlanTrack {
@@ -33,6 +33,25 @@ describe('Quran plan generation', () => {
     expect(plan.days[0].assignments.memorization?.from).toEqual({ surah: 2, ayah: 1 })
     expect(plan.days[0].assignments.memorization?.to).toEqual({ surah: 2, ayah: 5 })
     expect(plan.days[0].assignments.memorization?.unit).toBe('page')
+  })
+  it('allocates complete surahs when surah is the selected unit', () => {
+    const plan = generateQuranPlan({
+      startDate: '2026-01-04', endDate: '2026-01-05', weekdays: [0, 1],
+      tracks: [quranTrack('memorization', { surah: 2, ayah: 1 }, 2, 'surah')],
+    })
+    expect(plan.days[0].assignments.memorization?.from).toEqual({ surah: 2, ayah: 1 })
+    expect(plan.days[0].assignments.memorization?.to).toEqual({ surah: 3, ayah: 200 })
+    expect(plan.days[0].assignments.memorization?.unit).toBe('surah')
+    expect(plan.days[0].assignments.memorization?.unitAmount).toBe(2)
+    expect(plan.days[0].assignments.memorization?.text).toBe('من سورة البقرة إلى سورة آل عمران')
+    expect(plan.days[1].assignments.memorization?.from).toEqual({ surah: 4, ayah: 1 })
+  })
+  it('labels juz assignments without ayah numbers', () => {
+    const plan = generateQuranPlan({
+      startDate: '2026-01-04', endDate: '2026-01-04', weekdays: [0],
+      tracks: [quranTrack('memorization', quranJuzStartPoint(2), 1, 'juz')],
+    })
+    expect(plan.days[0].assignments.memorization?.text).toBe('الجزء 2')
   })
   it('allocates inclusive daily ayah ranges across surahs', () => {
     const plan = generateQuranPlan({
@@ -177,6 +196,28 @@ describe('Quran plan generation', () => {
     expect(plan.days[1].assignments.first?.unit).toBe('quarter')
     expect(plan.days[1].assignments.second).toBeUndefined()
     expect(plan.days[2].assignments.first).toBeNull()
+  })
+
+  it('loops an entire Quran Werd sequence while preserving each Werd unit', () => {
+    const sequenceId = 'looping-hifz-sequence'
+    const pages = {
+      ...quranTrack('pages', quranPageStartPoint(2), 1, 'page'),
+      hifzEnd: quranPageEndPoint(2),
+      quranSequenceId: sequenceId,
+      quranSequenceCyclic: true,
+    }
+    const surahs = {
+      ...quranTrack('surahs', { surah: 3, ayah: 1 }, 1, 'surah'),
+      hifzEnd: quranSurahEndPoint(3),
+      quranSequenceId: sequenceId,
+      quranSequenceCyclic: true,
+    }
+    const plan = generateQuranPlan({ startDate: '2026-08-16', endDate: '2026-08-19', weekdays: [0, 1, 2, 3], tracks: [pages, surahs] })
+    expect(plan.days.map(day => day.assignments.pages?.unit)).toEqual(['page', 'surah', 'page', 'surah'])
+    expect(plan.days[0].assignments.pages?.from).toEqual(quranPageStartPoint(2))
+    expect(plan.days[2].assignments.pages?.from).toEqual(quranPageStartPoint(2))
+    expect(plan.days[1].assignments.pages?.from).toEqual({ surah: 3, ayah: 1 })
+    expect(plan.days[3].assignments.pages?.from).toEqual({ surah: 3, ayah: 1 })
   })
 
   it('uses the offline Madani Mushaf mapping for line-based plans', () => {

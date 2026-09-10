@@ -214,6 +214,30 @@
     text-align: center !important;
   }
 
+  .print-plan .plan-table .plan-completion-cell {
+    width: 11mm !important;
+    padding-inline: 1mm !important;
+    text-align: center !important;
+  }
+
+  .print-plan .plan-completion-box {
+    width: 5mm !important;
+    height: 5mm !important;
+    color: transparent !important;
+    background: #fff !important;
+    border: 1.5px solid #64748b !important;
+    border-radius: 1mm !important;
+    font-family: Arial, sans-serif !important;
+    font-size: 11px !important;
+    line-height: 1 !important;
+  }
+
+  .print-plan input:checked + .plan-completion-box {
+    color: #fff !important;
+    background: #0d9488 !important;
+    border-color: #0f766e !important;
+  }
+
   .print-plan .plan-table-wrap {
     overflow: visible !important;
     border: 1px solid #a5f3fc !important;
