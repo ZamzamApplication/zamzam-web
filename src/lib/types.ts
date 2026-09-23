@@ -567,9 +567,9 @@ export interface CircleStudentStatsResponse {
   students: StudentStatsItem[]
 }
 
-export type ProgressCategory = 'new_memorization' | 'recent_revision' | 'old_revision' | 'test'
+export type ProgressCategory = string
 export type QuranRangeType = 'surah_ayah' | 'page'
-export type WardCategory = Exclude<ProgressCategory, 'test'>
+export type WardCategory = string
 export type WardIncrementUnit = 'ayahs' | 'lines' | 'pages' | 'juz' | 'hizb' | 'quarter' | 'half_page'
 
 export interface QuranRangeSnapshot {

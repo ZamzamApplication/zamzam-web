@@ -12,6 +12,7 @@ import ExcelPreviewModal, { type SpreadsheetSheet } from '@/components/ExcelPrev
 import { attendanceStatusColorClass } from '@/components/AttendanceStatusControl'
 import MonthSwitcher from '@/components/MonthSwitcher'
 import ScrollableTable from '@/components/ScrollableTable'
+import { progressCategoryLabel } from '@/components/TahfizInitialSettingsFields'
 
 export default function ReportsPage() {
   const router = useRouter()
@@ -412,15 +413,10 @@ export default function ReportsPage() {
                 <p className="text-xs text-deep-500 mt-1">{periodLabel}</p>
               </div>
               <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                {[
-                  ['new_memorization', 'حفظ جديد'],
-                  ['recent_revision', 'مراجعة قريبة'],
-                  ['old_revision', 'مراجعة قديمة'],
-                  ['test', 'اختبارات'],
-                ].map(([key, label]) => (
+                {Object.keys(progressReport.category_totals).map(key => (
                   <div key={key} className="rounded-xl bg-water-100/35 p-3 text-center">
                     <p className="text-2xl font-bold text-blue-700 dark:text-blue-400">{progressReport.category_totals[key] || 0}</p>
-                    <p className="mt-1 text-xs text-deep-500">{label}</p>
+                    <p className="mt-1 text-xs text-deep-500">{progressCategoryLabel(key)}</p>
                   </div>
                 ))}
               </div>

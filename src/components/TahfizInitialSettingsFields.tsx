@@ -7,9 +7,25 @@ export const DEFAULT_ATTENDANCE_STATUSES = ['حاضر', 'غياب', 'غياب ب
 export const DEFAULT_SESSION_NAMES = ['الصباحية', 'المسائية']
 export const PROGRESS_CATEGORY_OPTIONS: { key: WardCategory; label: string; description: string }[] = [
   { key: 'new_memorization', label: 'الحفظ', description: 'المقدار الجديد الذي يسمّعه الطالب.' },
-  { key: 'recent_revision', label: 'المراجعة القريبة', description: 'مراجعة المحفوظ الحديث.' },
-  { key: 'old_revision', label: 'المراجعة البعيدة', description: 'مراجعة المحفوظ السابق.' },
+  { key: 'recent_revision', label: 'المراجعة', description: 'مراجعة ما حفظه الطالب.' },
 ]
+
+export function progressCategoryLabel(category: string): string {
+  if (category === 'new_memorization') return 'الحفظ'
+  if (category === 'recent_revision') return 'المراجعة'
+  if (category === 'old_revision') return 'المراجعة البعيدة'
+  if (category === 'test') return 'اختبار'
+  return category
+}
+
+export const isCustomProgressCategory = (category: string) => !['new_memorization', 'recent_revision', 'test'].includes(category)
+
+export function canAddProgressCategory(value: string, categories: string[]): boolean {
+  const category = value.trim()
+  return Boolean(category) && category.length <= 50 && categories.length < 20
+    && !categories.includes(category)
+    && !['test', 'الحفظ', 'المراجعة', 'المراجعة البعيدة'].includes(category)
+}
 
 export type TahfizInitialSettings = {
   attendanceStatuses: string[]
@@ -34,7 +50,7 @@ export const DEFAULT_INITIAL_TAHFIZ_SETTINGS: TahfizInitialSettings = {
   subscriptionCurrency: 'EGP',
   monthStartDay: 1,
   progressTrackingEnabled: false,
-  progressCategories: ['new_memorization'],
+  progressCategories: ['new_memorization', 'recent_revision'],
 }
 
 export default function TahfizInitialSettingsFields({ value, onChange }: {
@@ -43,6 +59,7 @@ export default function TahfizInitialSettingsFields({ value, onChange }: {
 }) {
   const [newStatus, setNewStatus] = useState('')
   const [newSessionName, setNewSessionName] = useState('')
+  const [newProgressCategory, setNewProgressCategory] = useState('')
 
   const addStatus = () => {
     const status = newStatus.trim()
@@ -58,6 +75,13 @@ export default function TahfizInitialSettingsFields({ value, onChange }: {
     setNewSessionName('')
   }
 
+  const addProgressCategory = () => {
+    const category = newProgressCategory.trim()
+    if (!canAddProgressCategory(category, value.progressCategories)) return
+    onChange({ ...value, progressCategories: [...value.progressCategories, category] })
+    setNewProgressCategory('')
+  }
+
   return <div className="space-y-4">
     <section className="rounded-2xl border border-water-200/80 bg-white/45 p-4 dark:border-slate-700 dark:bg-slate-900/45">
       <h3 className="text-sm font-bold text-deep-900">متابعة القرآن</h3>
@@ -66,7 +90,7 @@ export default function TahfizInitialSettingsFields({ value, onChange }: {
         <input type="checkbox" checked={value.progressTrackingEnabled} onChange={event => onChange({ ...value, progressTrackingEnabled: event.target.checked })} />
         تفعيل متابعة القرآن
       </label>
-      {value.progressTrackingEnabled && <div className="mt-3 grid gap-2 sm:grid-cols-3">
+      {value.progressTrackingEnabled && <div className="mt-3 grid gap-2 sm:grid-cols-2">
         {PROGRESS_CATEGORY_OPTIONS.map(option => {
           const checked = value.progressCategories.includes(option.key)
           return <label key={option.key} className={`cursor-pointer rounded-xl border p-3 ${checked ? 'border-cyan-500 bg-cyan-50 dark:bg-cyan-950/30' : 'border-water-200 bg-white/50 dark:bg-slate-800/50'}`}>
@@ -74,6 +98,10 @@ export default function TahfizInitialSettingsFields({ value, onChange }: {
             <span className="mt-1 block text-[11px] leading-5 text-deep-500">{option.description}</span>
           </label>
         })}
+      </div>}
+      {value.progressTrackingEnabled && <div className="mt-3 space-y-2">
+        <div className="flex flex-wrap gap-2">{value.progressCategories.filter(isCustomProgressCategory).map(category => <span key={category} className="inline-flex items-center gap-2 rounded-full border border-water-200 px-3 py-1 text-xs font-semibold">{progressCategoryLabel(category)}<button type="button" aria-label={`حذف ${category}`} onClick={() => onChange({ ...value, progressCategories: value.progressCategories.filter(item => item !== category) })}>×</button></span>)}</div>
+        <div className="flex gap-2"><input value={newProgressCategory} onChange={event => setNewProgressCategory(event.target.value)} maxLength={50} placeholder="قسم متابعة مخصص" className="surface-field min-w-0 flex-1 rounded-xl px-3 py-2 text-sm" /><button type="button" onClick={addProgressCategory} disabled={!canAddProgressCategory(newProgressCategory, value.progressCategories)} className="water-btn-outline rounded-xl px-4 text-xs font-semibold disabled:opacity-40">إضافة</button></div>
       </div>}
     </section>
 

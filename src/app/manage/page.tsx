@@ -13,6 +13,7 @@ import { alphabetizeStudents, moveStudentWithinStatus, orderStudents } from '@/l
 import type { Circle, ExcusedPeriodInfo, ExcusedWeekdayInfo, QuranProgressEntry, QuranProgressRevision, QuranProgressTrendPoint, QuranRangeType, SheikhDeletionPreview, SheikhInfo, SheikhStudentDeletionResolution, StudentCategory, StudentGoal, StudentInfo, TahfizInvitation, UserInfo, WarningInfo, WarningRow, WhatsAppGroup } from '@/lib/types'
 import AsyncState from '@/components/AsyncState'
 import StudentCustomFieldsEditor from '@/components/StudentCustomFieldsEditor'
+import { progressCategoryLabel } from '@/components/TahfizInitialSettingsFields'
 
 const WEEKDAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
 function normalizeExcusedWeekdays(days: (ExcusedWeekdayInfo | number)[] | undefined): ExcusedWeekdayInfo[] {
@@ -1671,7 +1672,7 @@ function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete, onMo
                   {progressEntries.slice(0, 5).map((entry) => (
                     <div key={entry.id} className="rounded-lg bg-white/60 px-2.5 py-2 text-xs dark:bg-slate-800/50">
                       <div className="flex justify-between gap-2">
-                        <span className="font-semibold">{entry.category === 'new_memorization' ? 'حفظ جديد' : entry.category === 'recent_revision' ? 'مراجعة قريبة' : entry.category === 'old_revision' ? 'مراجعة قديمة' : 'اختبار'}</span>
+                        <span className="font-semibold">{progressCategoryLabel(entry.category)}</span>
                         <span>{entry.quality_score}/5 — {entry.mistakes} أخطاء</span>
                       </div>
                       <p className="mt-1 font-semibold text-blue-800 dark:text-blue-200">{formatQuranRange(entry)}</p>

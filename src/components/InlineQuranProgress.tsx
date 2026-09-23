@@ -2,14 +2,9 @@
 
 import type { ProgressCategory, QuranProgressEntry, QuranProgressInput } from '@/lib/types'
 import { QUALITY_OPTIONS, SURAHS, surahInfo } from '@/lib/quran'
+import { progressCategoryLabel } from '@/components/TahfizInitialSettingsFields'
 
 export type ProgressDraftMap = Record<string, QuranProgressInput>
-
-export const INLINE_PROGRESS_CATEGORIES: { key: ProgressCategory; label: string; shortLabel: string }[] = [
-  { key: 'new_memorization', label: 'الحفظ', shortLabel: 'حفظ' },
-  { key: 'recent_revision', label: 'المراجعة القريبة', shortLabel: 'قريبة' },
-  { key: 'old_revision', label: 'المراجعة البعيدة', shortLabel: 'بعيدة' },
-]
 
 export function progressDraftKey(studentId: number, category: ProgressCategory) {
   return `${studentId}:${category}`
@@ -140,7 +135,7 @@ export default function InlineQuranProgress({
   onSaveNext: () => void
   saving: boolean
 }) {
-  const categoryDefinitions = INLINE_PROGRESS_CATEGORIES.filter(({ key }) => categories.includes(key))
+  const categoryDefinitions = categories.filter(category => category !== 'test').map(key => ({ key, label: progressCategoryLabel(key) }))
   const visibleDrafts = categoryDefinitions.map(({ key }) => {
     const draftKey = progressDraftKey(student.id, key)
     return drafts[draftKey] || suggestedDrafts[draftKey] || createRequiredProgressDraft(student.id, student.sheikh_id, key, previousDrafts[draftKey])

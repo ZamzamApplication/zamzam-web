@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import AsyncState from '@/components/AsyncState'
@@ -40,6 +40,12 @@ function todayValue() {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
+function entryDateForPeriod(period: string, monthStartDay: number) {
+  const today = todayValue()
+  const { end } = monthRange(period.slice(0, 7), monthStartDay)
+  return end < today ? end : today
+}
+
 function Modal({ title, children, onClose, wide = false }: { title: string; children: React.ReactNode; onClose: () => void; wide?: boolean }) {
   return <div className="mobile-sheet-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm" onClick={onClose}>
     <div className={`mobile-sheet glass-strong max-h-[92vh] w-full overflow-y-auto rounded-2xl p-5 ${wide ? 'max-w-2xl' : 'max-w-md'}`} onClick={event => event.stopPropagation()}>
@@ -52,15 +58,16 @@ function Modal({ title, children, onClose, wide = false }: { title: string; chil
   </div>
 }
 
-function PaymentForm({ count, totalMinor, currency, busy, onCancel, onSubmit }: {
+function PaymentForm({ count, totalMinor, currency, defaultDate, busy, onCancel, onSubmit }: {
   count: number
   totalMinor: number
   currency: string
+  defaultDate: string
   busy: boolean
   onCancel: () => void
   onSubmit: (data: { payment_date: string; payment_method: SubscriptionPaymentMethod; payment_note: string | null }) => Promise<void>
 }) {
-  const [paymentDate, setPaymentDate] = useState(todayValue())
+  const [paymentDate, setPaymentDate] = useState(defaultDate)
   const [method, setMethod] = useState<SubscriptionPaymentMethod>('cash')
   const [note, setNote] = useState('')
   return <form className="space-y-4" onSubmit={event => { event.preventDefault(); void onSubmit({ payment_date: paymentDate, payment_method: method, payment_note: note.trim() || null }) }}>
@@ -69,8 +76,9 @@ function PaymentForm({ count, totalMinor, currency, busy, onCancel, onSubmit }: 
       <p className="mt-1 text-2xl font-bold text-blue-700 dark:text-blue-300">{formatSubscriptionMoney(totalMinor, currency)}</p>
     </div>
     <label className="block text-sm font-medium text-deep-700">تاريخ الدفع
-      <input type="date" required value={paymentDate} onChange={event => setPaymentDate(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-4 py-2.5" />
+      <input type="date" required max={todayValue()} value={paymentDate} onChange={event => setPaymentDate(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-4 py-2.5" />
     </label>
+    <p className="text-xs text-deep-500">راجع تاريخ الدفع؛ تُحسب إيرادات الدورة بحسب هذا التاريخ.</p>
     <label className="block text-sm font-medium text-deep-700">طريقة الدفع
       <select required value={method} onChange={event => setMethod(event.target.value as SubscriptionPaymentMethod)} className="surface-field mt-1 w-full rounded-xl px-4 py-2.5">
         {SUBSCRIPTION_PAYMENT_METHODS.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
@@ -155,10 +163,11 @@ function ReceiptView({ receipt, currency, onClose }: { receipt: SubscriptionRece
   </Modal>
 }
 
-function ExpenseForm({ expense, categories, currency, busy, onCancel, onSubmit }: {
+function ExpenseForm({ expense, categories, currency, defaultDate, busy, onCancel, onSubmit }: {
   expense: ExpenseRecord | null
   categories: ExpenseCategory[]
   currency: string
+  defaultDate: string
   busy: boolean
   onCancel(): void
   onSubmit(data: { name: string; category_id: string; amount_minor: number; expense_date: string; payment_method: SubscriptionPaymentMethod; note: string | null }): Promise<void>
@@ -167,7 +176,7 @@ function ExpenseForm({ expense, categories, currency, busy, onCancel, onSubmit }
   const [name, setName] = useState(expense?.name || '')
   const [categoryId, setCategoryId] = useState(expense?.category_id || available[0]?.id || '')
   const [amount, setAmount] = useState(expense ? minorToInput(expense.amount_minor) : '')
-  const [expenseDate, setExpenseDate] = useState(expense?.expense_date || todayValue())
+  const [expenseDate, setExpenseDate] = useState(expense?.expense_date || defaultDate)
   const [method, setMethod] = useState<SubscriptionPaymentMethod>(expense?.payment_method || 'cash')
   const [note, setNote] = useState(expense?.note || '')
   const [formError, setFormError] = useState('')
@@ -181,7 +190,7 @@ function ExpenseForm({ expense, categories, currency, busy, onCancel, onSubmit }
     <div className="grid gap-3 sm:grid-cols-2">
       <label className="text-sm font-medium text-deep-700">التصنيف<select required value={categoryId} onChange={event => setCategoryId(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-4 py-2.5">{available.map(category => <option key={category.id} value={category.id}>{category.label}</option>)}</select></label>
       <label className="text-sm font-medium text-deep-700">المبلغ ({currency})<input inputMode="decimal" required value={amount} onChange={event => setAmount(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-4 py-2.5" /></label>
-      <label className="text-sm font-medium text-deep-700">تاريخ المصروف<input type="date" max={todayValue()} required value={expenseDate} onChange={event => setExpenseDate(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-4 py-2.5" /></label>
+      <label className="text-sm font-medium text-deep-700">تاريخ المصروف<input type="date" max={todayValue()} required value={expenseDate} onChange={event => setExpenseDate(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-4 py-2.5" /><span className="mt-1 block text-xs font-normal text-deep-500">يحدد هذا التاريخ الدورة التي يظهر فيها المصروف.</span></label>
       <label className="text-sm font-medium text-deep-700">طريقة الدفع<select value={method} onChange={event => setMethod(event.target.value as SubscriptionPaymentMethod)} className="surface-field mt-1 w-full rounded-xl px-4 py-2.5">{SUBSCRIPTION_PAYMENT_METHODS.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
     </div>
     <label className="block text-sm font-medium text-deep-700">ملاحظة (اختياري)<textarea rows={2} value={note} onChange={event => setNote(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-4 py-2.5" /></label>
@@ -240,13 +249,18 @@ export default function SubscriptionsPage() {
   const [editingExpense, setEditingExpense] = useState<ExpenseRecord | null | undefined>(undefined)
   const [showBulkCorrection, setShowBulkCorrection] = useState(false)
   const [activeSection, setActiveSection] = useState<'subscriptions' | 'expenses'>('subscriptions')
+  const recordsRequest = useRef(0)
+  const financeRequest = useRef(0)
 
   const currency = settings?.currency || 'EGP'
+  const selectedEntryDate = entryDateForPeriod(period, monthStartDay)
+  const isPastPeriod = period < (settings?.current_period_start || monthRange(currentMonthValue(monthStartDay), monthStartDay).start)
   const pageSize = 30
   const paidValue = paidFilter === 'all' ? undefined : paidFilter === 'paid'
 
   const loadRecords = useCallback(async () => {
     if (!settings?.enabled) return
+    const request = ++recordsRequest.current
     setListLoading(true)
     setError('')
     try {
@@ -259,27 +273,32 @@ export default function SubscriptionsPage() {
         page,
         page_size: pageSize,
       })
-      setRecords(data.items)
-      setTotal(data.total)
-      setSummary(data.summary)
-      setSelected(new Set())
+      if (request === recordsRequest.current) {
+        setRecords(data.items)
+        setTotal(data.total)
+        setSummary(data.summary)
+        setSelected(new Set())
+      }
     } catch (reason: any) {
-      setError(reason.message || 'تعذر تحميل اشتراكات الشهر')
+      if (request === recordsRequest.current) setError(reason.message || 'تعذر تحميل اشتراكات الشهر')
     } finally {
-      setListLoading(false)
+      if (request === recordsRequest.current) setListLoading(false)
     }
   }, [page, paidValue, period, search, settings?.enabled, sheikhId, studentIdFilter])
 
   const loadFinance = useCallback(async () => {
+    const request = ++financeRequest.current
     try {
-      const [nextOverview, expensePage] = await Promise.all([
+      const [nextOverview, expenseRows] = await Promise.all([
         api.getFinanceOverview(period),
-        api.getExpenses({ period, category_id: expenseCategoryFilter || undefined, payment_method: expenseMethodFilter ? expenseMethodFilter as SubscriptionPaymentMethod : undefined, search: expenseSearch || undefined, page_size: 200 }),
+        api.exportExpenses({ period, category_id: expenseCategoryFilter || undefined, payment_method: expenseMethodFilter ? expenseMethodFilter as SubscriptionPaymentMethod : undefined, search: expenseSearch || undefined }),
       ])
-      setOverview(nextOverview)
-      setExpenses(expensePage.items)
+      if (request === financeRequest.current) {
+        setOverview(nextOverview)
+        setExpenses(expenseRows)
+      }
     } catch (reason: any) {
-      setError(reason.message || 'تعذر تحميل البيانات المالية')
+      if (request === financeRequest.current) setError(reason.message || 'تعذر تحميل البيانات المالية')
     }
   }, [expenseCategoryFilter, expenseMethodFilter, expenseSearch, period])
 
@@ -354,10 +373,10 @@ export default function SubscriptionsPage() {
       setPayingRecord(null)
       setBulkPaying(false)
       setNotice(recordIds.length === 1 ? 'تم تسجيل السداد.' : `تم تسجيل سداد ${recordIds.length} طلاب.`)
-      await loadRecords()
+      await Promise.all([loadRecords(), loadFinance()])
     } catch (reason: any) {
       setError(reason.message || 'تعذر تسجيل السداد. تم تحديث القائمة لتجنب تكرار العملية.')
-      await loadRecords()
+      await Promise.all([loadRecords(), loadFinance()])
     } finally {
       setBusy(false)
     }
@@ -379,7 +398,7 @@ export default function SubscriptionsPage() {
       }
       setEditingRecord(null)
       setNotice(scope === 'current' ? 'تم تحديث رسوم هذا الشهر فقط.' : 'تم تحديث رسوم الأشهر القادمة فقط دون تغيير الشهر الحالي.')
-      await loadRecords()
+      await Promise.all([loadRecords(), loadFinance()])
     } catch (reason: any) {
       setError(reason.message || 'تعذر تحديث الرسوم')
     } finally {
@@ -394,7 +413,7 @@ export default function SubscriptionsPage() {
     try {
       await api.markSubscriptionUnpaid(record.id)
       setNotice('تمت إعادة السجل إلى غير مدفوع.')
-      await loadRecords()
+      await Promise.all([loadRecords(), loadFinance()])
     } catch (reason: any) {
       setError(reason.message || 'تعذر إلغاء السداد')
     } finally {
@@ -513,6 +532,17 @@ export default function SubscriptionsPage() {
     finally { setBusy(false) }
   }
 
+  async function generatePastMonth() {
+    if (!window.confirm(`إنشاء الرسوم الناقصة لدورة ${formatMonthPeriod(period.slice(0, 7), monthStartDay)} للطلاب المقيدين حاليًا ممن لا يتجاوز تاريخ تسجيلهم نهاية الدورة؟ يشمل ذلك الطلاب الذين ليس لهم تاريخ تسجيل. راجع الرسوم قبل تسجيل السداد.`)) return
+    setBusy(true); setError('')
+    try {
+      const result = await api.generatePastSubscriptionMonth(period)
+      setNotice(`تم إنشاء ${result.generated} سجل للدورة المختارة.`)
+      await Promise.all([loadRecords(), loadFinance()])
+    } catch (reason: any) { setError(reason.message || 'تعذر إنشاء سجلات الدورة السابقة') }
+    finally { setBusy(false) }
+  }
+
   async function exportExpenseExcel() {
     setBusy(true); setError('')
     try {
@@ -540,16 +570,22 @@ export default function SubscriptionsPage() {
     {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300">{error}</div>}
     {notice && <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">{notice}</div>}
 
+    <label className="block max-w-xs text-sm font-semibold text-deep-700">الدورة المالية المعروضة
+      <input type="month" max={currentMonthValue(monthStartDay)} value={period.slice(0, 7)} onChange={event => { if (event.target.value) { setPeriod(monthRange(event.target.value, monthStartDay).start); setPage(1) } }} className="surface-field mt-1 w-full rounded-xl px-3 py-2.5 text-sm" />
+    </label>
+
     <section className="grid grid-cols-3 gap-2">
       {[
-        ['المحصل', overview?.cash_collected_minor ?? 0, 'text-emerald-600'],
+        ['التحصيل خلال الدورة', overview?.cash_collected_minor ?? 0, 'text-emerald-600'],
         ['المصروفات', overview?.expenses_minor ?? 0, 'text-red-600'],
         ['صافي الوضع المالي', overview?.net_cash_minor ?? 0, (overview?.net_cash_minor ?? 0) >= 0 ? 'text-blue-700' : 'text-red-600'],
       ].map(([label, value, color]) => <div key={String(label)} className="glass-card rounded-xl px-3 py-2"><p className="text-[11px] text-deep-500">{label}</p><p className={`mt-1 text-sm font-bold ${color}`}>{formatSubscriptionMoney(Number(value), currency)}</p></div>)}
     </section>
+    <p className="text-xs text-deep-500">الملخص المالي يشمل جميع عمليات الدورة. الفلاتر أدناه تغيّر القوائم وملخص الاشتراكات فقط.</p>
 
     <section className="glass-card rounded-2xl p-4">
-      <h2 className="font-bold text-deep-900">التحصيل حسب طريقة الدفع</h2>
+      <h2 className="font-bold text-deep-900">التحصيل حسب طريقة الدفع خلال الدورة</h2>
+      <p className="mt-1 text-xs text-deep-500">تُحسب مبالغ هذا القسم بتاريخ الدفع، حتى لو كانت رسوم دورة أخرى.</p>
       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{(overview?.payment_methods || []).map(item => <div key={item.method} className="rounded-xl border border-water-200 p-3"><p className="text-sm font-bold text-deep-800">{paymentMethodLabel(item.method)}</p><p className="mt-2 text-lg font-bold text-emerald-600">{formatSubscriptionMoney(item.income_minor, currency)}</p></div>)}</div>
     </section>
 
@@ -561,9 +597,9 @@ export default function SubscriptionsPage() {
     {activeSection === 'subscriptions' && <>
     {!settings?.enabled && <section className="glass-card rounded-2xl p-5"><h2 className="text-lg font-bold text-deep-900">تفعيل الاشتراكات الشهرية</h2><p className="mt-1 text-sm text-deep-500">يمكن تسجيل المصروفات دون الاشتراكات، أو تفعيل رسوم الطلاب من هنا.</p><form onSubmit={activate} className="mt-4 grid gap-3 sm:grid-cols-3"><input inputMode="decimal" required value={activationFee} onChange={event => setActivationFee(event.target.value)} placeholder="الرسم الشهري" className="surface-field rounded-xl px-4 py-2.5" /><select value={activationCurrency} onChange={event => setActivationCurrency(event.target.value)} className="surface-field rounded-xl px-4 py-2.5"><option value="EGP">EGP</option><option value="SAR">SAR</option><option value="USD">USD</option></select><button disabled={busy} className="water-btn rounded-xl px-4 py-2.5 font-bold text-white disabled:opacity-50">تفعيل الاشتراكات</button></form></section>}
 
-    <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-bold text-deep-900">اشتراكات الطلاب</h2><p className="text-sm text-deep-500">الرسوم والسداد للدورة المختارة</p></div>{settings?.enabled && <button type="button" onClick={() => setShowBulkCorrection(true)} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">تصحيح رسوم الشهر جماعيًا</button>}</div>
+    <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-bold text-deep-900">اشتراكات الطلاب</h2><p className="text-sm text-deep-500">الرسوم والسداد المنسوبان إلى الدورة المختارة، بصرف النظر عن تاريخ الدفع</p></div>{settings?.enabled && <div className="flex flex-wrap gap-2">{isPastPeriod && <button type="button" disabled={busy} onClick={() => void generatePastMonth()} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-50">إنشاء الرسوم الناقصة للدورة</button>}<button type="button" onClick={() => setShowBulkCorrection(true)} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">تصحيح رسوم الشهر جماعيًا</button></div>}</div>
 
-    <section className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+    <section className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5" aria-label="ملخص الاشتراكات المطابقة للفلاتر">
       {[
         ['المتوقع', summary.expected_minor, 'text-deep-900'],
         ['المحصل', summary.collected_minor, 'text-emerald-600'],
@@ -574,10 +610,7 @@ export default function SubscriptionsPage() {
     </section>
 
     <section className="glass-card rounded-2xl p-4">
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
-        <label className="text-xs font-medium text-deep-600">الدورة
-          <input type="month" value={period.slice(0, 7)} onChange={event => { setPeriod(monthRange(event.target.value, monthStartDay).start); setPage(1) }} className="surface-field mt-1 w-full rounded-xl px-3 py-2.5 text-sm" />
-        </label>
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
         <label className="text-xs font-medium text-deep-600">حالة السداد
           <select value={paidFilter} onChange={event => { setPaidFilter(event.target.value as typeof paidFilter); setPage(1) }} className="surface-field mt-1 w-full rounded-xl px-3 py-2.5 text-sm"><option value="all">الكل</option><option value="paid">مدفوع</option><option value="unpaid">غير مدفوع</option></select>
         </label>
@@ -621,11 +654,11 @@ export default function SubscriptionsPage() {
       <div className="glass-card overflow-hidden rounded-2xl"><div className="flex items-center justify-between border-b border-water-200 p-4"><span className="font-bold text-deep-800">سجل المصروفات</span><span className="text-sm font-bold text-red-600">{formatSubscriptionMoney(expenses.reduce((sum, item) => sum + item.amount_minor, 0), currency)}</span></div>{expenses.length === 0 ? <div className="p-10 text-center text-sm text-deep-500">لا توجد مصروفات مطابقة.</div> : <div className="divide-y divide-water-200/60">{expenses.map(expense => <article key={expense.id} className="grid gap-3 p-4 md:grid-cols-[1.4fr_1fr_1fr_auto] md:items-center"><div><h3 className="font-bold text-deep-900">{expense.name}</h3><p className="mt-1 text-xs text-deep-500">{expense.category_label}{expense.note ? ` · ${expense.note}` : ''}</p></div><div><p className="text-xs text-deep-500">المبلغ</p><p className="font-bold text-red-600">{formatSubscriptionMoney(expense.amount_minor, currency)}</p></div><div><p className="text-xs text-deep-500">الدفع</p><p className="text-sm text-deep-700">{expense.expense_date} · {paymentMethodLabel(expense.payment_method)}</p></div><div className="flex gap-2 md:justify-end"><button type="button" onClick={() => setEditingExpense(expense)} className="water-btn-outline rounded-lg px-3 py-1.5 text-xs">تعديل</button><button type="button" disabled={busy} onClick={() => void removeExpense(expense)} className="rounded-lg border border-red-200 px-3 py-1.5 text-xs text-red-600 dark:border-red-800">حذف</button></div></article>)}</div>}</div>
     </section>}
 
-    {payingRecord && <Modal title={`سداد اشتراك — ${payingRecord.student_name}`} onClose={() => setPayingRecord(null)}><PaymentForm count={1} totalMinor={payingRecord.fee_minor} currency={currency} busy={busy} onCancel={() => setPayingRecord(null)} onSubmit={data => submitPayment([payingRecord.id], data)} /></Modal>}
-    {bulkPaying && <Modal title="تسجيل سداد جماعي" onClose={() => setBulkPaying(false)}><PaymentForm count={selected.size} totalMinor={selectedTotal} currency={currency} busy={busy} onCancel={() => setBulkPaying(false)} onSubmit={data => submitPayment(Array.from(selected), data)} /></Modal>}
+    {payingRecord && <Modal title={`سداد اشتراك — ${payingRecord.student_name}`} onClose={() => setPayingRecord(null)}><PaymentForm count={1} totalMinor={payingRecord.fee_minor} currency={currency} defaultDate={selectedEntryDate} busy={busy} onCancel={() => setPayingRecord(null)} onSubmit={data => submitPayment([payingRecord.id], data)} /></Modal>}
+    {bulkPaying && <Modal title="تسجيل سداد جماعي" onClose={() => setBulkPaying(false)}><PaymentForm count={selected.size} totalMinor={selectedTotal} currency={currency} defaultDate={selectedEntryDate} busy={busy} onCancel={() => setBulkPaying(false)} onSubmit={data => submitPayment(Array.from(selected), data)} /></Modal>}
     {editingRecord && <Modal title={`تعديل رسوم — ${editingRecord.student_name}`} onClose={() => setEditingRecord(null)}><FeeForm record={editingRecord} currency={currency} busy={busy} onCancel={() => setEditingRecord(null)} onSubmit={saveFee} /></Modal>}
     {receipt && <ReceiptView receipt={receipt} currency={currency} onClose={() => setReceipt(null)} />}
-    {editingExpense !== undefined && <Modal title={editingExpense ? `تعديل مصروف — ${editingExpense.name}` : 'إضافة مصروف'} onClose={() => setEditingExpense(undefined)} wide><ExpenseForm expense={editingExpense} categories={expenseCategories} currency={currency} busy={busy} onCancel={() => setEditingExpense(undefined)} onSubmit={saveExpense} /></Modal>}
+    {editingExpense !== undefined && <Modal title={editingExpense ? `تعديل مصروف — ${editingExpense.name}` : 'إضافة مصروف'} onClose={() => setEditingExpense(undefined)} wide><ExpenseForm expense={editingExpense} categories={expenseCategories} currency={currency} defaultDate={selectedEntryDate} busy={busy} onCancel={() => setEditingExpense(undefined)} onSubmit={saveExpense} /></Modal>}
     {showBulkCorrection && <Modal title="تصحيح رسوم شهر كامل" onClose={() => setShowBulkCorrection(false)}><BulkCorrectionForm period={period} currency={currency} busy={busy} onCancel={() => setShowBulkCorrection(false)} onSubmit={correctMonth} /></Modal>}
     {showSettings && <Modal title="إعدادات المالية" onClose={() => setShowSettings(false)} wide><form onSubmit={saveSettings} className="space-y-5">
       <section className="space-y-4">

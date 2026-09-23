@@ -8,7 +8,7 @@ import { configuredAbsentStatus, configuredAttendanceStatuses, configuredPresent
 import { configuredExcelExportTemplates, DEFAULT_EXCEL_EXPORT_TEMPLATES, type ExcelExportTemplates } from '@/lib/excel-templates'
 import type { Circle, SheikhInfo, StudentCategory, TahfizInvitation } from '@/lib/types'
 import type { WardCategory } from '@/lib/types'
-import { PROGRESS_CATEGORY_OPTIONS } from '@/components/TahfizInitialSettingsFields'
+import { PROGRESS_CATEGORY_OPTIONS, canAddProgressCategory, isCustomProgressCategory, progressCategoryLabel } from '@/components/TahfizInitialSettingsFields'
 import AsyncState from '@/components/AsyncState'
 import ExcelTemplateSettings from '@/components/ExcelTemplateSettings'
 
@@ -46,7 +46,8 @@ export default function TahfizSettingsPage() {
   const [weekStartDay, setWeekStartDay] = useState(6)
   const [monthStartDay, setMonthStartDay] = useState(1)
   const [progressTrackingEnabled, setProgressTrackingEnabled] = useState(false)
-  const [progressCategories, setProgressCategories] = useState<WardCategory[]>(['new_memorization'])
+  const [progressCategories, setProgressCategories] = useState<WardCategory[]>(['new_memorization', 'recent_revision'])
+  const [newProgressCategory, setNewProgressCategory] = useState('')
   const [sheikhSelectionEnabled, setSheikhSelectionEnabled] = useState(true)
   const [restrictSheikhStudentAccess, setRestrictSheikhStudentAccess] = useState(true)
   const [attendanceStatuses, setAttendanceStatuses] = useState<string[]>([])
@@ -89,6 +90,13 @@ export default function TahfizSettingsPage() {
   const [invitationBusy, setInvitationBusy] = useState(false)
   const [latestInvitationLink, setLatestInvitationLink] = useState('')
 
+  const addProgressCategory = () => {
+    const category = newProgressCategory.trim()
+    if (!canAddProgressCategory(category, progressCategories)) return
+    setProgressCategories(current => [...current, category])
+    setNewProgressCategory('')
+  }
+
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem('user') || '{}')
     if (storedUser.role !== 'admin' && storedUser.role !== 'super_admin') {
@@ -105,7 +113,7 @@ export default function TahfizSettingsPage() {
         setWeekStartDay(data.week_start_day ?? 6)
         setMonthStartDay(data.month_start_day ?? 1)
         setProgressTrackingEnabled(Boolean(data.progress_tracking_enabled))
-        setProgressCategories(data.progress_categories?.length ? data.progress_categories : ['new_memorization'])
+        setProgressCategories(data.progress_categories?.length ? data.progress_categories : ['new_memorization', 'recent_revision'])
         setSheikhSelectionEnabled(data.attendance_sheikh_selection_enabled ?? true)
         setRestrictSheikhStudentAccess(data.restrict_sheikh_student_access ?? true)
         setAttendanceStatuses(configuredAttendanceStatuses(data.attendance_statuses))
@@ -717,7 +725,7 @@ export default function TahfizSettingsPage() {
             title="متابعة الحفظ والمراجعة"
             description="إيقافها يخفي الميزة دون حذف البيانات السابقة."
           />
-          {progressTrackingEnabled && <div className="mt-4 grid gap-3 md:grid-cols-3">
+          {progressTrackingEnabled && <div className="mt-4 grid gap-3 md:grid-cols-2">
             {PROGRESS_CATEGORY_OPTIONS.map(option => {
               const checked = progressCategories.includes(option.key)
               return <label key={option.key} className={`cursor-pointer rounded-xl border p-4 ${checked ? 'border-cyan-500 bg-cyan-50 dark:bg-cyan-950/30' : 'border-water-200 bg-white/50 dark:bg-slate-800/50'}`}>
@@ -726,7 +734,11 @@ export default function TahfizSettingsPage() {
               </label>
             })}
           </div>}
-          <p className="mt-3 text-xs leading-5 text-deep-500">الحفظ متاح افتراضياً. تعطيل قسم إضافي يخفيه من الإدخال الجديد دون حذف سجلاته السابقة.</p>
+          {progressTrackingEnabled && <div className="mt-4 space-y-3">
+            <div className="flex flex-wrap gap-2">{progressCategories.filter(isCustomProgressCategory).map(category => <span key={category} className="inline-flex items-center gap-2 rounded-full border border-water-200 bg-white/60 px-3 py-1.5 text-xs font-semibold text-deep-700">{progressCategoryLabel(category)}<button type="button" onClick={() => setProgressCategories(current => current.filter(item => item !== category))} aria-label={`حذف ${category}`} className="text-red-500">×</button></span>)}</div>
+            <div className="flex gap-2"><input value={newProgressCategory} onChange={event => setNewProgressCategory(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); addProgressCategory() } }} maxLength={50} placeholder="اسم قسم متابعة مخصص" className="surface-field min-w-0 flex-1 rounded-xl px-3 py-2 text-sm" /><button type="button" onClick={addProgressCategory} disabled={!canAddProgressCategory(newProgressCategory, progressCategories)} className="water-btn-outline rounded-xl px-4 text-xs font-semibold disabled:opacity-40">إضافة</button></div>
+          </div>}
+          <p className="mt-3 text-xs leading-5 text-deep-500">الحفظ والمراجعة متاحان افتراضياً. إخفاء قسم لا يحذف سجلاته السابقة.</p>
         </SettingsSection>}
 
         {section === 'excel' && <SettingsSection title="قوالب Excel" description="اختر الأعمدة وعناوينها مرة واحدة لجميع ملفات الحضور والتقارير.">

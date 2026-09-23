@@ -5,12 +5,7 @@ import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 import { SURAHS, surahInfo } from '@/lib/quran'
 import type { StudentQuranPlan, WardCategory } from '@/lib/types'
-
-const CATEGORY_LABELS: Record<WardCategory, string> = {
-  new_memorization: 'الحفظ',
-  recent_revision: 'المراجعة القريبة',
-  old_revision: 'المراجعة البعيدة',
-}
+import { progressCategoryLabel } from '@/components/TahfizInitialSettingsFields'
 
 type QuranPlanDraft = Omit<StudentQuranPlan, 'id' | 'student_id' | 'updated_at'>
 
@@ -103,7 +98,7 @@ export default function StudentQuranPlanEditor({ studentId, initiallyEnabled, co
         {plans.map(plan => {
           const maxAyah = surahInfo(plan.next_surah || 1).ayahs
           return <fieldset key={plan.category} className="rounded-xl border border-cyan-200 bg-cyan-50/35 p-4 dark:border-cyan-900 dark:bg-cyan-950/15">
-            <legend className="px-1 text-sm font-bold text-deep-800">{CATEGORY_LABELS[plan.category]}</legend>
+            <legend className="px-1 text-sm font-bold text-deep-800">{progressCategoryLabel(plan.category)}</legend>
             {plan.completed_at && <p className="mb-3 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-200">اكتمل الورد ✓ — عدّل نقطة البداية لبدء دورة جديدة.</p>}
             <div className="mt-1 grid grid-cols-2 gap-3">
               <label className="text-xs text-deep-600">الوحدة<select value={plan.increment_unit} onChange={event => {
@@ -120,7 +115,7 @@ export default function StudentQuranPlanEditor({ studentId, initiallyEnabled, co
           </fieldset>
         })}
       </div>
-      {missingCategories.length > 0 && <div className="mt-4 flex flex-wrap items-center gap-2"><span className="text-xs font-semibold text-deep-600">إضافة خطة:</span>{missingCategories.map(category => <button key={category} type="button" onClick={() => setPlans(current => [...current, defaultPlan(category)])} className="water-btn-outline rounded-lg px-3 py-2 text-xs font-bold">+ {CATEGORY_LABELS[category]}</button>)}</div>}
+      {missingCategories.length > 0 && <div className="mt-4 flex flex-wrap items-center gap-2"><span className="text-xs font-semibold text-deep-600">إضافة خطة:</span>{missingCategories.map(category => <button key={category} type="button" onClick={() => setPlans(current => [...current, defaultPlan(category)])} className="water-btn-outline rounded-lg px-3 py-2 text-xs font-bold">+ {progressCategoryLabel(category)}</button>)}</div>}
       <button type="button" disabled={!loaded || saving} onClick={() => void save()} className="water-btn mt-4 rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{saving ? 'جاري الحفظ...' : 'حفظ خطة الورد'}</button>
     </>}
     {error && <p role="alert" className="mt-3 text-xs font-semibold text-red-600 dark:text-red-300">{error}</p>}

@@ -251,6 +251,10 @@ export const api = {
     })
   },
 
+  generatePastSubscriptionMonth(period: string) {
+    return request<{ generated: number }>(`/subscriptions/months/generate?period=${encodeURIComponent(period)}`, { method: 'POST' })
+  },
+
   getFinanceOverview(period?: string) {
     const query = period ? `?period=${encodeURIComponent(period)}` : ''
     return request<FinanceOverview>(`/finance/overview${query}`)
