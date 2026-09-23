@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { getArabicDay, mediaUrl } from '@/lib/format'
 import type { AttendanceThresholdAlert, ProgressCategory, QuranProgressInput, Session, SessionAttendance, SheikhGroup } from '@/lib/types'
+import { QUALITY_OPTIONS, type QualityOption } from '@/lib/quran'
 import InlineQuranProgress, { isSurahAyahRangeComplete, type ProgressDraftMap, progressDraftKey, progressEntryToInput } from '@/components/InlineQuranProgress'
 import AttendanceStatusControl, { attendanceStatusColorClass } from '@/components/AttendanceStatusControl'
 import { configuredAbsentStatus, configuredAttendanceStatuses, configuredPresentStatus, countStudentsExceptAbsent, DEFAULT_ATTENDANCE_STATUSES } from '@/lib/attendance'
@@ -40,6 +41,7 @@ function StudentRow({
   previousProgressDrafts,
   suggestedProgressDrafts,
   progressCategories,
+  qualityOptions,
   savedProgressKeys,
   dirtyProgressKeys,
   progressSaving,
@@ -64,6 +66,7 @@ function StudentRow({
   previousProgressDrafts: ProgressDraftMap
   suggestedProgressDrafts: ProgressDraftMap
   progressCategories: ProgressCategory[]
+  qualityOptions: QualityOption[]
   savedProgressKeys: Set<string>
   dirtyProgressKeys: Set<string>
   progressSaving: boolean
@@ -149,6 +152,7 @@ function StudentRow({
           previousDrafts={previousProgressDrafts}
           suggestedDrafts={suggestedProgressDrafts}
           categories={progressCategories}
+          qualityOptions={qualityOptions}
           savedKeys={savedProgressKeys}
           dirtyKeys={dirtyProgressKeys}
           disabled={disabled}
@@ -178,6 +182,7 @@ function SheikhAccordion({
   previousProgressDrafts,
   suggestedProgressDrafts,
   progressCategories,
+  qualityOptions,
   savedProgressKeys,
   dirtyProgressKeys,
   progressSaving,
@@ -205,6 +210,7 @@ function SheikhAccordion({
   previousProgressDrafts: ProgressDraftMap
   suggestedProgressDrafts: ProgressDraftMap
   progressCategories: ProgressCategory[]
+  qualityOptions: QualityOption[]
   savedProgressKeys: Set<string>
   dirtyProgressKeys: Set<string>
   progressSaving: boolean
@@ -255,6 +261,7 @@ function SheikhAccordion({
               previousProgressDrafts={previousProgressDrafts}
               suggestedProgressDrafts={suggestedProgressDrafts}
               progressCategories={progressCategories}
+              qualityOptions={qualityOptions}
               savedProgressKeys={savedProgressKeys}
               dirtyProgressKeys={dirtyProgressKeys}
               progressSaving={progressSaving}
@@ -316,6 +323,7 @@ export default function SessionAttendancePage() {
   const [previousProgressDrafts, setPreviousProgressDrafts] = useState<ProgressDraftMap>({})
   const [suggestedProgressDrafts, setSuggestedProgressDrafts] = useState<ProgressDraftMap>({})
   const [progressCategories, setProgressCategories] = useState<ProgressCategory[]>(['new_memorization', 'recent_revision'])
+  const [qualityOptions, setQualityOptions] = useState<QualityOption[]>(QUALITY_OPTIONS.map(option => ({ ...option })))
   const [savedProgressKeys, setSavedProgressKeys] = useState<Set<string>>(new Set())
   const [dirtyProgressKeys, setDirtyProgressKeys] = useState<Set<string>>(new Set())
   const [progressSaving, setProgressSaving] = useState(false)
@@ -371,6 +379,9 @@ export default function SessionAttendancePage() {
       setUserRole(currentUser.role || '')
       const enabled = Boolean(progress.enabled)
       setProgressCategories(progress.categories?.length ? progress.categories : ['new_memorization', 'recent_revision'])
+      setQualityOptions(currentUser.tahfiz?.progress_quality_options?.length === 5
+        ? currentUser.tahfiz.progress_quality_options
+        : QUALITY_OPTIONS.map(option => ({ ...option })))
       setTahfizProgressEnabled(Boolean(currentUser.tahfiz?.progress_tracking_enabled))
       setProgressEnabled(enabled)
       setAttendanceStatuses(configuredAttendanceStatuses(currentUser.tahfiz?.attendance_statuses))
@@ -964,6 +975,7 @@ export default function SessionAttendancePage() {
             previousProgressDrafts={previousProgressDrafts}
             suggestedProgressDrafts={suggestedProgressDrafts}
             progressCategories={progressCategories}
+            qualityOptions={qualityOptions}
             savedProgressKeys={savedProgressKeys}
             dirtyProgressKeys={dirtyProgressKeys}
             progressSaving={progressSaving}

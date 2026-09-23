@@ -11,6 +11,7 @@ import type { WardCategory } from '@/lib/types'
 import { PROGRESS_CATEGORY_OPTIONS, canAddProgressCategory, isCustomProgressCategory, progressCategoryLabel } from '@/components/TahfizInitialSettingsFields'
 import AsyncState from '@/components/AsyncState'
 import ExcelTemplateSettings from '@/components/ExcelTemplateSettings'
+import { QUALITY_OPTIONS, type QualityOption } from '@/lib/quran'
 
 const WEEKDAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
 const STATUS_COLOR_OPTIONS = [
@@ -47,6 +48,7 @@ export default function TahfizSettingsPage() {
   const [monthStartDay, setMonthStartDay] = useState(1)
   const [progressTrackingEnabled, setProgressTrackingEnabled] = useState(false)
   const [progressCategories, setProgressCategories] = useState<WardCategory[]>(['new_memorization', 'recent_revision'])
+  const [progressQualityOptions, setProgressQualityOptions] = useState<QualityOption[]>(QUALITY_OPTIONS.map(option => ({ ...option })))
   const [newProgressCategory, setNewProgressCategory] = useState('')
   const [sheikhSelectionEnabled, setSheikhSelectionEnabled] = useState(true)
   const [restrictSheikhStudentAccess, setRestrictSheikhStudentAccess] = useState(true)
@@ -114,6 +116,9 @@ export default function TahfizSettingsPage() {
         setMonthStartDay(data.month_start_day ?? 1)
         setProgressTrackingEnabled(Boolean(data.progress_tracking_enabled))
         setProgressCategories(data.progress_categories?.length ? data.progress_categories : ['new_memorization', 'recent_revision'])
+        setProgressQualityOptions(data.progress_quality_options?.length === 5
+          ? data.progress_quality_options
+          : QUALITY_OPTIONS.map(option => ({ ...option })))
         setSheikhSelectionEnabled(data.attendance_sheikh_selection_enabled ?? true)
         setRestrictSheikhStudentAccess(data.restrict_sheikh_student_access ?? true)
         setAttendanceStatuses(configuredAttendanceStatuses(data.attendance_statuses))
@@ -369,7 +374,11 @@ export default function TahfizSettingsPage() {
           session_name_options: sessionNameOptions,
           sheikh_custom_fields_enabled: sheikhCustomFieldsEnabled,
         },
-        progress: { progress_tracking_enabled: progressTrackingEnabled, progress_categories: progressCategories },
+        progress: {
+          progress_tracking_enabled: progressTrackingEnabled,
+          progress_categories: progressCategories,
+          progress_quality_options: progressQualityOptions,
+        },
         excel: { excel_export_templates: excelExportTemplates },
         integrations: {
           whatsend_enabled: whatsendEnabled,
@@ -738,6 +747,16 @@ export default function TahfizSettingsPage() {
             <div className="flex flex-wrap gap-2">{progressCategories.filter(isCustomProgressCategory).map(category => <span key={category} className="inline-flex items-center gap-2 rounded-full border border-water-200 bg-white/60 px-3 py-1.5 text-xs font-semibold text-deep-700">{progressCategoryLabel(category)}<button type="button" onClick={() => setProgressCategories(current => current.filter(item => item !== category))} aria-label={`حذف ${category}`} className="text-red-500">×</button></span>)}</div>
             <div className="flex gap-2"><input value={newProgressCategory} onChange={event => setNewProgressCategory(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); addProgressCategory() } }} maxLength={50} placeholder="اسم قسم متابعة مخصص" className="surface-field min-w-0 flex-1 rounded-xl px-3 py-2 text-sm" /><button type="button" onClick={addProgressCategory} disabled={!canAddProgressCategory(newProgressCategory, progressCategories)} className="water-btn-outline rounded-xl px-4 text-xs font-semibold disabled:opacity-40">إضافة</button></div>
           </div>}
+          {progressTrackingEnabled && <fieldset className="mt-5 rounded-2xl border border-water-200 p-4">
+            <legend className="px-2 text-sm font-bold text-deep-800">تسميات درجات التقييم</legend>
+            <p className="mb-3 text-xs leading-5 text-deep-500">يمكنك تخصيص أسماء الدرجات الخمس. تبقى القيم الرقمية من ١ إلى ٥ ثابتة للحفاظ على دقة المتوسطات والسجلات السابقة.</p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {progressQualityOptions.slice().sort((a, b) => b.value - a.value).map(option => <label key={option.value} className="text-xs font-semibold text-deep-600">
+                الدرجة {option.value}
+                <input value={option.label} maxLength={40} required onChange={event => setProgressQualityOptions(current => current.map(item => item.value === option.value ? { ...item, label: event.target.value } : item))} className="surface-field mt-1 w-full rounded-xl px-3 py-2 text-sm" />
+              </label>)}
+            </div>
+          </fieldset>}
           <p className="mt-3 text-xs leading-5 text-deep-500">الحفظ والمراجعة متاحان افتراضياً. إخفاء قسم لا يحذف سجلاته السابقة.</p>
         </SettingsSection>}
 

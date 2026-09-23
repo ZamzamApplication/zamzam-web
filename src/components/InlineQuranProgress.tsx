@@ -1,7 +1,8 @@
 'use client'
 
 import type { ProgressCategory, QuranProgressEntry, QuranProgressInput } from '@/lib/types'
-import { QUALITY_OPTIONS, SURAHS, surahInfo } from '@/lib/quran'
+import type { QualityOption } from '@/lib/quran'
+import { SURAHS, surahInfo } from '@/lib/quran'
 import { progressCategoryLabel } from '@/components/TahfizInitialSettingsFields'
 
 export type ProgressDraftMap = Record<string, QuranProgressInput>
@@ -116,6 +117,7 @@ export default function InlineQuranProgress({
   previousDrafts,
   suggestedDrafts,
   categories,
+  qualityOptions,
   savedKeys,
   dirtyKeys,
   disabled,
@@ -128,6 +130,7 @@ export default function InlineQuranProgress({
   previousDrafts: ProgressDraftMap
   suggestedDrafts: ProgressDraftMap
   categories: ProgressCategory[]
+  qualityOptions: QualityOption[]
   savedKeys: Set<string>
   dirtyKeys: Set<string>
   disabled: boolean
@@ -201,7 +204,7 @@ export default function InlineQuranProgress({
                   <div className="col-span-2">
                     <p className="mb-1 text-[11px] font-semibold text-deep-600">التقييم</p>
                     <div className="flex flex-wrap gap-1">
-                      {QUALITY_OPTIONS.map((option) => <button key={option.value} type="button" onClick={() => onChange({ ...draft, quality_score: option.value })} disabled={disabled} className={`rounded-lg border px-2 py-1 text-[10px] font-semibold ${draft.quality_score === option.value ? 'border-cyan-500 bg-cyan-600 text-white' : 'border-water-200 bg-white text-deep-600 dark:bg-slate-900'}`}>{option.label}</button>)}
+                      {qualityOptions.map((option) => <button key={option.value} type="button" onClick={() => onChange({ ...draft, quality_score: option.value })} disabled={disabled} className={`rounded-lg border px-2 py-1 text-[10px] font-semibold ${draft.quality_score === option.value ? 'border-cyan-500 bg-cyan-600 text-white' : 'border-water-200 bg-white text-deep-600 dark:bg-slate-900'}`}>{option.label}</button>)}
                     </div>
                   </div>
                   <details className="col-span-2">

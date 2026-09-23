@@ -51,3 +51,5 @@ export const QUALITY_OPTIONS = [
   { value: 2, label: 'مقبول' },
   { value: 1, label: 'يحتاج متابعة' },
 ] as const
+
+export type QualityOption = { value: number; label: string }

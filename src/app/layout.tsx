@@ -293,7 +293,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const mobileNavItems: { href: string; label: string; icon: NavIconName; adminOnly?: boolean }[] = [
     { href: '/dashboard', label: 'الرئيسية', icon: 'home' },
     { href: '/sessions', label: 'الحلقات', icon: 'sessions' },
-    { href: '/finance', label: 'المالية', icon: 'finance', adminOnly: true },
+    { href: '/finance', label: 'القسم المالي', icon: 'finance', adminOnly: true },
     { href: '/manage', label: 'الإدارة', icon: 'manage', adminOnly: true },
     { href: '/settings', label: 'الإعدادات', icon: 'settings', adminOnly: true },
   ]
@@ -318,7 +318,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         } else if (u.tahfiz?.status !== 'active' && pathname !== '/pending') {
           router.replace('/pending')
         } else if (u.tahfiz?.status === 'active' && isPendingPage) {
-          router.replace('/dashboard')
+          router.replace(u.role === 'auditor' ? '/finance' : '/dashboard')
+        } else if (u.role === 'auditor' && pathname !== '/finance') {
+          router.replace('/finance')
         }
       })
       .catch(() => {
@@ -407,11 +409,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {!loading && user && (
           <>
           <header className="mobile-topbar nav-glass md:hidden sticky top-0 z-40">
-            <Link href={isDedicatedPlatform ? '/platform' : '/dashboard'} className="nav-brand" aria-label="الصفحة الرئيسية">
+            <Link href={isDedicatedPlatform ? '/platform' : user.role === 'auditor' ? '/finance' : '/dashboard'} className="nav-brand" aria-label="الصفحة الرئيسية">
               <span className="nav-brand-mark">💧</span> زمزم
             </Link>
             <div className="flex items-center gap-2">
-              <TahfizSwitcher user={user} onSwitch={switchTahfiz} onCreate={() => { setCreateTahfizError(''); setNewTahfizStep(1); setShowCreateTahfiz(true) }} switchingId={switchingTahfizId} />
+              {user.role !== 'auditor' && <TahfizSwitcher user={user} onSwitch={switchTahfiz} onCreate={() => { setCreateTahfizError(''); setNewTahfizStep(1); setShowCreateTahfiz(true) }} switchingId={switchingTahfizId} />}
               <ThemeToggle />
               <button onClick={logout} className="nav-icon-btn" title="تسجيل الخروج" aria-label="تسجيل الخروج">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -423,15 +425,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <nav className="nav-glass hidden md:block px-6 py-3 sticky top-0 z-40" aria-label="التنقل الرئيسي">
             <div className="max-w-6xl mx-auto flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2 md:gap-3 flex-wrap">
-              <Link href={isDedicatedPlatform ? '/platform' : '/dashboard'} className="nav-brand">
+              <Link href={isDedicatedPlatform ? '/platform' : user.role === 'auditor' ? '/finance' : '/dashboard'} className="nav-brand">
                 <span className="nav-brand-mark">💧</span> زمزم
               </Link>
               {user?.role === 'super_admin' && isDedicatedPlatform ? (
                 <span className="nav-link nav-link-active">إدارة المنصة</span>
               ) : (
                 <>
-                  <Link href="/sessions" className={navLinkClass('/sessions')} aria-current={isActive('/sessions') ? 'page' : undefined}>الحلقات</Link>
-                  {(user?.role === 'admin' || user?.role === 'super_admin') && <Link href="/finance" className={navLinkClass('/finance')} aria-current={isActive('/finance') ? 'page' : undefined}>القسم المالي</Link>}
+                  {user?.role !== 'auditor' && <Link href="/sessions" className={navLinkClass('/sessions')} aria-current={isActive('/sessions') ? 'page' : undefined}>الحلقات</Link>}
+                  {(user?.role === 'admin' || user?.role === 'super_admin' || user?.role === 'auditor') && <Link href="/finance" className={navLinkClass('/finance')} aria-current={isActive('/finance') ? 'page' : undefined}>القسم المالي</Link>}
                   {(user?.role === 'admin' || user?.role === 'super_admin') && <Link href="/manage" className={navLinkClass('/manage')} aria-current={isActive('/manage') ? 'page' : undefined}>الإدارة</Link>}
                   {(user?.role === 'admin' || user?.role === 'super_admin') && <Link href="/settings" className={navLinkClass('/settings')} aria-current={isActive('/settings') ? 'page' : undefined}>إعدادات التحفيظ</Link>}
                   {user?.role === 'super_admin' && <Link href="/platform" className={navLinkClass('/platform')} aria-current={isActive('/platform') ? 'page' : undefined}>المنصة</Link>}
@@ -439,7 +441,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               )}
             </div>
             <div className="flex items-center gap-2 md:gap-3">
-              <TahfizSwitcher user={user} onSwitch={switchTahfiz} onCreate={() => { setCreateTahfizError(''); setNewTahfizStep(1); setShowCreateTahfiz(true) }} switchingId={switchingTahfizId} />
+              {user.role !== 'auditor' && <TahfizSwitcher user={user} onSwitch={switchTahfiz} onCreate={() => { setCreateTahfizError(''); setNewTahfizStep(1); setShowCreateTahfiz(true) }} switchingId={switchingTahfizId} />}
               <ThemeToggle />
               <span className="nav-username">{user.username}</span>
               <button
@@ -452,7 +454,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </nav>
           {!isDedicatedPlatform && <nav className="mobile-bottom-nav md:hidden" aria-label="التنقل الرئيسي">
-            {mobileNavItems.filter((item) => !item.adminOnly || user.role === 'admin' || user.role === 'super_admin').map((item) => (
+            {mobileNavItems.filter((item) => user.role === 'auditor' ? item.href === '/finance' : !item.adminOnly || user.role === 'admin' || user.role === 'super_admin').map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -522,7 +524,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             children
           )}
         </main>
-        {!loading && user && user.role !== 'super_admin' && <FeedbackButton />}
+        {!loading && user && user.role !== 'super_admin' && user.role !== 'auditor' && <FeedbackButton />}
       </body>
     </html>
   )

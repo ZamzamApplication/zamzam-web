@@ -1,8 +1,8 @@
 export interface User {
   id: number
   username: string
-  role: 'super_admin' | 'admin' | 'sheikh'
-  global_role?: 'super_admin' | 'admin' | 'sheikh'
+  role: 'super_admin' | 'admin' | 'sheikh' | 'auditor'
+  global_role?: 'super_admin' | 'admin' | 'sheikh' | 'auditor'
   sheikh_id: number | null
   attendance_all_students_access?: boolean
   tahfiz_id: number | null
@@ -35,6 +35,7 @@ export interface User {
     whatsend_enabled?: boolean
     progress_tracking_enabled?: boolean
     progress_categories?: WardCategory[]
+    progress_quality_options?: import('./quran').QualityOption[]
   } | null
 }
 
@@ -43,7 +44,7 @@ export interface TahfizMembership {
   tahfiz_id: number
   tahfiz_name: string
   tahfiz_status: 'pending' | 'active' | 'rejected' | 'suspended'
-  role: 'admin' | 'sheikh'
+  role: 'admin' | 'sheikh' | 'auditor'
   sheikh_id: number | null
   is_active?: boolean
 }
@@ -143,6 +144,7 @@ export interface Circle {
   whatsend_enabled?: boolean
   progress_tracking_enabled?: boolean
   progress_categories?: WardCategory[]
+  progress_quality_options?: import('./quran').QualityOption[]
   subscriptions_enabled?: boolean
   subscription_default_fee_minor?: number
   subscription_currency?: string
@@ -474,7 +476,7 @@ export interface StudentProfile extends StudentInfo {
 export interface UserInfo {
   id: number
   username: string
-  role: string
+  role: 'admin' | 'sheikh' | 'auditor'
   sheikh_id: number | null
 }
 

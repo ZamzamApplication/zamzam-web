@@ -2,6 +2,7 @@ import { getApiRuntime } from './api-runtime'
 import type {
   AttendanceThresholdAlert,
   Circle,
+  ExpenseCategory,
   ExpensePage,
   ExpenseRecord,
   FinanceOverview,
@@ -258,6 +259,10 @@ export const api = {
   getFinanceOverview(period?: string) {
     const query = period ? `?period=${encodeURIComponent(period)}` : ''
     return request<FinanceOverview>(`/finance/overview${query}`)
+  },
+
+  getFinanceSettings() {
+    return request<{ month_start_day: number; expense_categories: ExpenseCategory[]; sheikhs: { id: number; name: string }[] }>('/finance/settings')
   },
 
   getExpenses(filters: { period?: string; category_id?: string; payment_method?: SubscriptionPaymentMethod; search?: string; page?: number; page_size?: number }) {

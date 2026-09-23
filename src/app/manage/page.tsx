@@ -1084,7 +1084,7 @@ function InviteUserModal({ sheikhs, onClose }: { sheikhs: SheikhInfo[]; onClose:
 function AddUserModal({ sheikhs, onClose, onCreated }: { sheikhs: SheikhInfo[]; onClose: () => void; onCreated: () => void }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState('sheikh')
+  const [role, setRole] = useState<'sheikh' | 'admin' | 'auditor'>('sheikh')
   const [sheikhId, setSheikhId] = useState<number | ''>('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -1110,9 +1110,10 @@ function AddUserModal({ sheikhs, onClose, onCreated }: { sheikhs: SheikhInfo[]; 
       <form onSubmit={handleSubmit} className="space-y-4">
         <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="اسم المستخدم" required className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
         <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="كلمة المرور" required className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
-        <select value={role} onChange={(e) => setRole(e.target.value)} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
+        <select value={role} onChange={(e) => setRole(e.target.value as typeof role)} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
           <option value="sheikh">شيخ</option>
           <option value="admin">مدير</option>
+          <option value="auditor">مراجع مالي — القسم المالي فقط</option>
         </select>
         {role === 'sheikh' && (
           <select value={sheikhId} onChange={(e) => setSheikhId(e.target.value ? Number(e.target.value) : '')} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
@@ -1162,14 +1163,15 @@ function EditUserModal({ user, sheikhs, onClose, onUpdated }: { user: UserInfo; 
       <form onSubmit={handleSubmit} className="space-y-4">
         <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="اسم المستخدم" required className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
         <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="كلمة المرور (اتركه فارغاً إذا لم ترد تغييره)" className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400" />
-        <select value={role} onChange={(e) => setRole(e.target.value)} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
+        <select value={role} onChange={(e) => setRole(e.target.value as typeof role)} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
           <option value="sheikh">شيخ</option>
           <option value="admin">مدير</option>
+          <option value="auditor">مراجع مالي — القسم المالي فقط</option>
         </select>
-        <select value={sheikhId} onChange={(e) => setSheikhId(e.target.value ? Number(e.target.value) : '')} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
+        {role === 'sheikh' && <select value={sheikhId} onChange={(e) => setSheikhId(e.target.value ? Number(e.target.value) : '')} className="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-water-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-water-400">
           <option value="">-- اختر شيخاً --</option>
           {sheikhs.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </select>
+        </select>}
         <div className="flex gap-3 pt-2">
           <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 water-btn-outline rounded-xl text-sm">إلغاء</button>
           <button type="submit" disabled={loading} className="flex-1 px-4 py-2.5 water-btn text-white rounded-xl text-sm font-medium disabled:opacity-50">{loading ? 'جاري...' : 'حفظ'}</button>
@@ -2284,7 +2286,7 @@ export default function ManagePage() {
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
                         u.role === 'admin' ? 'bg-purple-100/60 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300' : 'bg-water-100/60 text-blue-700'
                       }`}>
-                        {u.role === 'admin' ? 'مدير' : 'شيخ'}
+                        {u.role === 'admin' ? 'مدير' : u.role === 'auditor' ? 'مراجع مالي' : 'شيخ'}
                       </span>
                     </div>
                     <div className="flex gap-2">
