@@ -581,7 +581,7 @@ export default function SubscriptionsPage() {
 
     <section className="grid grid-cols-3 gap-2">
       {[
-        ['التحصيل خلال الدورة', overview?.cash_collected_minor ?? 0, 'text-emerald-600'],
+        ['المحصل عن رسوم الدورة', overview?.collected_subscriptions_minor ?? 0, 'text-emerald-600'],
         ['المصروفات', overview?.expenses_minor ?? 0, 'text-red-600'],
         ['صافي الوضع المالي', overview?.net_cash_minor ?? 0, (overview?.net_cash_minor ?? 0) >= 0 ? 'text-blue-700' : 'text-red-600'],
       ].map(([label, value, color]) => <div key={String(label)} className="glass-card rounded-xl px-3 py-2"><p className="text-[11px] text-deep-500">{label}</p><p className={`mt-1 text-sm font-bold ${color}`}>{formatSubscriptionMoney(Number(value), currency)}</p></div>)}
@@ -607,7 +607,7 @@ export default function SubscriptionsPage() {
     <section className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5" aria-label="ملخص الاشتراكات المطابقة للفلاتر">
       {[
         ['المتوقع', summary.expected_minor, 'text-deep-900'],
-        ['المحصل', summary.collected_minor, 'text-emerald-600'],
+        ['المحصل عن رسوم الدورة', summary.collected_minor, 'text-emerald-600'],
         ['غير المحصل', summary.unpaid_minor, 'text-amber-600'],
       ].map(([label, value, color]) => <div key={String(label)} className="glass-card rounded-xl px-3 py-2"><p className="text-[11px] text-deep-500">{label}</p><p className={`mt-0.5 text-sm font-bold ${color}`}>{formatSubscriptionMoney(Number(value), currency)}</p></div>)}
       <div className="glass-card rounded-xl px-3 py-2"><p className="text-[11px] text-deep-500">مدفوع</p><p className="mt-0.5 text-sm font-bold text-emerald-600">{summary.paid_count}</p></div>
