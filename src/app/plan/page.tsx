@@ -81,10 +81,56 @@ function amountLabel(track: QuranPlanTrack, amount: number) {
   return `${amount} ${unitLabels[track.unit][amount === 1 ? 0 : 1]}`
 }
 
-function TrackFields({ track, index, count, onChange, onMove, onRemove, onAddWerd, embedded = false, sequencePosition = 0, styleIndex = index }: {
+function TrackDaysPicker({ track, globalWeekdays, onChange }: {
+  track: QuranPlanTrack
+  globalWeekdays: number[]
+  onChange(value: QuranPlanTrack): void
+}) {
+  const custom = track.weekdays !== undefined
+  const effective = track.weekdays ?? globalWeekdays
+  const toggleDay = (day: number) => {
+    const current = track.weekdays ?? globalWeekdays
+    const next = current.includes(day) ? current.filter(item => item !== day) : [...current, day].sort((a, b) => a - b)
+    onChange({ ...track, weekdays: next })
+  }
+  return <div className="mt-4 rounded-xl border border-slate-200 bg-white/45 p-3 dark:border-slate-700 dark:bg-slate-900/25">
+    <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-deep-700">
+      <input
+        type="checkbox"
+        checked={custom}
+        onChange={() => onChange(custom ? { ...track, weekdays: undefined } : { ...track, weekdays: [...globalWeekdays] })}
+        className="h-4 w-4 accent-blue-700"
+      />
+      تخصيص أيام لهذا البند
+    </label>
+    {!custom
+      ? <p className="mt-2 text-xs text-deep-500">يتبع أيام الدراسة العامة. فعّل التخصيص لإيقاف هذا البند في أيام معينة (تظهر راحة).</p>
+      : <>
+        <p className="mt-2 text-xs text-deep-500">ضمن أيام الدراسة العامة — الأيام غير المحددة هنا تظهر «راحة» لهذا البند فقط.</p>
+        <div className="mt-2 grid grid-cols-4 gap-1.5 sm:grid-cols-7">
+          {WEEKDAYS.map((day, dayIndex) => {
+            const selected = effective.includes(dayIndex)
+            const globalOff = !globalWeekdays.includes(dayIndex)
+            return <label
+              key={day}
+              title={globalOff ? 'يوم راحة عام — لن يكون هناك دراسة أصلاً' : day}
+              className={`cursor-pointer rounded-lg border px-1 py-2 text-center text-xs font-semibold transition ${selected && !globalOff ? 'border-cyan-500 bg-cyan-600 text-white' : 'border-water-200 bg-white/50 text-deep-600 dark:border-slate-700 dark:bg-slate-900/50'} ${globalOff ? 'opacity-50' : ''}`}
+            >
+              <input type="checkbox" checked={selected} onChange={() => toggleDay(dayIndex)} className="sr-only" />
+              {day}
+            </label>
+          })}
+        </div>
+        {effective.length === 0 && <p role="alert" className="mt-2 text-xs font-semibold text-red-600">لم تختر أي يوم — سيظهر هذا البند راحة دائمًا.</p>}
+      </>}
+  </div>
+}
+
+function TrackFields({ track, index, count, globalWeekdays, onChange, onMove, onRemove, onAddWerd, embedded = false, sequencePosition = 0, styleIndex = index }: {
   track: QuranPlanTrack
   index: number
   count: number
+  globalWeekdays: number[]
   onChange(value: QuranPlanTrack): void
   onMove(direction: -1 | 1): void
   onRemove(): void
@@ -325,6 +371,7 @@ function TrackFields({ track, index, count, onChange, onMove, onRemove, onAddWer
         {playlistImportError && <p role="alert" className="text-xs font-semibold text-red-700 dark:text-red-300">{playlistImportError}</p>}
         <button type="button" onClick={() => onChange({ ...track, items: [...(track.items || []), { id: `${track.id}-${Date.now()}-${(track.items || []).length}`, name: '', totalUnits: track.kind === 'playlist' ? 0 : 100, startUnit: 1, url: track.kind === 'playlist' ? '' : undefined, episodes: track.kind === 'playlist' ? [] : undefined }] })} className="water-btn-outline rounded-lg px-3 py-2 text-xs font-bold">+ {track.kind === 'playlist' ? 'إضافة فيديو أو قائمة أخرى' : 'إضافة كتاب آخر'}</button>
       </div>}
+      {(!embedded || sequencePosition === 0) && <TrackDaysPicker track={track} globalWeekdays={globalWeekdays} onChange={onChange} />}
     </>}
   </>
 
@@ -340,9 +387,9 @@ export default function QuranPlanPage() {
   const [endDate, setEndDate] = useState(defaults.end)
   const [weekdays, setWeekdays] = useState<number[]>([0, 1, 2, 3, 4, 5, 6])
   const [includeCompletionCheckboxes, setIncludeCompletionCheckboxes] = useState(true)
+  const [pageOrientation, setPageOrientation] = useState<'landscape' | 'portrait'>('landscape')
   const [tracks, setTracks] = useState<QuranPlanTrack[]>([defaultTrack('memorization', 'الحفظ', 5), defaultTrack('revision', 'المراجعة', 20)])
   const [plan, setPlan] = useState<GeneratedQuranPlan | null>(null)
-  const [completedDays, setCompletedDays] = useState<Set<string>>(() => new Set())
   const [excelSheets, setExcelSheets] = useState<SpreadsheetSheet[] | null>(null)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
@@ -405,7 +452,6 @@ export default function QuranPlanPage() {
     setCopied(false)
     try {
       setPlan(generateQuranPlan({ startDate, endDate, weekdays, tracks }))
-      setCompletedDays(new Set())
       setTimeout(() => document.getElementById('plan-preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
     } catch (reason) {
       const code = reason instanceof Error ? reason.message : ''
@@ -417,12 +463,19 @@ export default function QuranPlanPage() {
   const planText = () => {
     if (!plan) return ''
     const lines = [`🌿 *خطة ${ownerLabel}* 🌿`, ...(studentName.trim() ? [`👤 *${ownerLabel}:* ${studentName.trim()}`] : []), `📅 *الفترة:* ${displayDate(startDate)} إلى ${displayDate(endDate)}`, `🗓️ *أيام الدراسة:* ${[...weekdays].sort((a, b) => a - b).map(day => WEEKDAYS[day]).join('، ')}`]
-    plan.tracks.forEach((track, index) => lines.push(`${TRACK_STYLES[index % TRACK_STYLES.length].emoji} *معدل ${track.name}:* ${amountLabel(track, track.dailyAmount)} يومياً`))
+    plan.tracks.forEach((track, index) => {
+      lines.push(`${TRACK_STYLES[index % TRACK_STYLES.length].emoji} *معدل ${track.name}:* ${amountLabel(track, track.dailyAmount)} يومياً`)
+      if (track.weekdays !== undefined) lines.push(`  🗓️ أيام ${track.name}: ${[...track.weekdays].sort((a, b) => a - b).map(day => WEEKDAYS[day]).join('، ') || '—'}`)
+    })
     lines.push('', '━━━━━━━━━━━━━━━━━━', '')
     plan.days.forEach(day => {
       lines.push(`📌 *${WEEKDAYS[day.weekday]} — ${displayDate(day.date)}*`)
       if (!day.isStudyDay) lines.push('🌙 راحة')
       else plan.tracks.forEach((track, index) => {
+        if (day.paused?.[track.id]) {
+          lines.push(`${TRACK_STYLES[index % TRACK_STYLES.length].emoji} *${track.name}:* 🌙 راحة`)
+          return
+        }
         const assignment = day.assignments[track.id]
         const assignmentText = assignment?.from && assignment.to && assignment.unit !== 'surah' && assignment.unit !== 'juz'
           ? formatCompactPlanRange(assignment.from, assignment.to)
@@ -444,15 +497,6 @@ export default function QuranPlanPage() {
     window.print()
   }
 
-  const toggleCompletedDay = (date: string) => {
-    setCompletedDays(current => {
-      const next = new Set(current)
-      if (next.has(date)) next.delete(date)
-      else next.add(date)
-      return next
-    })
-  }
-
   const openExcelPreview = () => {
     if (!plan) return
     const trackColumns = plan.tracks.map((track, index) => ({
@@ -462,6 +506,7 @@ export default function QuranPlanPage() {
     }))
     const schedule: SpreadsheetSheet = {
       name: 'جدول الخطة',
+      orientation: pageOrientation,
       columns: [
         { id: 'date', label: 'التاريخ', width: 24 },
         { id: 'day', label: 'اليوم', width: 14 },
@@ -474,7 +519,7 @@ export default function QuranPlanPage() {
         status: day.isStudyDay ? 'دراسة' : 'راحة',
         ...Object.fromEntries(plan.tracks.map((track, index) => {
           const assignment = day.assignments[track.id]
-          const value = !day.isStudyDay
+          const value = !day.isStudyDay || day.paused?.[track.id]
             ? 'راحة'
             : assignment
               ? `${assignment.text}${assignment.to ? completedMushafText(assignment.to) : ''}${assignment.links?.length ? `\n${assignment.links.map(link => `${link.label}: ${link.url}`).join('\n')}` : ''}`
@@ -488,8 +533,8 @@ export default function QuranPlanPage() {
     setExcelSheets([schedule])
   }
 
-  const assignmentCell = (assignment: QuranAssignment | null, isStudyDay: boolean) => {
-    if (!isStudyDay) return 'راحة'
+  const assignmentCell = (assignment: QuranAssignment | null, isStudyDay: boolean, paused = false) => {
+    if (!isStudyDay || paused) return 'راحة'
     if (!assignment) return 'اكتمل الورد'
     if (assignment.links?.length) return <span className="flex flex-col gap-0.5">{assignment.links.map(link => <a key={`${link.label}-${link.url}`} href={link.url} target="_blank" rel="noreferrer" className="font-semibold text-blue-700 underline underline-offset-2 dark:text-blue-300">{link.label}</a>)}</span>
     return <><span>{assignment.text}</span>{assignment.to ? completedMushafText(assignment.to) : ''}</>
@@ -524,10 +569,11 @@ export default function QuranPlanPage() {
         </div>
         <fieldset><legend className="text-sm font-bold text-deep-800">أيام الدراسة</legend><div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-7">{WEEKDAYS.map((day, index) => { const selected = weekdays.includes(index); return <label key={day} className={`cursor-pointer rounded-xl border px-2 py-2.5 text-center text-xs font-semibold transition ${selected ? 'border-cyan-500 bg-cyan-600 text-white' : 'border-water-200 bg-white/50 text-deep-600 dark:border-slate-700 dark:bg-slate-900/50'}`}><input type="checkbox" checked={selected} onChange={() => setWeekdays(current => selected ? current.filter(item => item !== index) : [...current, index])} className="sr-only" />{day}</label> })}</div></fieldset>
         <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-water-200 bg-white/50 px-4 py-3 text-sm font-semibold text-deep-700 dark:border-slate-700 dark:bg-slate-900/50"><input type="checkbox" checked={includeCompletionCheckboxes} onChange={event => setIncludeCompletionCheckboxes(event.target.checked)} className="h-5 w-5 accent-teal-600" />إضافة خانة «تم» إلى الخطة والطباعة</label>
+        <fieldset><legend className="text-sm font-bold text-deep-800">اتجاه الصفحة للطباعة و Excel</legend><div className="mt-2 grid grid-cols-2 gap-2">{(['landscape', 'portrait'] as const).map(value => { const selected = pageOrientation === value; return <label key={value} className={`cursor-pointer rounded-xl border px-2 py-2.5 text-center text-xs font-semibold transition ${selected ? 'border-cyan-500 bg-cyan-600 text-white' : 'border-water-200 bg-white/50 text-deep-600 dark:border-slate-700 dark:bg-slate-900/50'}`}><input type="radio" name="page-orientation" checked={selected} onChange={() => setPageOrientation(value)} className="sr-only" />{value === 'landscape' ? 'أفقي ⟷' : 'عمودي ⟵'}</label> })}</div></fieldset>
         <div className="space-y-4">{trackGroups.map(group => {
           if (!group.sequenceId) {
             const { track, index } = group.members[0]
-            return <TrackFields key={track.id} track={track} index={index} count={tracks.length} onChange={value => updateTrack(track.id, value)} onMove={direction => moveTrack(index, direction)} onRemove={() => setTracks(current => current.filter(item => item.id !== track.id))} onAddWerd={() => addFollowingWerd(index)} />
+            return <TrackFields key={track.id} track={track} index={index} count={tracks.length} globalWeekdays={weekdays} onChange={value => updateTrack(track.id, value)} onMove={direction => moveTrack(index, direction)} onRemove={() => setTracks(current => current.filter(item => item.id !== track.id))} onAddWerd={() => addFollowingWerd(index)} />
           }
           const firstIndex = group.members[0].index
           const style = TRACK_STYLES[firstIndex % TRACK_STYLES.length]
@@ -541,7 +587,7 @@ export default function QuranPlanPage() {
               </div>
             </div>
             <p className="mb-4 text-xs font-semibold text-blue-800 dark:text-blue-200">ينتقل الورد تلقائياً إلى التالي عند بلوغ نهايته{sequenceLoops ? '، ثم يبدأ السلسلة كاملة من أولها بعد نهاية آخر ورد' : ''}، ويظهر الجميع في عمود واحد في الخطة.</p>
-            {group.members.map(({ track, index }, sequencePosition) => <TrackFields key={track.id} track={track} index={index} count={tracks.length} embedded sequencePosition={sequencePosition} styleIndex={firstIndex} onChange={value => updateTrack(track.id, value)} onMove={direction => moveTrack(index, direction)} onRemove={() => setTracks(current => current.filter(item => item.id !== track.id))} onAddWerd={() => addFollowingWerd(index)} />)}
+            {group.members.map(({ track, index }, sequencePosition) => <TrackFields key={track.id} track={track} index={index} count={tracks.length} embedded sequencePosition={sequencePosition} styleIndex={firstIndex} globalWeekdays={weekdays} onChange={value => updateTrack(track.id, value)} onMove={direction => moveTrack(index, direction)} onRemove={() => setTracks(current => current.filter(item => item.id !== track.id))} onAddWerd={() => addFollowingWerd(index)} />)}
           </fieldset>
         })}</div>
         <div className="flex flex-wrap gap-2"><button type="button" onClick={() => addTrack('quran')} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-bold">+ إضافة ورد قرآني</button><button type="button" onClick={() => addTrack('quantity')} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-bold">+ إضافة كتب</button><button type="button" onClick={() => addTrack('playlist')} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-bold">+ إضافة فيديو أو قائمة YouTube</button></div>
@@ -550,11 +596,11 @@ export default function QuranPlanPage() {
       </form>
     </section>
 
-    {plan && <section id="plan-preview" className="print-plan mt-7 scroll-mt-5 rounded-3xl border border-water-200 bg-white p-4 shadow-xl dark:border-slate-700 dark:bg-slate-900 sm:p-7">
+    {plan && <section id="plan-preview" className={`print-plan ${pageOrientation === 'portrait' ? 'plan-portrait' : 'plan-landscape'} mt-7 scroll-mt-5 rounded-3xl border border-water-200 bg-white p-4 shadow-xl dark:border-slate-700 dark:bg-slate-900 sm:p-7`}>
       <div className="plan-header flex flex-col gap-4 border-b border-water-200 pb-5 dark:border-slate-700 sm:flex-row sm:items-start sm:justify-between"><div className="plan-heading"><p className="plan-kicker text-xs font-bold text-blue-700 dark:text-blue-300">بسم الله الرحمن الرحيم</p><h2 className="plan-title mt-2 text-2xl font-bold text-deep-900">{printTitle}</h2><p className="plan-period mt-2 text-sm text-deep-500">من {displayDate(startDate)} إلى {displayDate(endDate)}</p></div><div className="no-print flex flex-wrap gap-2"><button type="button" onClick={async () => { await navigator.clipboard.writeText(planText()); setCopied(true) }} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">{copied ? 'تم النسخ ✓' : 'نسخ النص'}</button><button type="button" onClick={openExcelPreview} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">تصدير Excel</button><button type="button" onClick={printPlan} className="water-btn rounded-xl px-4 py-2 text-sm font-bold text-white">طباعة الخطة</button></div></div>
       <div className="plan-summary my-4 flex flex-wrap gap-2"><div className="plan-stat plan-stat-days rounded-lg bg-cyan-50 px-3 py-1.5 text-center dark:bg-cyan-950/35"><span className="plan-stat-label block text-xs font-semibold text-blue-700 dark:text-blue-300">أيام الدراسة</span><strong className="block text-base font-bold text-blue-800 dark:text-blue-200">{plan.studyDays} يوم</strong></div>{plan.tracks.map((track, index) => { const style = TRACK_STYLES[index % TRACK_STYLES.length]; const unitLabel = track.kind === 'quantity' ? track.quantityUnit : amountLabel(track, 1).replace(/^1 /, ''); return <div key={track.id} className="plan-stat rounded-lg px-3 py-1.5 text-center" style={{ backgroundColor: style.soft, color: style.ink }}><span className="plan-stat-label block text-xs font-semibold">إجمالي {track.name}</span><strong className="block text-base font-bold">{plan.totals[track.id].amount} {unitLabel}</strong></div> })}</div>
-      <div className="plan-table-wrap overflow-x-auto rounded-2xl border border-water-200 dark:border-slate-700"><table className="plan-table w-full border-collapse text-right text-sm" style={{ minWidth: `${Math.max(includeCompletionCheckboxes ? 47 : 44, (includeCompletionCheckboxes ? 21 : 18) + plan.tracks.length * 14)}rem` }}><thead className="bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-100"><tr><th className="px-4 py-3">التاريخ</th><th className="px-4 py-3">اليوم</th>{includeCompletionCheckboxes && <th className="plan-completion-cell px-2 py-3">تم</th>}{plan.tracks.map(track => <th key={track.id} className="px-4 py-3">{track.name}</th>)}</tr></thead><tbody className="divide-y divide-water-100 dark:divide-slate-800">{plan.days.map(day => <tr key={day.date} className={day.isStudyDay ? 'plan-study-row bg-white dark:bg-slate-900' : 'plan-rest-row bg-slate-50/75 text-slate-500 dark:bg-slate-950/45 dark:text-slate-400'}><td className="whitespace-nowrap px-4 py-3">{displayDate(day.date)}</td><td className="px-4 py-3 font-semibold">{WEEKDAYS[day.weekday]}</td>{includeCompletionCheckboxes && <td className="plan-completion-cell px-2 py-3">{day.isStudyDay ? <label className="inline-flex cursor-pointer items-center justify-center" aria-label={`تم إنجاز خطة ${displayDate(day.date)}`}><input type="checkbox" checked={completedDays.has(day.date)} onChange={() => toggleCompletedDay(day.date)} className="peer sr-only" /><span aria-hidden="true" className="plan-completion-box flex h-6 w-6 items-center justify-center rounded border-2 border-slate-400 bg-white text-sm font-bold text-transparent transition peer-checked:border-teal-600 peer-checked:bg-teal-600 peer-checked:text-white dark:border-slate-500 dark:bg-slate-900 dark:peer-checked:border-teal-500 dark:peer-checked:bg-teal-600">✓</span></label> : <span aria-hidden="true">—</span>}</td>}{plan.tracks.map((track, index) => <td key={track.id} className="px-4 py-3" style={{ borderInlineStart: `3px solid ${TRACK_STYLES[index % TRACK_STYLES.length].line}` }}>{assignmentCell(day.assignments[track.id], day.isStudyDay)}</td>)}</tr>)}</tbody></table></div>
-      <p className="no-print mt-5 text-center text-xs text-deep-400">وُلدت الخطة بواسطة زمزم · يمكن تعديل المدخلات وإعادة إنشائها في أي وقت</p>
+      <div className="plan-table-wrap overflow-x-auto rounded-2xl border border-water-200 dark:border-slate-700"><table className="plan-table w-full border-collapse text-right text-sm" style={{ minWidth: `${Math.max(includeCompletionCheckboxes ? 47 : 44, (includeCompletionCheckboxes ? 21 : 18) + plan.tracks.length * 14)}rem` }}><thead className="bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-100"><tr><th className="px-4 py-3">التاريخ</th><th className="px-4 py-3">اليوم</th>{includeCompletionCheckboxes && <th className="plan-completion-cell px-2 py-3">تم</th>}{plan.tracks.map(track => <th key={track.id} className="px-4 py-3">{track.name}{track.weekdays !== undefined && <span className="no-print mt-0.5 block text-[10px] font-normal opacity-70">أيام مخصصة</span>}</th>)}</tr></thead><tbody className="divide-y divide-water-100 dark:divide-slate-800">{plan.days.map(day => <tr key={day.date} className={day.isStudyDay ? 'plan-study-row bg-white dark:bg-slate-900' : 'plan-rest-row bg-slate-50/75 text-slate-500 dark:bg-slate-950/45 dark:text-slate-400'}><td className="whitespace-nowrap px-4 py-3">{displayDate(day.date)}</td><td className="px-4 py-3 font-semibold">{WEEKDAYS[day.weekday]}</td>{includeCompletionCheckboxes && <td className="plan-completion-cell px-2 py-3">{day.isStudyDay ? <span aria-hidden="true" className="plan-completion-box flex h-6 w-6 items-center justify-center rounded border-2 border-slate-400 bg-white dark:border-slate-500 dark:bg-slate-900" /> : <span aria-hidden="true">—</span>}</td>}{plan.tracks.map((track, index) => <td key={track.id} className="px-4 py-3" style={{ borderInlineStart: `3px solid ${TRACK_STYLES[index % TRACK_STYLES.length].line}` }}>{assignmentCell(day.assignments[track.id], day.isStudyDay, day.paused?.[track.id] === true)}</td>)}</tr>)}</tbody></table></div>
+      <p className="no-print mt-5 text-center text-xs text-deep-400">وُلدت الخطة بواسطة زمزم · يمكن تعديل المدخلات وإعادة إنشائها في أي وقت<br />عند الطباعة: ألغِ تحديد «Headers and footers» و «Background graphics» من خيارات الطباعة للحصول على نسخة نظيفة.</p>
     </section>}
     {excelSheets && <ExcelPreviewModal sheets={excelSheets} filename={`zamzam-plan-${startDate}.xlsx`} helpText="راجع جدول الخطة قبل تنزيل ملف Excel." onClose={() => setExcelSheets(null)} />}
   </div></div>

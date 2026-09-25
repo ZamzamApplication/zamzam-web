@@ -198,18 +198,6 @@ function ExpenseForm({ expense, categories, currency, defaultDate, busy, onCance
   </form>
 }
 
-function BulkCorrectionForm({ period, currency, busy, onCancel, onSubmit }: { period: string; currency: string; busy: boolean; onCancel(): void; onSubmit(from: number, to: number): Promise<void> }) {
-  const [fromValue, setFromValue] = useState('')
-  const [toValue, setToValue] = useState('')
-  const [formError, setFormError] = useState('')
-  return <form className="space-y-4" onSubmit={event => { event.preventDefault(); const from = majorToMinor(fromValue); const to = majorToMinor(toValue); if (from === null || from <= 0 || to === null || from === to) { setFormError('أدخل قيمتين صحيحتين ومختلفتين.'); return } void onSubmit(from, to) }}>
-    <p className="rounded-xl border border-amber-200 bg-amber-50/60 p-3 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">سيتم تعديل السجلات غير المدفوعة المطابقة للقيمة القديمة في دورة {period} فقط. لن تتغير الإعفاءات أو الرسوم المخصصة أو الإيصالات المدفوعة.</p>
-    <div className="grid gap-3 sm:grid-cols-2"><label className="text-sm font-medium text-deep-700">القيمة القديمة ({currency})<input inputMode="decimal" required value={fromValue} onChange={event => setFromValue(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-4 py-2.5" /></label><label className="text-sm font-medium text-deep-700">القيمة الجديدة ({currency})<input inputMode="decimal" required value={toValue} onChange={event => setToValue(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-4 py-2.5" /></label></div>
-    {formError && <p role="alert" className="text-sm text-red-600">{formError}</p>}
-    <div className="flex gap-3"><button type="button" onClick={onCancel} className="water-btn-outline flex-1 rounded-xl px-4 py-2.5">إلغاء</button><button disabled={busy} className="water-btn flex-1 rounded-xl px-4 py-2.5 font-bold text-white disabled:opacity-50">تطبيق التصحيح</button></div>
-  </form>
-}
-
 export default function SubscriptionsPage() {
   const router = useRouter()
   const [settings, setSettings] = useState<SubscriptionSettings | null>(null)
@@ -247,14 +235,12 @@ export default function SubscriptionsPage() {
   const [expenseMethodFilter, setExpenseMethodFilter] = useState('')
   const [expenseSearch, setExpenseSearch] = useState('')
   const [editingExpense, setEditingExpense] = useState<ExpenseRecord | null | undefined>(undefined)
-  const [showBulkCorrection, setShowBulkCorrection] = useState(false)
   const [activeSection, setActiveSection] = useState<'subscriptions' | 'expenses'>('subscriptions')
   const recordsRequest = useRef(0)
   const financeRequest = useRef(0)
 
   const currency = settings?.currency || 'EGP'
   const selectedEntryDate = entryDateForPeriod(period, monthStartDay)
-  const isPastPeriod = period < (settings?.current_period_start || monthRange(currentMonthValue(monthStartDay), monthStartDay).start)
   const pageSize = 30
   const paidValue = paidFilter === 'all' ? undefined : paidFilter === 'paid'
 
@@ -525,29 +511,6 @@ export default function SubscriptionsPage() {
     finally { setBusy(false) }
   }
 
-  async function correctMonth(fromFeeMinor: number, toFeeMinor: number) {
-    if (!window.confirm('تأكيد التصحيح الجماعي لهذا الشهر؟ سيُسجل الإجراء في سجل التدقيق.')) return
-    setBusy(true); setError('')
-    try {
-      const result = await api.bulkCorrectSubscriptionAmount({ period, from_fee_minor: fromFeeMinor, to_fee_minor: toFeeMinor })
-      setShowBulkCorrection(false)
-      setNotice(`تم تحديث ${result.updated} سجل وتجاوز ${result.skipped} سجل غير مطابق أو محمي.`)
-      await Promise.all([loadRecords(), loadFinance()])
-    } catch (reason: any) { setError(reason.message || 'تعذر تصحيح رسوم الشهر') }
-    finally { setBusy(false) }
-  }
-
-  async function generatePastMonth() {
-    if (!window.confirm(`إنشاء الرسوم الناقصة لدورة ${formatMonthPeriod(period.slice(0, 7), monthStartDay)} للطلاب المقيدين حاليًا ممن لا يتجاوز تاريخ تسجيلهم نهاية الدورة؟ يشمل ذلك الطلاب الذين ليس لهم تاريخ تسجيل. راجع الرسوم قبل تسجيل السداد.`)) return
-    setBusy(true); setError('')
-    try {
-      const result = await api.generatePastSubscriptionMonth(period)
-      setNotice(`تم إنشاء ${result.generated} سجل للدورة المختارة.`)
-      await Promise.all([loadRecords(), loadFinance()])
-    } catch (reason: any) { setError(reason.message || 'تعذر إنشاء سجلات الدورة السابقة') }
-    finally { setBusy(false) }
-  }
-
   async function exportExpenseExcel() {
     setBusy(true); setError('')
     try {
@@ -602,7 +565,7 @@ export default function SubscriptionsPage() {
     {activeSection === 'subscriptions' && <>
     {!settings?.enabled && <section className="glass-card rounded-2xl p-5"><h2 className="text-lg font-bold text-deep-900">تفعيل الاشتراكات الشهرية</h2><p className="mt-1 text-sm text-deep-500">يمكن تسجيل المصروفات دون الاشتراكات، أو تفعيل رسوم الطلاب من هنا.</p><form onSubmit={activate} className="mt-4 grid gap-3 sm:grid-cols-3"><input inputMode="decimal" required value={activationFee} onChange={event => setActivationFee(event.target.value)} placeholder="الرسم الشهري" className="surface-field rounded-xl px-4 py-2.5" /><select value={activationCurrency} onChange={event => setActivationCurrency(event.target.value)} className="surface-field rounded-xl px-4 py-2.5"><option value="EGP">EGP</option><option value="SAR">SAR</option><option value="USD">USD</option></select><button disabled={busy} className="water-btn rounded-xl px-4 py-2.5 font-bold text-white disabled:opacity-50">تفعيل الاشتراكات</button></form></section>}
 
-    <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-bold text-deep-900">اشتراكات الطلاب</h2><p className="text-sm text-deep-500">الرسوم والسداد المنسوبان إلى الدورة المختارة، بصرف النظر عن تاريخ الدفع</p></div>{settings?.enabled && <div className="flex flex-wrap gap-2">{isPastPeriod && <button type="button" disabled={busy} onClick={() => void generatePastMonth()} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-50">إنشاء الرسوم الناقصة للدورة</button>}<button type="button" onClick={() => setShowBulkCorrection(true)} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">تصحيح رسوم الشهر جماعيًا</button></div>}</div>
+    <div><h2 className="text-xl font-bold text-deep-900">اشتراكات الطلاب</h2><p className="text-sm text-deep-500">الرسوم والسداد المنسوبان إلى الدورة المختارة، بصرف النظر عن تاريخ الدفع</p></div>
 
     <section className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5" aria-label="ملخص الاشتراكات المطابقة للفلاتر">
       {[
@@ -666,7 +629,6 @@ export default function SubscriptionsPage() {
     {editingRecord && <Modal title={`تعديل رسوم — ${editingRecord.student_name}`} onClose={() => setEditingRecord(null)}><FeeForm record={editingRecord} currency={currency} busy={busy} onCancel={() => setEditingRecord(null)} onSubmit={saveFee} /></Modal>}
     {receipt && <ReceiptView receipt={receipt} currency={currency} onClose={() => setReceipt(null)} />}
     {editingExpense !== undefined && <Modal title={editingExpense ? `تعديل مصروف — ${editingExpense.name}` : 'إضافة مصروف'} onClose={() => setEditingExpense(undefined)} wide><ExpenseForm expense={editingExpense} categories={expenseCategories} currency={currency} defaultDate={selectedEntryDate} busy={busy} onCancel={() => setEditingExpense(undefined)} onSubmit={saveExpense} /></Modal>}
-    {showBulkCorrection && <Modal title="تصحيح رسوم شهر كامل" onClose={() => setShowBulkCorrection(false)}><BulkCorrectionForm period={period} currency={currency} busy={busy} onCancel={() => setShowBulkCorrection(false)} onSubmit={correctMonth} /></Modal>}
     {!isAuditor && showSettings && <Modal title="إعدادات المالية" onClose={() => setShowSettings(false)} wide><form onSubmit={saveSettings} className="space-y-5">
       <section className="space-y-4">
         <div><h3 className="font-bold text-deep-900">الاشتراكات الشهرية</h3><p className="mt-1 text-xs text-deep-500">تحكم في الرسوم الافتراضية وتفعيل التحصيل.</p></div>

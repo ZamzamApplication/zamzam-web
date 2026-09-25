@@ -30,6 +30,8 @@ export type QuranPlanTrack = {
   quranSequenceId?: string
   quranSequenceCyclic?: boolean
   items?: QuranPlanSequenceItem[]
+  /** Active weekdays (0=Sunday..6=Saturday) for this content. Undefined = follow the plan's global days. */
+  weekdays?: number[]
 }
 export type QuranPlanInput = {
   startDate: string
@@ -54,6 +56,8 @@ export type QuranPlanDay = {
   weekday: number
   isStudyDay: boolean
   assignments: Record<string, QuranAssignment | null>
+  /** Per-content pause flags: true means this content rests on this day (shows راحة). */
+  paused?: Record<string, boolean>
 }
 export type QuranPlanTrackTotal = {
   ayahs: number
@@ -584,8 +588,9 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
     )))
     const invalidLegacyQuantity = track.kind === 'quantity' && !hasSequence && (!track.subject.trim() || !track.quantityUnit.trim() || !Number.isInteger(track.startNumber) || track.startNumber < 1)
     const invalidPlaylist = track.kind === 'playlist' && !hasSequence
+    const invalidWeekdays = track.weekdays !== undefined && (!Array.isArray(track.weekdays) || track.weekdays.some(day => !Number.isInteger(day) || day < 0 || day > 6))
     if (invalidHifzRange) throw new Error('invalid_hifz_range')
-    if (!track.id.trim() || ids.has(track.id) || !track.name.trim() || invalidQuran || invalidSequence || invalidLegacyQuantity || invalidPlaylist || !Number.isInteger(track.dailyAmount) || track.dailyAmount < 1) {
+    if (!track.id.trim() || ids.has(track.id) || !track.name.trim() || invalidQuran || invalidSequence || invalidLegacyQuantity || invalidPlaylist || invalidWeekdays || !Number.isInteger(track.dailyAmount) || track.dailyAmount < 1) {
       throw new Error('invalid_track')
     }
     ids.add(track.id)
@@ -612,15 +617,25 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
   )
   let studyDays = 0
   const selectedDays = new Set(input.weekdays)
+  const trackDays = new Map<string, Set<number>>(
+    enabledTracks.map(track => [
+      track.id,
+      track.weekdays === undefined
+        ? selectedDays
+        : new Set(track.weekdays.filter(day => Number.isInteger(day) && day >= 0 && day <= 6)),
+    ]),
+  )
   const days: QuranPlanDay[] = []
 
   for (let index = 0; index < calendarDays; index += 1) {
     const date = new Date(start)
     date.setDate(start.getDate() + index)
-    const isStudyDay = selectedDays.has(date.getDay())
+    const weekday = date.getDay()
+    const isStudyDay = selectedDays.has(weekday)
     const assignments: Record<string, QuranAssignment | null> = Object.fromEntries(
       outputTracks.map(track => [track.id, null]),
     )
+    const paused: Record<string, boolean> = {}
     if (isStudyDay) {
       studyDays += 1
       const handledQuranSequences = new Set<string>()
@@ -633,6 +648,10 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
           if (!group || !cursor) continue
           const outputTrack = group[0]
           const currentTrack = group[cursor.trackIndex]
+          if (!trackDays.get(currentTrack.id)?.has(weekday)) {
+            paused[outputTrack.id] = true
+            continue
+          }
           const result = allocate(cursor.point, currentTrack, currentTrack.hifzEnd ?? LAST_POINT)
           assignments[outputTrack.id] = result.assignment
           totals[outputTrack.id].end = result.assignment.to
@@ -651,6 +670,10 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
           continue
         }
         if (track.kind !== 'quran' && track.items !== undefined) {
+          if (!trackDays.get(track.id)?.has(weekday)) {
+            paused[track.id] = true
+            continue
+          }
           const result = allocateSequence(sequenceCursors.get(track.id) ?? null, track)
           assignments[track.id] = result.assignment
           sequenceCursors.set(track.id, result.next)
@@ -659,6 +682,10 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
             totals[track.id].amount += result.assignment.unitAmount
           }
         } else if (track.kind === 'quantity') {
+          if (!trackDays.get(track.id)?.has(weekday)) {
+            paused[track.id] = true
+            continue
+          }
           const next = nextNumbers.get(track.id)
           if (next == null) continue
           const result = allocateQuantity(next, track)
@@ -667,6 +694,10 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
           totals[track.id].endNumber = result.assignment.toNumber
           totals[track.id].amount += result.assignment.unitAmount
         } else {
+          if (!trackDays.get(track.id)?.has(weekday)) {
+            paused[track.id] = true
+            continue
+          }
           const next = nextPoints.get(track.id)
           if (!next) continue
           const hifzEnd = track.hifzEnd ?? LAST_POINT
@@ -680,7 +711,7 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
         }
       }
     }
-    days.push({ date: isoDate(date), weekday: date.getDay(), isStudyDay, assignments })
+    days.push({ date: isoDate(date), weekday, isStudyDay, assignments, paused: Object.keys(paused).length ? paused : undefined })
   }
 
   return { tracks: outputTracks.map(track => ({ ...track, start: { ...track.start } })), days, studyDays, totals }

@@ -18,6 +18,7 @@ export interface SpreadsheetSheet {
   name: string
   columns: SpreadsheetColumn[]
   rows: Record<string, SpreadsheetValue>[]
+  orientation?: 'landscape' | 'portrait'
   headerFontFamily?: string
   headerFontSize?: number
   headerBold?: boolean
@@ -95,7 +96,7 @@ export default function ExcelPreviewModal({
           views: [{ rightToLeft: true, state: 'frozen', ySplit: headerRows }],
           pageSetup: {
             paperSize: 9,
-            orientation: 'landscape',
+            orientation: sheet.orientation ?? 'landscape',
             fitToPage: true,
             fitToWidth: 1,
             fitToHeight: 0,
