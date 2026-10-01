@@ -263,22 +263,28 @@ export function formatPlanRange(from: QuranPoint, to: QuranPoint): string {
   const fromAyah = mushafAyahMarker(from.ayah)
   const toAyah = mushafAyahMarker(to.ayah)
   if (from.surah === to.surah) {
+    if (from.ayah === 1 && to.ayah === surahInfo(to.surah).ayahs) return `سورة ${surahInfo(from.surah).name}`
     return from.ayah === to.ayah
       ? `سورة ${surahInfo(from.surah).name} — ${fromAyah}`
       : `سورة ${surahInfo(from.surah).name} — ${fromAyah} : ${toAyah}`
   }
-  return `سورة ${surahInfo(from.surah).name} ${fromAyah} ← سورة ${surahInfo(to.surah).name} ${toAyah}`
+  const first = `سورة ${surahInfo(from.surah).name}${from.ayah === 1 ? '' : ` ${fromAyah}`}`
+  const last = `سورة ${surahInfo(to.surah).name}${to.ayah === surahInfo(to.surah).ayahs ? '' : ` ${toAyah}`}`
+  return `${first} ← ${last}`
 }
 
 export function formatCompactPlanRange(from: QuranPoint, to: QuranPoint): string {
   const fromAyah = mushafAyahMarker(from.ayah)
   const toAyah = mushafAyahMarker(to.ayah)
   if (from.surah === to.surah) {
+    if (from.ayah === 1 && to.ayah === surahInfo(to.surah).ayahs) return `سورة ${surahInfo(from.surah).name}`
     return from.ayah === to.ayah
       ? `سورة ${surahInfo(from.surah).name}: ${fromAyah}`
       : `سورة ${surahInfo(from.surah).name}: ${fromAyah} : ${toAyah}`
   }
-  return `سورة ${surahInfo(from.surah).name}: ${fromAyah} ← سورة ${surahInfo(to.surah).name}: ${toAyah}`
+  const first = `سورة ${surahInfo(from.surah).name}${from.ayah === 1 ? '' : `: ${fromAyah}`}`
+  const last = `سورة ${surahInfo(to.surah).name}${to.ayah === surahInfo(to.surah).ayahs ? '' : `: ${toAyah}`}`
+  return `${first} ← ${last}`
 }
 
 function formatSurahRange(from: QuranPoint, to: QuranPoint): string {

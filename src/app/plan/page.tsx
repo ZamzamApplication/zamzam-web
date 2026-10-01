@@ -184,7 +184,6 @@ function TrackFields({ track, index, count, globalWeekdays, onChange, onMove, on
   const lastHifzPoint = { surah: SURAHS.length, ayah: surahInfo(SURAHS.length).ayahs }
   const hifzStart = track.hifzStart ?? track.start
   const hifzEnd = track.hifzEnd ?? lastHifzPoint
-  const effectiveEnd = quranPlanStopPoint(track)
   const repeatFromMushafStart = Boolean(track.cyclic && !track.hifzStart)
   const repeatFromSpecificStart = Boolean(track.cyclic && track.hifzStart)
   const isSequenceChild = embedded && sequencePosition > 0
@@ -273,7 +272,7 @@ function TrackFields({ track, index, count, globalWeekdays, onChange, onMove, on
             <select value={quarterLocation.juz} onChange={event => onChange({ ...track, start: quranJuzStartPoint(Number(event.target.value)) })} className={selectClass}>{Array.from({ length: QURAN_JUZ_COUNT }, (_, index) => <option key={index + 1} value={index + 1}>جزء {index + 1}</option>)}</select>
           </label>
           : track.unit === 'surah'
-            ? <label className="text-xs font-semibold text-deep-700">سورة البداية
+            ? <label className="text-xs font-semibold text-deep-700">السورة
               <select value={track.start.surah} onChange={event => onChange({ ...track, start: quranSurahStartPoint(Number(event.target.value)) })} className={selectClass}>{SURAHS.map(surah => <option key={surah.number} value={surah.number}>{surah.number}. {surah.name}</option>)}</select>
             </label>
           : <>
@@ -337,7 +336,6 @@ function TrackFields({ track, index, count, globalWeekdays, onChange, onMove, on
           <input type="number" min={1} max={1000} required value={track.dailyAmount} onChange={event => onChange({ ...track, dailyAmount: Number(event.target.value) })} className={selectClass} />
         </label>
       </div>
-      <p className="mt-2 text-xs font-semibold text-deep-600">الاتجاه تلقائياً: من {surahInfo(track.start.surah).name} إلى {surahInfo(effectiveEnd.surah).name}. {reverse ? 'تتقدم الآيات بالترتيب داخل كل سورة، ثم تنتقل إلى السورة السابقة.' : 'تتقدم الآيات والسور بالترتيب المعتاد.'}</p>
       {!track.quranSequenceId && <>
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white/60 px-3 py-2.5 text-xs font-semibold text-deep-700 dark:border-slate-700 dark:bg-slate-900/40"><input type="checkbox" checked={repeatFromMushafStart} onChange={() => onChange({ ...track, cyclic: !repeatFromMushafStart, hifzStart: undefined })} className="h-4 w-4 accent-blue-700" />{reverse ? 'تكرار من سورة الناس' : 'تكرار من أول المصحف'}</label>
@@ -504,7 +502,7 @@ export default function QuranPlanPage() {
 
   const printTitle = studentName.trim() ? `خطة ${ownerLabel} — ${studentName.trim()}` : `خطة ${ownerLabel}`
   const completionText = (assignment: QuranAssignment) => assignment.completedMushaf
-    ? ' · اكتمل المصحف'
+    ? ''
     : assignment.completedRange ? ' · اكتمل نطاق الخطة' : ''
   const printPlan = () => {
     const previousTitle = document.title
