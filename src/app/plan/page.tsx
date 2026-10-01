@@ -486,9 +486,7 @@ export default function QuranPlanPage() {
           return
         }
         const assignment = day.assignments[track.id]
-        const assignmentText = assignment?.segments && assignment.unit !== 'surah' && assignment.unit !== 'juz'
-          ? assignment.segments.map(segment => formatCompactPlanRange(segment.from, segment.to)).join('، ثم ')
-          : assignment?.from && assignment.to && assignment.unit !== 'surah' && assignment.unit !== 'juz'
+        const assignmentText = assignment?.from && assignment.to && assignment.unit !== 'surah' && assignment.unit !== 'juz'
             ? formatCompactPlanRange(assignment.from, assignment.to)
           : assignment?.text
         lines.push(`${TRACK_STYLES[index % TRACK_STYLES.length].emoji} *${track.name}:* ${assignmentText ? `${assignmentText}${assignment ? completionText(assignment) : ''}` : 'اكتمل الورد ✅'}`)

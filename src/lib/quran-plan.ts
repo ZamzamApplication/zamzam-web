@@ -510,13 +510,11 @@ function allocateReverse(start: QuranPoint, track: QuranPlanTrack, stop: QuranPo
 
   const first = segments[0]
   const last = segments[segments.length - 1]
-  const text = segments.map(segment => track.unit === 'surah'
-    ? (segment.from.ayah > 1 || segment.to.ayah < surahInfo(segment.to.surah).ayahs
-      ? formatPlanRange(segment.from, segment.to)
-      : `سورة ${surahInfo(segment.from.surah).name}`)
+  const text = track.unit === 'surah' && first.from.ayah === 1 && last.to.ayah === surahInfo(last.to.surah).ayahs
+    ? formatSurahRange(first.from, last.to)
     : track.unit === 'juz'
-      ? `${formatJuzRange(segment.from, segment.to)} — ${formatPlanRange(segment.from, segment.to)}`
-      : formatPlanRange(segment.from, segment.to)).join('، ثم ')
+      ? formatJuzRange(first.from, last.to)
+      : formatPlanRange(first.from, last.to)
 
   return {
     assignment: {
