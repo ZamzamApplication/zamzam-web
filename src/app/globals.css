@@ -41,13 +41,8 @@
 }
 
 @media print {
-  @page plan-landscape {
+  @page plan {
     size: A4 landscape;
-    margin: 0;
-  }
-
-  @page plan-portrait {
-    size: A4 portrait;
     margin: 0;
   }
 
@@ -77,8 +72,8 @@
     box-shadow: none !important;
   }
 
-  .print-plan.plan-landscape {
-    page: plan-landscape;
+  .print-plan {
+    page: plan;
     position: absolute !important;
     inset: 0 0 auto 0 !important;
     color: #0f172a !important;
@@ -92,27 +87,8 @@
     font-family: Cairo, Arial, sans-serif !important;
     border-radius: 0 !important;
     color-scheme: light !important;
-    print-color-adjust: economy !important;
-    -webkit-print-color-adjust: economy !important;
-  }
-
-  .print-plan.plan-portrait {
-    page: plan-portrait;
-    position: absolute !important;
-    inset: 0 0 auto 0 !important;
-    color: #0f172a !important;
-    background: #fff !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    min-height: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    box-sizing: border-box !important;
-    font-family: Cairo, Arial, sans-serif !important;
-    border-radius: 0 !important;
-    color-scheme: light !important;
-    print-color-adjust: economy !important;
-    -webkit-print-color-adjust: economy !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
   }
 
   .print-plan .plan-header {
@@ -174,17 +150,17 @@
 
   .print-plan .plan-stat-days {
     color: #155e75 !important;
-    background: #fff !important;
+    background: #cffafe !important;
   }
 
   .print-plan .plan-stat-memorization {
     color: #166534 !important;
-    background: #fff !important;
+    background: #dcfce7 !important;
   }
 
   .print-plan .plan-stat-revision {
     color: #6b21a8 !important;
-    background: #fff !important;
+    background: #f3e8ff !important;
   }
 
   .print-plan .plan-stat-days *,
@@ -204,8 +180,8 @@
   }
 
   .print-plan .plan-table thead {
-    color: #0f172a !important;
-    background: #fff !important;
+    color: #164e63 !important;
+    background: #cffafe !important;
     display: table-header-group !important;
   }
 
@@ -268,12 +244,12 @@
   }
 
   .print-plan .plan-study-row:nth-child(even) {
-    background: #fff !important;
+    background: #f8fafc !important;
   }
 
   .print-plan .plan-rest-row {
     color: #64748b !important;
-    background: #fff !important;
+    background: #f8fafc !important;
   }
 
   .print-plan .plan-memorization-cell {

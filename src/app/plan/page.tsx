@@ -381,19 +381,23 @@ function TrackFields({ track, index, count, globalWeekdays, onChange, onMove, on
 
 export default function QuranPlanPage() {
   const defaults = useMemo(initialDates, [])
-  const [planOwnerType, setPlanOwnerType] = useState<'student' | 'teacher'>('student')
+  const [planOwnerType, setPlanOwnerType] = useState<'student' | 'female-student' | 'teacher' | 'female-teacher'>('student')
   const [studentName, setStudentName] = useState('')
   const [startDate, setStartDate] = useState(defaults.start)
   const [endDate, setEndDate] = useState(defaults.end)
   const [weekdays, setWeekdays] = useState<number[]>([0, 1, 2, 3, 4, 5, 6])
   const [includeCompletionCheckboxes, setIncludeCompletionCheckboxes] = useState(true)
-  const [pageOrientation, setPageOrientation] = useState<'landscape' | 'portrait'>('landscape')
   const [tracks, setTracks] = useState<QuranPlanTrack[]>([defaultTrack('memorization', 'الحفظ', 5), defaultTrack('revision', 'المراجعة', 20)])
   const [plan, setPlan] = useState<GeneratedQuranPlan | null>(null)
   const [excelSheets, setExcelSheets] = useState<SpreadsheetSheet[] | null>(null)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
-  const ownerLabel = planOwnerType === 'student' ? 'الطالب' : 'الأستاذ'
+  const ownerLabel = {
+    student: 'الطالب',
+    'female-student': 'الطالبة',
+    teacher: 'الأستاذ',
+    'female-teacher': 'الأستاذة',
+  }[planOwnerType]
 
   const updateTrack = (id: string, value: QuranPlanTrack) => setTracks(current => {
     const previous = current.find(track => track.id === id)
@@ -506,7 +510,7 @@ export default function QuranPlanPage() {
     }))
     const schedule: SpreadsheetSheet = {
       name: 'جدول الخطة',
-      orientation: pageOrientation,
+      orientation: 'landscape',
       columns: [
         { id: 'date', label: 'التاريخ', width: 24 },
         { id: 'day', label: 'اليوم', width: 14 },
@@ -559,17 +563,16 @@ export default function QuranPlanPage() {
   return <div className="min-h-screen bg-[rgb(var(--bg))] px-3 py-6 sm:px-5 sm:py-10"><div className="mx-auto max-w-6xl">
     <header className="mb-6 flex flex-wrap items-center justify-between gap-3"><Link href="/" className="text-lg font-bold text-blue-700 dark:text-blue-300">💧 زمزم</Link><span className="rounded-full border border-water-200 bg-white/60 px-3 py-1.5 text-xs font-semibold text-deep-600 dark:border-slate-700 dark:bg-slate-900/60">أداة مستقلة · لا تحفظ بيانات</span></header>
     <section className="glass-strong overflow-hidden rounded-3xl">
-      <div className="bg-gradient-to-l from-cyan-700 to-teal-600 px-5 py-7 text-white sm:px-8"><p className="text-sm font-semibold text-blue-100">مولّد خطة يومية</p><h1 className="mt-2 text-2xl font-bold sm:text-3xl">إنشاء خطة مخصصة للطالب</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-blue-50/90">أضف أوراداً قرآنية دورية، أو سلسلة كتب محددة الصفحات، أو قوائم YouTube بروابط حلقاتها، وحدد المعدل اليومي لكل بند.</p></div>
+      <div className="bg-gradient-to-l from-cyan-700 to-teal-600 px-5 py-7 text-white sm:px-8"><p className="text-sm font-semibold text-blue-100">مولّد خطة يومية</p><h1 className="mt-2 text-2xl font-bold sm:text-3xl">إنشاء خطة مخصصة</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-blue-50/90">أضف أوراداً قرآنية دورية، أو سلسلة كتب محددة الصفحات، أو قوائم YouTube بروابط حلقاتها، وحدد المعدل اليومي لكل بند.</p></div>
       <form onSubmit={build} className="space-y-5 p-4 sm:p-7">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <label className="text-sm font-semibold text-deep-700">نوع الخطة<select value={planOwnerType} onChange={event => setPlanOwnerType(event.target.value as 'student' | 'teacher')} className="surface-field mt-1.5 w-full rounded-xl px-4 py-2.5 font-normal"><option value="student">خطة الطالب</option><option value="teacher">خطة الأستاذ</option></select></label>
+          <label className="text-sm font-semibold text-deep-700">نوع الخطة<select value={planOwnerType} onChange={event => setPlanOwnerType(event.target.value as typeof planOwnerType)} className="surface-field mt-1.5 w-full rounded-xl px-4 py-2.5 font-normal"><option value="student">خطة الطالب</option><option value="female-student">خطة الطالبة</option><option value="teacher">خطة الأستاذ</option><option value="female-teacher">خطة الأستاذة</option></select></label>
           <label className="text-sm font-semibold text-deep-700">اسم {ownerLabel} <span className="font-normal text-deep-400">(اختياري)</span><input value={studentName} onChange={event => setStudentName(event.target.value)} maxLength={100} placeholder={`اسم ${ownerLabel}`} className="surface-field mt-1.5 w-full rounded-xl px-4 py-2.5 font-normal" /></label>
           <label className="text-sm font-semibold text-deep-700">تاريخ البداية<input type="date" required value={startDate} onChange={event => { setStartDate(event.target.value); if (endDate < event.target.value) setEndDate(event.target.value) }} className="surface-field mt-1.5 w-full rounded-xl px-4 py-2.5 font-normal" /></label>
           <label className="text-sm font-semibold text-deep-700">تاريخ النهاية<input type="date" required min={startDate} value={endDate} onChange={event => setEndDate(event.target.value)} className="surface-field mt-1.5 w-full rounded-xl px-4 py-2.5 font-normal" /></label>
         </div>
         <fieldset><legend className="text-sm font-bold text-deep-800">أيام الدراسة</legend><div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-7">{WEEKDAYS.map((day, index) => { const selected = weekdays.includes(index); return <label key={day} className={`cursor-pointer rounded-xl border px-2 py-2.5 text-center text-xs font-semibold transition ${selected ? 'border-cyan-500 bg-cyan-600 text-white' : 'border-water-200 bg-white/50 text-deep-600 dark:border-slate-700 dark:bg-slate-900/50'}`}><input type="checkbox" checked={selected} onChange={() => setWeekdays(current => selected ? current.filter(item => item !== index) : [...current, index])} className="sr-only" />{day}</label> })}</div></fieldset>
         <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-water-200 bg-white/50 px-4 py-3 text-sm font-semibold text-deep-700 dark:border-slate-700 dark:bg-slate-900/50"><input type="checkbox" checked={includeCompletionCheckboxes} onChange={event => setIncludeCompletionCheckboxes(event.target.checked)} className="h-5 w-5 accent-teal-600" />إضافة خانة «تم» إلى الخطة والطباعة</label>
-        <fieldset><legend className="text-sm font-bold text-deep-800">اتجاه الصفحة للطباعة و Excel</legend><div className="mt-2 grid grid-cols-2 gap-2">{(['landscape', 'portrait'] as const).map(value => { const selected = pageOrientation === value; return <label key={value} className={`cursor-pointer rounded-xl border px-2 py-2.5 text-center text-xs font-semibold transition ${selected ? 'border-cyan-500 bg-cyan-600 text-white' : 'border-water-200 bg-white/50 text-deep-600 dark:border-slate-700 dark:bg-slate-900/50'}`}><input type="radio" name="page-orientation" checked={selected} onChange={() => setPageOrientation(value)} className="sr-only" />{value === 'landscape' ? 'أفقي ⟷' : 'عمودي ⟵'}</label> })}</div></fieldset>
         <div className="space-y-4">{trackGroups.map(group => {
           if (!group.sequenceId) {
             const { track, index } = group.members[0]
@@ -596,7 +599,7 @@ export default function QuranPlanPage() {
       </form>
     </section>
 
-    {plan && <section id="plan-preview" className={`print-plan ${pageOrientation === 'portrait' ? 'plan-portrait' : 'plan-landscape'} mt-7 scroll-mt-5 rounded-3xl border border-water-200 bg-white p-4 shadow-xl dark:border-slate-700 dark:bg-slate-900 sm:p-7`}>
+    {plan && <section id="plan-preview" className="print-plan mt-7 scroll-mt-5 rounded-3xl border border-water-200 bg-white p-4 shadow-xl dark:border-slate-700 dark:bg-slate-900 sm:p-7">
       <div className="plan-header flex flex-col gap-4 border-b border-water-200 pb-5 dark:border-slate-700 sm:flex-row sm:items-start sm:justify-between"><div className="plan-heading"><p className="plan-kicker text-xs font-bold text-blue-700 dark:text-blue-300">بسم الله الرحمن الرحيم</p><h2 className="plan-title mt-2 text-2xl font-bold text-deep-900">{printTitle}</h2><p className="plan-period mt-2 text-sm text-deep-500">من {displayDate(startDate)} إلى {displayDate(endDate)}</p></div><div className="no-print flex flex-wrap gap-2"><button type="button" onClick={async () => { await navigator.clipboard.writeText(planText()); setCopied(true) }} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">{copied ? 'تم النسخ ✓' : 'نسخ النص'}</button><button type="button" onClick={openExcelPreview} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">تصدير Excel</button><button type="button" onClick={printPlan} className="water-btn rounded-xl px-4 py-2 text-sm font-bold text-white">طباعة الخطة</button></div></div>
       <div className="plan-summary my-4 flex flex-wrap gap-2"><div className="plan-stat plan-stat-days rounded-lg bg-cyan-50 px-3 py-1.5 text-center dark:bg-cyan-950/35"><span className="plan-stat-label block text-xs font-semibold text-blue-700 dark:text-blue-300">أيام الدراسة</span><strong className="block text-base font-bold text-blue-800 dark:text-blue-200">{plan.studyDays} يوم</strong></div>{plan.tracks.map((track, index) => { const style = TRACK_STYLES[index % TRACK_STYLES.length]; const unitLabel = track.kind === 'quantity' ? track.quantityUnit : amountLabel(track, 1).replace(/^1 /, ''); return <div key={track.id} className="plan-stat rounded-lg px-3 py-1.5 text-center" style={{ backgroundColor: style.soft, color: style.ink }}><span className="plan-stat-label block text-xs font-semibold">إجمالي {track.name}</span><strong className="block text-base font-bold">{plan.totals[track.id].amount} {unitLabel}</strong></div> })}</div>
       <div className="plan-table-wrap overflow-x-auto rounded-2xl border border-water-200 dark:border-slate-700"><table className="plan-table w-full border-collapse text-right text-sm" style={{ minWidth: `${Math.max(includeCompletionCheckboxes ? 47 : 44, (includeCompletionCheckboxes ? 21 : 18) + plan.tracks.length * 14)}rem` }}><thead className="bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-100"><tr><th className="px-4 py-3">التاريخ</th><th className="px-4 py-3">اليوم</th>{includeCompletionCheckboxes && <th className="plan-completion-cell px-2 py-3">تم</th>}{plan.tracks.map(track => <th key={track.id} className="px-4 py-3">{track.name}{track.weekdays !== undefined && <span className="no-print mt-0.5 block text-[10px] font-normal opacity-70">أيام مخصصة</span>}</th>)}</tr></thead><tbody className="divide-y divide-water-100 dark:divide-slate-800">{plan.days.map(day => <tr key={day.date} className={day.isStudyDay ? 'plan-study-row bg-white dark:bg-slate-900' : 'plan-rest-row bg-slate-50/75 text-slate-500 dark:bg-slate-950/45 dark:text-slate-400'}><td className="whitespace-nowrap px-4 py-3">{displayDate(day.date)}</td><td className="px-4 py-3 font-semibold">{WEEKDAYS[day.weekday]}</td>{includeCompletionCheckboxes && <td className="plan-completion-cell px-2 py-3">{day.isStudyDay ? <span aria-hidden="true" className="plan-completion-box flex h-6 w-6 items-center justify-center rounded border-2 border-slate-400 bg-white dark:border-slate-500 dark:bg-slate-900" /> : <span aria-hidden="true">—</span>}</td>}{plan.tracks.map((track, index) => <td key={track.id} className="px-4 py-3" style={{ borderInlineStart: `3px solid ${TRACK_STYLES[index % TRACK_STYLES.length].line}` }}>{assignmentCell(day.assignments[track.id], day.isStudyDay, day.paused?.[track.id] === true)}</td>)}</tr>)}</tbody></table></div>
