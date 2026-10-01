@@ -235,7 +235,7 @@
   .print-plan .plan-table-wrap {
     overflow: visible !important;
     border: 1px solid #a5f3fc !important;
-    border-radius: 3mm !important;
+    border-radius: 0 !important;
   }
 
   .print-plan .plan-study-row {
