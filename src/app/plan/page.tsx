@@ -58,8 +58,8 @@ function initialDates() {
   return { start: localIso(start), end: localIso(end) }
 }
 
-function defaultTrack(id: string, name: string, dailyAmount: number): QuranPlanTrack {
-  return { id, name, enabled: true, kind: 'quran', start: { surah: 1, ayah: 1 }, unit: 'ayahs', subject: '', quantityUnit: 'صفحة', startNumber: 1, dailyAmount, cyclic: false }
+function defaultTrack(id: string, name: string): QuranPlanTrack {
+  return { id, name, enabled: true, kind: 'quran', start: { surah: 1, ayah: 1 }, unit: 'ayahs', subject: '', quantityUnit: 'صفحة', startNumber: 1, dailyAmount: 1, cyclic: false }
 }
 
 function displayDate(value: string) {
@@ -390,7 +390,7 @@ export default function QuranPlanPage() {
   const [endDate, setEndDate] = useState(defaults.end)
   const [weekdays, setWeekdays] = useState<number[]>([0, 1, 2, 3, 4, 5, 6])
   const [includeCompletionCheckboxes, setIncludeCompletionCheckboxes] = useState(true)
-  const [tracks, setTracks] = useState<QuranPlanTrack[]>([defaultTrack('memorization', 'الحفظ', 5), defaultTrack('revision', 'المراجعة', 20)])
+  const [tracks, setTracks] = useState<QuranPlanTrack[]>([defaultTrack('memorization', 'الحفظ'), defaultTrack('revision', 'المراجعة')])
   const [plan, setPlan] = useState<GeneratedQuranPlan | null>(null)
   const [excelSheets, setExcelSheets] = useState<SpreadsheetSheet[] | null>(null)
   const [error, setError] = useState('')
@@ -421,8 +421,8 @@ export default function QuranPlanPage() {
   const addTrack = (kind: 'quran' | 'quantity' | 'playlist') => {
     const id = `custom-${Date.now()}-${tracks.length}`
     setTracks(current => [...current, kind === 'quran'
-      ? defaultTrack(id, 'بند جديد', 5)
-      : { ...defaultTrack(id, kind === 'playlist' ? 'مشاهدة' : 'قراءة', kind === 'playlist' ? 1 : 10), kind, subject: '', quantityUnit: kind === 'playlist' ? 'حلقة' : 'صفحة', items: [{ id: `${id}-item-1`, name: '', totalUnits: kind === 'playlist' ? 0 : 100, startUnit: 1, url: kind === 'playlist' ? '' : undefined, episodes: kind === 'playlist' ? [] : undefined }] }])
+      ? defaultTrack(id, 'بند جديد')
+      : { ...defaultTrack(id, kind === 'playlist' ? 'مشاهدة' : 'قراءة'), kind, subject: '', quantityUnit: kind === 'playlist' ? 'حلقة' : 'صفحة', items: [{ id: `${id}-item-1`, name: '', totalUnits: kind === 'playlist' ? 0 : 100, startUnit: 1, url: kind === 'playlist' ? '' : undefined, episodes: kind === 'playlist' ? [] : undefined }] }])
   }
   const addFollowingWerd = (index: number) => setTracks(current => {
     const source = current[index]
