@@ -19,6 +19,7 @@ import {
   quranJuzEndPoint,
   quranJuzStartPoint,
   quranPageForPoint,
+  quranPlanStopPoint,
   quranPageEndPoint,
   quranPageStartPoint,
   quranNextPoint,
@@ -183,17 +184,10 @@ function TrackFields({ track, index, count, globalWeekdays, onChange, onMove, on
   const lastHifzPoint = { surah: SURAHS.length, ayah: surahInfo(SURAHS.length).ayahs }
   const hifzStart = track.hifzStart ?? track.start
   const hifzEnd = track.hifzEnd ?? lastHifzPoint
+  const effectiveEnd = quranPlanStopPoint(track)
   const repeatFromMushafStart = Boolean(track.cyclic && !track.hifzStart)
   const repeatFromSpecificStart = Boolean(track.cyclic && track.hifzStart)
   const isSequenceChild = embedded && sequencePosition > 0
-  const exactPointFields = (point: QuranPlanTrack['start'], label: string, updatePoint: (point: QuranPlanTrack['start']) => void, end = false) => <>
-    <label className="text-xs font-semibold text-deep-700">سورة {label}
-      <select value={point.surah} onChange={event => { const surah = Number(event.target.value); updatePoint({ surah, ayah: end ? surahInfo(surah).ayahs : 1 }) }} className={selectClass}>{SURAHS.map(surah => <option key={surah.number} value={surah.number}>{surah.number}. {surah.name}</option>)}</select>
-    </label>
-    <label className="text-xs font-semibold text-deep-700">آية {label}
-      <select value={Math.min(point.ayah, surahInfo(point.surah).ayahs)} onChange={event => updatePoint({ ...point, ayah: Number(event.target.value) })} className={selectClass}>{Array.from({ length: surahInfo(point.surah).ayahs }, (_, index) => index + 1).map(value => <option key={value} value={value}>{value}</option>)}</select>
-    </label>
-  </>
   const hifzPointFields = (point: QuranPlanTrack['start'], key: 'hifzStart' | 'hifzEnd') => {
     const isEnd = key === 'hifzEnd'
     const updatePoint = (next: QuranPlanTrack['start']) => onChange({ ...track, [key]: next })
@@ -244,7 +238,7 @@ function TrackFields({ track, index, count, globalWeekdays, onChange, onMove, on
 
     return <>
       <label className="text-xs font-semibold text-deep-700">سورة {boundary}
-        <select value={point.surah} onChange={event => updatePoint({ surah: Number(event.target.value), ayah: 1 })} className={selectClass}>{SURAHS.map(surah => <option key={surah.number} value={surah.number}>{surah.number}. {surah.name}</option>)}</select>
+        <select value={point.surah} onChange={event => { const surah = Number(event.target.value); updatePoint({ surah, ayah: isEnd ? surahInfo(surah).ayahs : 1 }) }} className={selectClass}>{SURAHS.map(surah => <option key={surah.number} value={surah.number}>{surah.number}. {surah.name}</option>)}</select>
       </label>
       <label className="text-xs font-semibold text-deep-700">آية {boundary}
         <select value={Math.min(point.ayah, surahInfo(point.surah).ayahs)} onChange={event => updatePoint({ ...point, ayah: Number(event.target.value) })} className={selectClass}>{Array.from({ length: surahInfo(point.surah).ayahs }, (_, index) => index + 1).map(value => <option key={value} value={value}>{value}</option>)}</select>
@@ -252,9 +246,7 @@ function TrackFields({ track, index, count, globalWeekdays, onChange, onMove, on
     </>
   }
 
-  const quranStartFields = reverse
-    ? exactPointFields(track.start, 'البداية', point => onChange({ ...track, start: point }))
-    : track.unit === 'page' || track.unit === 'half_page'
+  const quranStartFields = track.unit === 'page' || track.unit === 'half_page'
     ? <label className="text-xs font-semibold text-deep-700">صفحة البداية
       <input type="number" min={1} max={QURAN_PAGE_COUNT} value={quranPageForPoint(track.start)} onChange={event => onChange({ ...track, start: quranPageStartPoint(Number(event.target.value)) })} className={selectClass} />
     </label>
@@ -337,15 +329,15 @@ function TrackFields({ track, index, count, globalWeekdays, onChange, onMove, on
     {track.enabled && <>
       {track.kind === 'quran' ? <><div className={`mt-4 grid gap-3 sm:grid-cols-2 ${(track.unit === 'page' || track.unit === 'half_page' || track.unit === 'surah' || track.unit === 'juz') ? 'lg:grid-cols-4' : 'lg:grid-cols-6'}`}>
         {quranStartFields}
-        {exactPointFields(hifzEnd, 'النهاية', point => onChange({ ...track, hifzEnd: point }), true)}
+        {hifzPointFields(hifzEnd, 'hifzEnd')}
         <label className="text-xs font-semibold text-deep-700">الوحدة
-          <select value={track.unit} onChange={event => { const unit = event.target.value as QuranPlanTrack['unit']; onChange({ ...track, unit, start: reverse ? track.start : normalizeStartForUnit(unit), hifzStart: track.hifzStart ? (reverse ? track.hifzStart : normalizeHifzPointForUnit(track.hifzStart, unit, false)) : undefined, hifzEnd: track.hifzEnd ? (reverse ? track.hifzEnd : normalizeHifzPointForUnit(track.hifzEnd, unit, true)) : undefined }) }} className={selectClass}><option value="ayahs">آيات</option><option value="lines">أسطر</option><option value="surah">سورة</option><option value="half_page">نصف صفحة</option><option value="page">صفحة</option><option value="quarter">ربع</option><option value="hizb">حزب</option><option value="juz">جزء</option></select>
+          <select value={track.unit} onChange={event => { const unit = event.target.value as QuranPlanTrack['unit']; onChange({ ...track, unit, start: normalizeStartForUnit(unit), hifzStart: track.hifzStart ? normalizeHifzPointForUnit(track.hifzStart, unit, false) : undefined, hifzEnd: track.hifzEnd ? normalizeHifzPointForUnit(track.hifzEnd, unit, true) : undefined }) }} className={selectClass}><option value="ayahs">آيات</option><option value="lines">أسطر</option><option value="surah">سورة</option><option value="half_page">نصف صفحة</option><option value="page">صفحة</option><option value="quarter">ربع</option><option value="hizb">حزب</option><option value="juz">جزء</option></select>
         </label>
         <label className="text-xs font-semibold text-deep-700">المعدل اليومي
           <input type="number" min={1} max={1000} required value={track.dailyAmount} onChange={event => onChange({ ...track, dailyAmount: Number(event.target.value) })} className={selectClass} />
         </label>
       </div>
-      <p className="mt-2 text-xs font-semibold text-deep-600">الاتجاه تلقائياً: من {surahInfo(track.start.surah).name} إلى {surahInfo(hifzEnd.surah).name}. {reverse ? 'تتقدم الآيات بالترتيب داخل كل سورة، ثم تنتقل إلى السورة السابقة.' : 'تتقدم الآيات والسور بالترتيب المعتاد.'}</p>
+      <p className="mt-2 text-xs font-semibold text-deep-600">الاتجاه تلقائياً: من {surahInfo(track.start.surah).name} إلى {surahInfo(effectiveEnd.surah).name}. {reverse ? 'تتقدم الآيات بالترتيب داخل كل سورة، ثم تنتقل إلى السورة السابقة.' : 'تتقدم الآيات والسور بالترتيب المعتاد.'}</p>
       {!track.quranSequenceId && <>
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white/60 px-3 py-2.5 text-xs font-semibold text-deep-700 dark:border-slate-700 dark:bg-slate-900/40"><input type="checkbox" checked={repeatFromMushafStart} onChange={() => onChange({ ...track, cyclic: !repeatFromMushafStart, hifzStart: undefined })} className="h-4 w-4 accent-blue-700" />{reverse ? 'تكرار من سورة الناس' : 'تكرار من أول المصحف'}</label>
@@ -353,7 +345,7 @@ function TrackFields({ track, index, count, globalWeekdays, onChange, onMove, on
         </div>
         {repeatFromSpecificStart && <div className="mt-3 rounded-xl border border-slate-200 bg-white/45 p-3 dark:border-slate-700 dark:bg-slate-900/25">
           <p className="mb-2 text-xs font-bold text-deep-700">نقطة بداية التكرار</p>
-          <div className="grid gap-3 sm:grid-cols-2">{reverse ? exactPointFields(hifzStart, 'بداية التكرار', point => onChange({ ...track, hifzStart: point })) : hifzPointFields(hifzStart, 'hifzStart')}</div>
+          <div className="grid gap-3 sm:grid-cols-2">{hifzPointFields(hifzStart, 'hifzStart')}</div>
         </div>}
       </>}
       {track.quranSequenceId && !embedded && <p className="mt-3 rounded-xl border border-blue-200 bg-blue-50/55 px-3 py-2 text-xs font-semibold text-blue-800 dark:border-blue-900 dark:bg-blue-950/20 dark:text-blue-200">ينتقل الورد تلقائياً إلى الورد التالي عند بلوغ نهايته.</p>}
@@ -439,7 +431,7 @@ export default function QuranPlanPage() {
     if (!source || source.kind !== 'quran') return current
     const sequenceId = source.quranSequenceId ?? `quran-sequence-${source.id}`
     const nextStart = source.hifzEnd
-      ? ((isReverseQuranTrack(source) ? quranNextReversePoint(source.hifzEnd) : quranNextPoint(source.hifzEnd)) ?? source.start)
+      ? ((isReverseQuranTrack(source) ? quranNextReversePoint(quranPlanStopPoint(source)) : quranNextPoint(source.hifzEnd)) ?? source.start)
       : source.start
     const nextWerd: QuranPlanTrack = {
       ...source,

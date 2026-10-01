@@ -142,6 +142,16 @@ export function isReverseQuranTrack(track: QuranPlanTrack): boolean {
   return track.kind === 'quran' && track.hifzEnd !== undefined && track.start.surah > track.hifzEnd.surah
 }
 
+export function quranPlanStopPoint(track: QuranPlanTrack): QuranPoint {
+  const stop = track.hifzEnd ?? LAST_POINT
+  if (!isReverseQuranTrack(track)) return stop
+  const firstQuarter = quranQuarterForPoint(stop)
+  if (track.unit === 'quarter' && firstQuarter.juz === 1 && firstQuarter.quarter === 1) return quranSurahEndPoint(1)
+  if (track.unit === 'hizb' && firstQuarter.juz === 1 && firstQuarter.quarter <= 4) return quranSurahEndPoint(1)
+  if (track.unit === 'juz' && firstQuarter.juz === 1) return quranSurahEndPoint(1)
+  return stop
+}
+
 function globalOffset(point: QuranPoint): number {
   let offset = point.ayah
   for (let surah = 1; surah < point.surah; surah += 1) offset += surahInfo(surah).ayahs
@@ -659,7 +669,7 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
   for (const track of enabledTracks) {
     const reverse = isReverseQuranTrack(track)
     const hifzStart = track.hifzStart ?? (reverse ? { surah: 114, ayah: 1 } : { surah: 1, ayah: 1 })
-    const hifzEnd = track.hifzEnd ?? (reverse ? quranSurahEndPoint(1) : LAST_POINT)
+    const hifzEnd = quranPlanStopPoint(track)
     const usesHifzRange = track.kind === 'quran' && (track.cyclic || track.hifzStart !== undefined || track.hifzEnd !== undefined)
     const invalidHifzRange = usesHifzRange && (
       !isValidQuranPoint(hifzStart)
@@ -749,7 +759,7 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
             continue
           }
           const result = isReverseQuranTrack(currentTrack)
-            ? allocateReverse(cursor.point, currentTrack, currentTrack.hifzEnd ?? quranSurahEndPoint(1))
+            ? allocateReverse(cursor.point, currentTrack, quranPlanStopPoint(currentTrack))
             : allocate(cursor.point, currentTrack, currentTrack.hifzEnd ?? LAST_POINT)
           assignments[outputTrack.id] = result.assignment
           totals[outputTrack.id].end = result.assignment.to
@@ -799,7 +809,7 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
           const next = nextPoints.get(track.id)
           if (!next) continue
           const reverse = isReverseQuranTrack(track)
-          const hifzEnd = track.hifzEnd ?? (reverse ? quranSurahEndPoint(1) : LAST_POINT)
+          const hifzEnd = quranPlanStopPoint(track)
           const hasHifzEnd = track.cyclic || track.hifzStart !== undefined || track.hifzEnd !== undefined
           const result = reverse
             ? allocateReverse(next, track, hifzEnd)
