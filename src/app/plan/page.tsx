@@ -272,7 +272,7 @@ function TrackFields({ track, index, count, globalWeekdays, onChange, onMove, on
             <select value={quarterLocation.juz} onChange={event => onChange({ ...track, start: quranJuzStartPoint(Number(event.target.value)) })} className={selectClass}>{Array.from({ length: QURAN_JUZ_COUNT }, (_, index) => <option key={index + 1} value={index + 1}>جزء {index + 1}</option>)}</select>
           </label>
           : track.unit === 'surah'
-            ? <label className="text-xs font-semibold text-deep-700">السورة
+            ? <label className="text-xs font-semibold text-deep-700">سورة البداية
               <select value={track.start.surah} onChange={event => onChange({ ...track, start: quranSurahStartPoint(Number(event.target.value)) })} className={selectClass}>{SURAHS.map(surah => <option key={surah.number} value={surah.number}>{surah.number}. {surah.name}</option>)}</select>
             </label>
           : <>
