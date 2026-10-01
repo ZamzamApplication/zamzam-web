@@ -49,6 +49,8 @@ export type QuranAssignment = {
   unitAmount: number
   text: string
   completedMushaf: boolean
+  completedRange?: boolean
+  segments?: { from: QuranPoint; to: QuranPoint }[]
   links?: { label: string; url: string }[]
 }
 export type QuranPlanDay = {
@@ -124,6 +126,20 @@ function nextPoint(point: QuranPoint): QuranPoint | null {
 
 export function quranNextPoint(point: QuranPoint): QuranPoint | null {
   return nextPoint(point)
+}
+
+export function quranNextReversePoint(point: QuranPoint): QuranPoint | null {
+  if (point.ayah < surahInfo(point.surah).ayahs) return { surah: point.surah, ayah: point.ayah + 1 }
+  return point.surah > 1 ? { surah: point.surah - 1, ayah: 1 } : null
+}
+
+function reverseOrder(point: QuranPoint): number {
+  // Surahs descend, while verses within each surah ascend.
+  return (SURAHS.length - point.surah) * 1000 + point.ayah
+}
+
+export function isReverseQuranTrack(track: QuranPlanTrack): boolean {
+  return track.kind === 'quran' && track.hifzEnd !== undefined && track.start.surah > track.hifzEnd.surah
 }
 
 function globalOffset(point: QuranPoint): number {
@@ -429,6 +445,81 @@ function allocate(start: QuranPoint, track: QuranPlanTrack, maximumEnd: QuranPoi
   }
 }
 
+function firstLineAtOrAfter(offset: number): number {
+  const lines = quranLineEndOffsets()
+  let low = 0
+  let high = lines.length
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2)
+    if (lines[middle] < offset) low = middle + 1
+    else high = middle
+  }
+  return Math.min(low, lines.length - 1)
+}
+
+function reverseSegmentAmount(from: QuranPoint, to: QuranPoint, unit: QuranPlanUnit): number {
+  if (unit === 'ayahs') return to.ayah - from.ayah + 1
+  if (unit === 'surah') return 1
+  if (unit === 'page') return quranPageForPoint(to) - quranPageForPoint(from) + 1
+  const lineCount = firstLineAtOrAfter(globalOffset(to)) - firstLineAtOrAfter(globalOffset(from)) + 1
+  if (unit === 'lines') return lineCount
+  if (unit === 'half_page') return Math.ceil(lineCount / 8)
+  const firstQuarter = lastBoundaryAtOrBefore(quranQuarterStartOffsets, globalOffset(from))
+  const lastQuarter = lastBoundaryAtOrBefore(quranQuarterStartOffsets, globalOffset(to))
+  const quarters = lastQuarter - firstQuarter + 1
+  if (unit === 'quarter') return quarters
+  return Math.ceil(quarters / (unit === 'hizb' ? 4 : 8))
+}
+
+function allocateReverse(start: QuranPoint, track: QuranPlanTrack, stop: QuranPoint): { assignment: QuranAssignment; next: QuranPoint | null } {
+  const segments: { from: QuranPoint; to: QuranPoint }[] = []
+  let cursor: QuranPoint | null = start
+  let remaining = track.dailyAmount
+  let amount = 0
+  let ayahs = 0
+  let completedRange = false
+
+  while (cursor && remaining > 0) {
+    const segmentEnd = cursor.surah === stop.surah ? stop : quranSurahEndPoint(cursor.surah)
+    const result = allocate(cursor, { ...track, dailyAmount: remaining }, segmentEnd)
+    const to = result.assignment.to as QuranPoint
+    const used = reverseSegmentAmount(cursor, to, track.unit)
+    segments.push({ from: cursor, to })
+    amount += used
+    ayahs += result.assignment.ayahCount
+    remaining -= used
+    completedRange = reverseOrder(to) >= reverseOrder(stop)
+    cursor = completedRange ? null : result.next ?? quranNextReversePoint(to)
+  }
+
+  const first = segments[0]
+  const last = segments[segments.length - 1]
+  const text = segments.map(segment => track.unit === 'surah'
+    ? (segment.from.ayah > 1 || segment.to.ayah < surahInfo(segment.to.surah).ayahs
+      ? formatPlanRange(segment.from, segment.to)
+      : `سورة ${surahInfo(segment.from.surah).name}`)
+    : track.unit === 'juz'
+      ? `${formatJuzRange(segment.from, segment.to)} — ${formatPlanRange(segment.from, segment.to)}`
+      : formatPlanRange(segment.from, segment.to)).join('، ثم ')
+
+  return {
+    assignment: {
+      from: first.from,
+      to: last.to,
+      fromNumber: null,
+      toNumber: null,
+      ayahCount: ayahs,
+      unit: track.unit,
+      unitAmount: amount,
+      text,
+      completedMushaf: completedRange && track.start.surah === SURAHS.length && track.start.ayah === 1 && stop.surah === 1 && stop.ayah === surahInfo(1).ayahs,
+      completedRange,
+      segments,
+    },
+    next: cursor,
+  }
+}
+
 function allocateQuantity(start: number, track: QuranPlanTrack): { assignment: QuranAssignment; next: number } {
   const end = start + track.dailyAmount - 1
   const subject = track.subject.trim()
@@ -566,15 +657,20 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
   const enabledTracks = input.tracks.filter(track => track.enabled)
   const ids = new Set<string>()
   for (const track of enabledTracks) {
-    const hifzStart = track.hifzStart ?? { surah: 1, ayah: 1 }
-    const hifzEnd = track.hifzEnd ?? LAST_POINT
+    const reverse = isReverseQuranTrack(track)
+    const hifzStart = track.hifzStart ?? (reverse ? { surah: 114, ayah: 1 } : { surah: 1, ayah: 1 })
+    const hifzEnd = track.hifzEnd ?? (reverse ? quranSurahEndPoint(1) : LAST_POINT)
     const usesHifzRange = track.kind === 'quran' && (track.cyclic || track.hifzStart !== undefined || track.hifzEnd !== undefined)
     const invalidHifzRange = usesHifzRange && (
       !isValidQuranPoint(hifzStart)
       || !isValidQuranPoint(hifzEnd)
-      || globalOffset(hifzStart) > globalOffset(hifzEnd)
-      || globalOffset(track.start) > globalOffset(hifzEnd)
-      || (track.cyclic && globalOffset(track.start) < globalOffset(hifzStart))
+      || (reverse
+        ? reverseOrder(hifzStart) > reverseOrder(hifzEnd)
+          || reverseOrder(track.start) > reverseOrder(hifzEnd)
+          || (track.cyclic && reverseOrder(track.start) < reverseOrder(hifzStart))
+        : globalOffset(hifzStart) > globalOffset(hifzEnd)
+          || globalOffset(track.start) > globalOffset(hifzEnd)
+          || (track.cyclic && globalOffset(track.start) < globalOffset(hifzStart)))
     )
     const invalidQuran = track.kind === 'quran' && (
       !isValidQuranPoint(track.start)
@@ -652,7 +748,9 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
             paused[outputTrack.id] = true
             continue
           }
-          const result = allocate(cursor.point, currentTrack, currentTrack.hifzEnd ?? LAST_POINT)
+          const result = isReverseQuranTrack(currentTrack)
+            ? allocateReverse(cursor.point, currentTrack, currentTrack.hifzEnd ?? quranSurahEndPoint(1))
+            : allocate(cursor.point, currentTrack, currentTrack.hifzEnd ?? LAST_POINT)
           assignments[outputTrack.id] = result.assignment
           totals[outputTrack.id].end = result.assignment.to
           totals[outputTrack.id].ayahs += result.assignment.ayahCount
@@ -700,11 +798,14 @@ export function generateQuranPlan(input: QuranPlanInput): GeneratedQuranPlan {
           }
           const next = nextPoints.get(track.id)
           if (!next) continue
-          const hifzEnd = track.hifzEnd ?? LAST_POINT
+          const reverse = isReverseQuranTrack(track)
+          const hifzEnd = track.hifzEnd ?? (reverse ? quranSurahEndPoint(1) : LAST_POINT)
           const hasHifzEnd = track.cyclic || track.hifzStart !== undefined || track.hifzEnd !== undefined
-          const result = allocate(next, track, hasHifzEnd ? hifzEnd : LAST_POINT)
+          const result = reverse
+            ? allocateReverse(next, track, hifzEnd)
+            : allocate(next, track, hasHifzEnd ? hifzEnd : LAST_POINT)
           assignments[track.id] = result.assignment
-          nextPoints.set(track.id, result.next ?? (track.cyclic ? (track.hifzStart ?? { surah: 1, ayah: 1 }) : null))
+          nextPoints.set(track.id, result.next ?? (track.cyclic ? (track.hifzStart ?? (reverse ? { surah: 114, ayah: 1 } : { surah: 1, ayah: 1 })) : null))
           totals[track.id].end = result.assignment.to
           totals[track.id].ayahs += result.assignment.ayahCount
           totals[track.id].amount += result.assignment.unitAmount

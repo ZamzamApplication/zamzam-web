@@ -6,9 +6,9 @@ import { useMemo, useState } from 'react'
 import ExcelPreviewModal, { type SpreadsheetSheet } from '@/components/ExcelPreviewModal'
 import { SURAHS, surahInfo } from '@/lib/quran'
 import {
-  completedMushafText,
   formatCompactPlanRange,
   generateQuranPlan,
+  isReverseQuranTrack,
   QURAN_HIZBS_PER_JUZ,
   QURAN_JUZ_COUNT,
   QURAN_QUARTERS_PER_JUZ,
@@ -22,6 +22,7 @@ import {
   quranPageEndPoint,
   quranPageStartPoint,
   quranNextPoint,
+  quranNextReversePoint,
   quranQuarterEndPoint,
   quranQuarterForPoint,
   quranQuarterStartPoint,
@@ -178,12 +179,21 @@ function TrackFields({ track, index, count, globalWeekdays, onChange, onMove, on
 
   const selectClass = 'surface-field mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm font-normal'
   const startPointLabel = (point: QuranPlanTrack['start']) => `${surahInfo(point.surah).name}، آية ${point.ayah}`
+  const reverse = isReverseQuranTrack(track)
   const lastHifzPoint = { surah: SURAHS.length, ayah: surahInfo(SURAHS.length).ayahs }
   const hifzStart = track.hifzStart ?? track.start
   const hifzEnd = track.hifzEnd ?? lastHifzPoint
   const repeatFromMushafStart = Boolean(track.cyclic && !track.hifzStart)
   const repeatFromSpecificStart = Boolean(track.cyclic && track.hifzStart)
   const isSequenceChild = embedded && sequencePosition > 0
+  const exactPointFields = (point: QuranPlanTrack['start'], label: string, updatePoint: (point: QuranPlanTrack['start']) => void, end = false) => <>
+    <label className="text-xs font-semibold text-deep-700">سورة {label}
+      <select value={point.surah} onChange={event => { const surah = Number(event.target.value); updatePoint({ surah, ayah: end ? surahInfo(surah).ayahs : 1 }) }} className={selectClass}>{SURAHS.map(surah => <option key={surah.number} value={surah.number}>{surah.number}. {surah.name}</option>)}</select>
+    </label>
+    <label className="text-xs font-semibold text-deep-700">آية {label}
+      <select value={Math.min(point.ayah, surahInfo(point.surah).ayahs)} onChange={event => updatePoint({ ...point, ayah: Number(event.target.value) })} className={selectClass}>{Array.from({ length: surahInfo(point.surah).ayahs }, (_, index) => index + 1).map(value => <option key={value} value={value}>{value}</option>)}</select>
+    </label>
+  </>
   const hifzPointFields = (point: QuranPlanTrack['start'], key: 'hifzStart' | 'hifzEnd') => {
     const isEnd = key === 'hifzEnd'
     const updatePoint = (next: QuranPlanTrack['start']) => onChange({ ...track, [key]: next })
@@ -242,7 +252,9 @@ function TrackFields({ track, index, count, globalWeekdays, onChange, onMove, on
     </>
   }
 
-  const quranStartFields = track.unit === 'page' || track.unit === 'half_page'
+  const quranStartFields = reverse
+    ? exactPointFields(track.start, 'البداية', point => onChange({ ...track, start: point }))
+    : track.unit === 'page' || track.unit === 'half_page'
     ? <label className="text-xs font-semibold text-deep-700">صفحة البداية
       <input type="number" min={1} max={QURAN_PAGE_COUNT} value={quranPageForPoint(track.start)} onChange={event => onChange({ ...track, start: quranPageStartPoint(Number(event.target.value)) })} className={selectClass} />
     </label>
@@ -325,22 +337,23 @@ function TrackFields({ track, index, count, globalWeekdays, onChange, onMove, on
     {track.enabled && <>
       {track.kind === 'quran' ? <><div className={`mt-4 grid gap-3 sm:grid-cols-2 ${(track.unit === 'page' || track.unit === 'half_page' || track.unit === 'surah' || track.unit === 'juz') ? 'lg:grid-cols-4' : 'lg:grid-cols-6'}`}>
         {quranStartFields}
-        {hifzPointFields(hifzEnd, 'hifzEnd')}
+        {exactPointFields(hifzEnd, 'النهاية', point => onChange({ ...track, hifzEnd: point }), true)}
         <label className="text-xs font-semibold text-deep-700">الوحدة
-          <select value={track.unit} onChange={event => { const unit = event.target.value as QuranPlanTrack['unit']; onChange({ ...track, unit, start: normalizeStartForUnit(unit), hifzStart: track.hifzStart ? normalizeHifzPointForUnit(track.hifzStart, unit, false) : undefined, hifzEnd: track.hifzEnd ? normalizeHifzPointForUnit(track.hifzEnd, unit, true) : undefined }) }} className={selectClass}><option value="ayahs">آيات</option><option value="lines">أسطر</option><option value="surah">سورة</option><option value="half_page">نصف صفحة</option><option value="page">صفحة</option><option value="quarter">ربع</option><option value="hizb">حزب</option><option value="juz">جزء</option></select>
+          <select value={track.unit} onChange={event => { const unit = event.target.value as QuranPlanTrack['unit']; onChange({ ...track, unit, start: reverse ? track.start : normalizeStartForUnit(unit), hifzStart: track.hifzStart ? (reverse ? track.hifzStart : normalizeHifzPointForUnit(track.hifzStart, unit, false)) : undefined, hifzEnd: track.hifzEnd ? (reverse ? track.hifzEnd : normalizeHifzPointForUnit(track.hifzEnd, unit, true)) : undefined }) }} className={selectClass}><option value="ayahs">آيات</option><option value="lines">أسطر</option><option value="surah">سورة</option><option value="half_page">نصف صفحة</option><option value="page">صفحة</option><option value="quarter">ربع</option><option value="hizb">حزب</option><option value="juz">جزء</option></select>
         </label>
         <label className="text-xs font-semibold text-deep-700">المعدل اليومي
           <input type="number" min={1} max={1000} required value={track.dailyAmount} onChange={event => onChange({ ...track, dailyAmount: Number(event.target.value) })} className={selectClass} />
         </label>
       </div>
+      <p className="mt-2 text-xs font-semibold text-deep-600">الاتجاه تلقائياً: من {surahInfo(track.start.surah).name} إلى {surahInfo(hifzEnd.surah).name}. {reverse ? 'تتقدم الآيات بالترتيب داخل كل سورة، ثم تنتقل إلى السورة السابقة.' : 'تتقدم الآيات والسور بالترتيب المعتاد.'}</p>
       {!track.quranSequenceId && <>
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white/60 px-3 py-2.5 text-xs font-semibold text-deep-700 dark:border-slate-700 dark:bg-slate-900/40"><input type="checkbox" checked={repeatFromMushafStart} onChange={() => onChange({ ...track, cyclic: !repeatFromMushafStart, hifzStart: undefined })} className="h-4 w-4 accent-blue-700" />تكرار من أول المصحف</label>
+          <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white/60 px-3 py-2.5 text-xs font-semibold text-deep-700 dark:border-slate-700 dark:bg-slate-900/40"><input type="checkbox" checked={repeatFromMushafStart} onChange={() => onChange({ ...track, cyclic: !repeatFromMushafStart, hifzStart: undefined })} className="h-4 w-4 accent-blue-700" />{reverse ? 'تكرار من سورة الناس' : 'تكرار من أول المصحف'}</label>
           <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white/60 px-3 py-2.5 text-xs font-semibold text-deep-700 dark:border-slate-700 dark:bg-slate-900/40"><input type="checkbox" checked={repeatFromSpecificStart} onChange={() => onChange({ ...track, cyclic: !repeatFromSpecificStart, hifzStart: !repeatFromSpecificStart ? { ...track.start } : undefined })} className="h-4 w-4 accent-blue-700" />تكرار من نقطة بداية معينة</label>
         </div>
         {repeatFromSpecificStart && <div className="mt-3 rounded-xl border border-slate-200 bg-white/45 p-3 dark:border-slate-700 dark:bg-slate-900/25">
           <p className="mb-2 text-xs font-bold text-deep-700">نقطة بداية التكرار</p>
-          <div className="grid gap-3 sm:grid-cols-2">{hifzPointFields(hifzStart, 'hifzStart')}</div>
+          <div className="grid gap-3 sm:grid-cols-2">{reverse ? exactPointFields(hifzStart, 'بداية التكرار', point => onChange({ ...track, hifzStart: point })) : hifzPointFields(hifzStart, 'hifzStart')}</div>
         </div>}
       </>}
       {track.quranSequenceId && !embedded && <p className="mt-3 rounded-xl border border-blue-200 bg-blue-50/55 px-3 py-2 text-xs font-semibold text-blue-800 dark:border-blue-900 dark:bg-blue-950/20 dark:text-blue-200">ينتقل الورد تلقائياً إلى الورد التالي عند بلوغ نهايته.</p>}
@@ -425,7 +438,9 @@ export default function QuranPlanPage() {
     const source = current[index]
     if (!source || source.kind !== 'quran') return current
     const sequenceId = source.quranSequenceId ?? `quran-sequence-${source.id}`
-    const nextStart = source.hifzEnd ? (quranNextPoint(source.hifzEnd) ?? source.start) : source.start
+    const nextStart = source.hifzEnd
+      ? ((isReverseQuranTrack(source) ? quranNextReversePoint(source.hifzEnd) : quranNextPoint(source.hifzEnd)) ?? source.start)
+      : source.start
     const nextWerd: QuranPlanTrack = {
       ...source,
       id: `custom-${Date.now()}-${current.length}`,
@@ -433,7 +448,7 @@ export default function QuranPlanPage() {
       start: nextStart,
       cyclic: false,
       hifzStart: undefined,
-      hifzEnd: undefined,
+      hifzEnd: isReverseQuranTrack(source) ? quranSurahEndPoint(1) : undefined,
       quranSequenceId: sequenceId,
       quranSequenceCyclic: source.quranSequenceCyclic ?? false,
     }
@@ -481,10 +496,12 @@ export default function QuranPlanPage() {
           return
         }
         const assignment = day.assignments[track.id]
-        const assignmentText = assignment?.from && assignment.to && assignment.unit !== 'surah' && assignment.unit !== 'juz'
-          ? formatCompactPlanRange(assignment.from, assignment.to)
+        const assignmentText = assignment?.segments && assignment.unit !== 'surah' && assignment.unit !== 'juz'
+          ? assignment.segments.map(segment => formatCompactPlanRange(segment.from, segment.to)).join('، ثم ')
+          : assignment?.from && assignment.to && assignment.unit !== 'surah' && assignment.unit !== 'juz'
+            ? formatCompactPlanRange(assignment.from, assignment.to)
           : assignment?.text
-        lines.push(`${TRACK_STYLES[index % TRACK_STYLES.length].emoji} *${track.name}:* ${assignmentText || 'اكتمل الورد ✅'}`)
+        lines.push(`${TRACK_STYLES[index % TRACK_STYLES.length].emoji} *${track.name}:* ${assignmentText ? `${assignmentText}${assignment ? completionText(assignment) : ''}` : 'اكتمل الورد ✅'}`)
         assignment?.links?.forEach(link => lines.push(`🔗 ${link.label}: ${link.url}`))
       })
       lines.push('', '──────────────────', '')
@@ -494,6 +511,9 @@ export default function QuranPlanPage() {
   }
 
   const printTitle = studentName.trim() ? `خطة ${ownerLabel} — ${studentName.trim()}` : `خطة ${ownerLabel}`
+  const completionText = (assignment: QuranAssignment) => assignment.completedMushaf
+    ? ' · اكتمل المصحف'
+    : assignment.completedRange ? ' · اكتمل نطاق الخطة' : ''
   const printPlan = () => {
     const previousTitle = document.title
     document.title = ''
@@ -526,7 +546,7 @@ export default function QuranPlanPage() {
           const value = !day.isStudyDay || day.paused?.[track.id]
             ? 'راحة'
             : assignment
-              ? `${assignment.text}${assignment.to ? completedMushafText(assignment.to) : ''}${assignment.links?.length ? `\n${assignment.links.map(link => `${link.label}: ${link.url}`).join('\n')}` : ''}`
+              ? `${assignment.text}${completionText(assignment)}${assignment.links?.length ? `\n${assignment.links.map(link => `${link.label}: ${link.url}`).join('\n')}` : ''}`
               : 'اكتمل الورد'
           return [`track_${index}`, value]
         })),
@@ -541,7 +561,7 @@ export default function QuranPlanPage() {
     if (!isStudyDay || paused) return 'راحة'
     if (!assignment) return 'اكتمل الورد'
     if (assignment.links?.length) return <span className="flex flex-col gap-0.5">{assignment.links.map(link => <a key={`${link.label}-${link.url}`} href={link.url} target="_blank" rel="noreferrer" className="font-semibold text-blue-700 underline underline-offset-2 dark:text-blue-300">{link.label}</a>)}</span>
-    return <><span>{assignment.text}</span>{assignment.to ? completedMushafText(assignment.to) : ''}</>
+    return <><span>{assignment.text}</span>{completionText(assignment)}</>
   }
 
   const trackGroups: Array<{ key: string; sequenceId?: string; members: Array<{ track: QuranPlanTrack; index: number }> }> = []
