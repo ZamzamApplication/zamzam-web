@@ -4,6 +4,20 @@ Arabic-first, RTL Next.js application for managing Qur'an memorization centers.
 The production site is <https://zamzam-web.fly.dev> and uses the Zamzam API at
 <https://zamzam-api.fly.dev>.
 
+## Plan builder
+
+Anyone can generate a plan at `/plan`, including Qur'an, books, YouTube videos
+and playlists, and public SoundCloud playlists. Logging in allows users to save
+named plans, edit them, track completed days, mark whole plans complete, and
+archive, restore, or delete them. Saved plans belong to the individual user.
+
+Saved plans are private by default. Owners can enable a read-only link or a link
+that also allows recording daily completion without logging in. Shared progress
+is saved on the same plan. Recipients cannot edit its configuration, archive it,
+or delete it. Changing the sharing mode rotates the link; making a plan private
+or deleting it revokes existing links. Archived plans remain readable and pause
+daily progress updates until restored.
+
 ## Development
 
 ```bash

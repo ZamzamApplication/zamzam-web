@@ -40,7 +40,7 @@ function cookieValue(name: string): string | null {
   return entry ? decodeURIComponent(entry.slice(prefix.length)) : null
 }
 
-async function request<T = any>(path: string, options?: RequestInit): Promise<T> {
+export async function request<T = any>(path: string, options?: RequestInit): Promise<T> {
   const runtime = getApiRuntime()
   const token = await runtime.getAccessToken()
   const activeTahfizId = typeof window !== 'undefined'

@@ -25,6 +25,10 @@ export default function LoginPage() {
         if (user.tahfiz?.name) localStorage.setItem('active_tahfiz_name', user.tahfiz.name)
       }
       const nextPath = new URLSearchParams(window.location.search).get('next')
+      if (nextPath === '/plan' || nextPath?.startsWith('/plan?')) {
+        router.push(nextPath)
+        return
+      }
       if (nextPath?.startsWith('/invite/')) {
         router.push(nextPath)
         return

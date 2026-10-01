@@ -1,7 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+
+import PlanLibrary from '@/components/PlanLibrary'
+import { api } from '@/lib/api'
+import { personalPlans, retainedCompletionDates, type PlanConfiguration, type SavedPlan, type SavedPlanSummary, type ShareMode } from '@/lib/personal-plans'
 
 import ExcelPreviewModal, { type SpreadsheetSheet } from '@/components/ExcelPreviewModal'
 import { SURAHS, surahInfo } from '@/lib/quran'
@@ -391,7 +395,182 @@ export default function QuranPlanPage() {
   const [weekdays, setWeekdays] = useState<number[]>([0, 1, 2, 3, 4, 5, 6])
   const [includeCompletionCheckboxes, setIncludeCompletionCheckboxes] = useState(true)
   const [tracks, setTracks] = useState<QuranPlanTrack[]>([defaultTrack('memorization', 'الحفظ'), defaultTrack('revision', 'المراجعة')])
-  const [plan, setPlan] = useState<GeneratedQuranPlan | null>(null)
+  const [generatedPlan, setPlan] = useState<GeneratedQuranPlan | null>(null)
+  const [previewKey, setPreviewKey] = useState('')
+  const [planName, setPlanName] = useState('')
+  const [savedPlan, setSavedPlan] = useState<SavedPlan | null>(null)
+  const [savedPlans, setSavedPlans] = useState<SavedPlanSummary[]>([])
+  const [completedDates, setCompletedDates] = useState<string[]>([])
+  const [signedIn, setSignedIn] = useState(false)
+  const [accountChecked, setAccountChecked] = useState(false)
+  const [sharedToken, setSharedToken] = useState<string | null>(null)
+  const [sharedView, setSharedView] = useState(false)
+  const [privatePlanId, setPrivatePlanId] = useState<string | null>(null)
+  const [planBusy, setPlanBusy] = useState(false)
+  const [storageError, setStorageError] = useState('')
+  const [storageMessage, setStorageMessage] = useState('')
+  const configuration: PlanConfiguration = { planOwnerType, studentName, startDate, endDate, weekdays, includeCompletionCheckboxes, tracks }
+  const generationKey = JSON.stringify({ startDate, endDate, weekdays, tracks })
+  const plan = previewKey === generationKey ? generatedPlan : null
+  const showCompletion = includeCompletionCheckboxes || !!savedPlan
+  const hasUnsavedChanges = !!savedPlan && (planName !== savedPlan.name || JSON.stringify(configuration) !== JSON.stringify(savedPlan.configuration))
+  const scheduleChanged = !!savedPlan && generationKey !== JSON.stringify({ startDate: savedPlan.configuration.startDate, endDate: savedPlan.configuration.endDate, weekdays: savedPlan.configuration.weekdays, tracks: savedPlan.configuration.tracks })
+
+  const applyConfiguration = (config: PlanConfiguration, name: string, done: string[]) => {
+    const generated = generateQuranPlan(config)
+    setPlanOwnerType(config.planOwnerType)
+    setStudentName(config.studentName)
+    setStartDate(config.startDate)
+    setEndDate(config.endDate)
+    setWeekdays(config.weekdays)
+    setIncludeCompletionCheckboxes(config.includeCompletionCheckboxes)
+    setTracks(config.tracks)
+    setPlanName(name)
+    setCompletedDates(done)
+    setPreviewKey(JSON.stringify({ startDate: config.startDate, endDate: config.endDate, weekdays: config.weekdays, tracks: config.tracks }))
+    setPlan(generated)
+    setStorageMessage('')
+    setError('')
+  }
+
+  const applySavedPlan = (record: SavedPlan) => {
+    applyConfiguration(record.configuration, record.name, record.completed_dates)
+    setSavedPlan(record)
+  }
+
+  const loginToSave = () => {
+    try {
+      sessionStorage.setItem('zamzam-plan-login-draft', JSON.stringify({ configuration, name: planName, completedDates }))
+    } catch { /* Login remains available when temporary browser storage is disabled. */ }
+    window.location.assign(`/login?next=${encodeURIComponent(privatePlanId ? `/plan?id=${privatePlanId}` : '/plan')}`)
+  }
+
+  useEffect(() => {
+    let active = true
+    const params = new URLSearchParams(window.location.search)
+    const token = params.get('share')
+    setPrivatePlanId(params.get('id'))
+    setSharedView(!!token)
+    setSharedToken(token)
+    const initialize = async () => {
+      try {
+        if (token) {
+          const record = await personalPlans.shared(token)
+          if (active) applySavedPlan(record)
+        } else {
+          await api.getMe()
+          if (!active) return
+          setSignedIn(true)
+          const library = await personalPlans.list()
+          if (active) setSavedPlans(library)
+          const id = params.get('id')
+          if (id) {
+            const record = await personalPlans.get(id)
+            if (active) applySavedPlan(record)
+          } else if (active) {
+            const draft = sessionStorage.getItem('zamzam-plan-login-draft')
+            if (draft) {
+              sessionStorage.removeItem('zamzam-plan-login-draft')
+              const data = JSON.parse(draft) as { configuration: PlanConfiguration; name: string; completedDates: string[] }
+              applyConfiguration(data.configuration, data.name, data.completedDates)
+            }
+          }
+        }
+      } catch (reason) {
+        if (active && (token || !(reason instanceof Error) || reason.message !== 'Unauthorized')) {
+          setStorageError(token ? 'الرابط غير متاح أو ألغاه صاحب الخطة.' : 'تعذر تحميل الخطط المحفوظة. أعد تحميل الصفحة للمحاولة مرة أخرى.')
+        }
+      } finally {
+        if (active) setAccountChecked(true)
+      }
+    }
+    void initialize()
+    return () => { active = false }
+  }, [])
+
+  const performPlanAction = async (action: () => Promise<void>) => {
+    if (planBusy) return
+    setPlanBusy(true)
+    setStorageError('')
+    setStorageMessage('')
+    try { await action() } catch (reason) {
+      const status = (reason as { status?: number }).status
+      setStorageError(status === 409 ? 'الخطة تغيرت أو تمت أرشفتها. أعد فتحها قبل المتابعة.' : status === 401 || (reason instanceof Error && reason.message === 'Unauthorized') ? 'سجّل دخولك لحفظ وإدارة خططك.' : 'تعذر حفظ التغيير. حاول مرة أخرى.')
+    } finally { setPlanBusy(false) }
+  }
+
+  const updateLibrary = (record: SavedPlan) => {
+    setSavedPlans(current => [record, ...current.filter(item => item.id !== record.id)])
+  }
+
+  const saveCurrentPlan = (asNew = false) => performPlanAction(async () => {
+    const generated = generateQuranPlan(configuration)
+    const done = retainedCompletionDates(savedPlan?.configuration, configuration, completedDates)
+    const record = await personalPlans.save({
+      name: planName.trim() || (studentName.trim() ? `خطة ${studentName.trim()}` : 'خطة جديدة'),
+      configuration,
+      study_dates: generated.days.filter(day => day.isStudyDay).map(day => day.date),
+      completed_dates: done,
+    }, asNew ? undefined : savedPlan ?? undefined)
+    applySavedPlan(record)
+    updateLibrary(record)
+    window.history.replaceState(null, '', `/plan?id=${record.id}`)
+    setStorageMessage(asNew ? 'تم حفظ نسخة جديدة.' : 'تم حفظ الخطة.')
+  })
+
+  const openSavedPlan = (summary: SavedPlanSummary) => performPlanAction(async () => {
+    const record = await personalPlans.get(summary.id)
+    applySavedPlan(record)
+    updateLibrary(record)
+    window.history.replaceState(null, '', `/plan?id=${summary.id}`)
+  })
+
+  const changeSavedStatus = (summary: SavedPlanSummary, changes: { completed?: boolean; archived?: boolean; share_mode?: ShareMode }) => performPlanAction(async () => {
+    const record = await personalPlans.status(summary, changes)
+    updateLibrary(record)
+    if (savedPlan?.id === record.id) {
+      setSavedPlan(record)
+      setCompletedDates(record.completed_dates)
+    }
+    setStorageMessage('تم حفظ التغيير.')
+  })
+
+  const deleteSavedPlan = (summary: SavedPlanSummary) => {
+    if (!window.confirm(`حذف «${summary.name}» نهائياً؟ ستتوقف روابط مشاركتها أيضاً.`)) return
+    void performPlanAction(async () => {
+      await personalPlans.remove(summary)
+      setSavedPlans(current => current.filter(item => item.id !== summary.id))
+      if (savedPlan?.id === summary.id) { setSavedPlan(null); window.history.replaceState(null, '', '/plan') }
+      setStorageMessage('تم حذف الخطة. يمكنك حفظ المدخلات الحالية كخطة جديدة.')
+    })
+  }
+
+  const newPlan = () => {
+    setSavedPlan(null)
+    setPlanName('')
+    setCompletedDates([])
+    setPlan(null)
+    setPreviewKey('')
+    setStudentName('')
+    setStartDate(defaults.start)
+    setEndDate(defaults.end)
+    setWeekdays([0, 1, 2, 3, 4, 5, 6])
+    setTracks([defaultTrack('memorization', 'الحفظ'), defaultTrack('revision', 'المراجعة')])
+    setError('')
+    setStorageError('')
+    setStorageMessage('')
+    window.history.replaceState(null, '', '/plan')
+  }
+
+  const markDay = (date: string, done: boolean) => {
+    if (!savedPlan) { setCompletedDates(current => done ? [...current.filter(day => day !== date), date] : current.filter(day => day !== date)); return }
+    void performPlanAction(async () => {
+      const record = await personalPlans.mark(savedPlan, date, done, sharedToken ?? undefined)
+      setSavedPlan(record)
+      setCompletedDates(record.completed_dates)
+      if (!sharedView) updateLibrary(record)
+    })
+  }
   const [excelSheets, setExcelSheets] = useState<SpreadsheetSheet[] | null>(null)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
@@ -461,6 +640,8 @@ export default function QuranPlanPage() {
     setCopied(false)
     try {
       setPlan(generateQuranPlan({ startDate, endDate, weekdays, tracks }))
+      setPreviewKey(generationKey)
+      setCompletedDates(retainedCompletionDates(savedPlan?.configuration, configuration, completedDates))
       setTimeout(() => document.getElementById('plan-preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
     } catch (reason) {
       const code = reason instanceof Error ? reason.message : ''
@@ -471,7 +652,7 @@ export default function QuranPlanPage() {
 
   const planText = () => {
     if (!plan) return ''
-    const lines = [`🌿 *خطة ${ownerLabel}* 🌿`, ...(studentName.trim() ? [`👤 *${ownerLabel}:* ${studentName.trim()}`] : []), `📅 *الفترة:* ${displayDate(startDate)} إلى ${displayDate(endDate)}`, `🗓️ *أيام الدراسة:* ${[...weekdays].sort((a, b) => a - b).map(day => WEEKDAYS[day]).join('، ')}`]
+    const lines = [`🌿 *${planName.trim() || `خطة ${ownerLabel}`}* 🌿`, ...(studentName.trim() ? [`👤 *${ownerLabel}:* ${studentName.trim()}`] : []), `📅 *الفترة:* ${displayDate(startDate)} إلى ${displayDate(endDate)}`, `🗓️ *أيام الدراسة:* ${[...weekdays].sort((a, b) => a - b).map(day => WEEKDAYS[day]).join('، ')}`]
     plan.tracks.forEach((track, index) => {
       lines.push(`${TRACK_STYLES[index % TRACK_STYLES.length].emoji} *معدل ${track.name}:* ${amountLabel(track, track.dailyAmount)} يومياً`)
       if (track.weekdays !== undefined) lines.push(`  🗓️ أيام ${track.name}: ${[...track.weekdays].sort((a, b) => a - b).map(day => WEEKDAYS[day]).join('، ') || '—'}`)
@@ -498,7 +679,7 @@ export default function QuranPlanPage() {
     return lines.join('\n')
   }
 
-  const printTitle = studentName.trim() ? `خطة ${ownerLabel} — ${studentName.trim()}` : `خطة ${ownerLabel}`
+  const printTitle = planName.trim() || (studentName.trim() ? `خطة ${ownerLabel} — ${studentName.trim()}` : `خطة ${ownerLabel}`)
   const completionText = (assignment: QuranAssignment) => assignment.completedMushaf
     ? ''
     : assignment.completedRange ? ' · اكتمل نطاق الخطة' : ''
@@ -528,7 +709,7 @@ export default function QuranPlanPage() {
       rows: plan.days.map(day => ({
         date: displayDate(day.date),
         day: WEEKDAYS[day.weekday],
-        status: day.isStudyDay ? 'دراسة' : 'راحة',
+        status: day.isStudyDay ? completedDates.includes(day.date) ? 'تم ✓' : 'دراسة' : 'راحة',
         ...Object.fromEntries(plan.tracks.map((track, index) => {
           const assignment = day.assignments[track.id]
           const value = !day.isStudyDay || day.paused?.[track.id]
@@ -569,10 +750,17 @@ export default function QuranPlanPage() {
   })
 
   return <div className="min-h-screen bg-[rgb(var(--bg))] px-3 py-6 sm:px-5 sm:py-10"><div className="mx-auto max-w-6xl">
-    <header className="mb-6 flex flex-wrap items-center justify-between gap-3"><Link href="/" className="text-lg font-bold text-blue-700 dark:text-blue-300">💧 زمزم</Link><span className="rounded-full border border-water-200 bg-white/60 px-3 py-1.5 text-xs font-semibold text-deep-600 dark:border-slate-700 dark:bg-slate-900/60">أداة مستقلة · لا تحفظ بيانات</span></header>
-    <section className="glass-strong overflow-hidden rounded-3xl">
+    <header className="mb-6 flex flex-wrap items-center justify-between gap-3"><Link href="/" className="text-lg font-bold text-blue-700 dark:text-blue-300">💧 زمزم</Link><span className="rounded-full border border-water-200 bg-white/60 px-3 py-1.5 text-xs font-semibold text-deep-600 dark:border-slate-700 dark:bg-slate-900/60">{sharedView ? 'خطة مشتركة' : 'إنشاء مجاني · الحفظ للمستخدمين المسجلين'}</span></header>
+    {storageError && <p role="alert" className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/30 dark:text-red-300">{storageError}</p>}
+    {storageMessage && <p role="status" className="mb-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">{storageMessage}</p>}
+    {accountChecked && !sharedView && !signedIn && privatePlanId && <p className="mb-4 rounded-xl bg-blue-50 p-3 text-sm text-blue-800 dark:bg-blue-950/30 dark:text-blue-200">هذه خطة خاصة. <button type="button" onClick={loginToSave} className="font-bold underline">سجّل الدخول لفتح خطتك</button></p>}
+    {!accountChecked && <p role="status" className="mb-4 text-sm text-deep-500">جاري تحميل الخطط…</p>}
+    {!sharedView && signedIn && <PlanLibrary plans={savedPlans} busy={planBusy} selectedId={savedPlan?.id} onOpen={summary => void openSavedPlan(summary)} onStatus={(summary, changes) => void changeSavedStatus(summary, changes)} onDelete={deleteSavedPlan} onNew={newPlan} />}
+    {sharedView && savedPlan && <p className="mb-4 rounded-xl bg-blue-50 p-3 text-sm text-blue-800 dark:bg-blue-950/30 dark:text-blue-200">{savedPlan.archived ? 'هذه الخطة مؤرشفة.' : savedPlan.can_mark ? 'يمكنك قراءة الخطة وتسجيل إنجاز الأيام. يُحفظ الإنجاز لصاحب الخطة وجميع من يستخدمون الرابط.' : 'هذا الرابط للقراءة فقط.'} <Link href="/plan" className="mr-2 font-bold underline">إنشاء خطتي</Link></p>}
+    {!sharedView && <section className="glass-strong overflow-hidden rounded-3xl">
       <div className="bg-gradient-to-l from-cyan-700 to-teal-600 px-5 py-7 text-white sm:px-8"><p className="text-sm font-semibold text-blue-100">مولّد خطة يومية</p><h1 className="mt-2 text-2xl font-bold sm:text-3xl">إنشاء خطة مخصصة</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-blue-50/90">أضف أوراداً قرآنية دورية، أو سلسلة كتب محددة الصفحات، أو قوائم YouTube وSoundCloud بروابط حلقاتها، وحدد المعدل اليومي لكل بند.</p></div>
       <form onSubmit={build} className="space-y-5 p-4 sm:p-7">
+        <label className="block text-sm font-semibold text-deep-700">اسم الخطة<input value={planName} onChange={event => setPlanName(event.target.value)} maxLength={120} placeholder="مثال: حفظ شهر رمضان" className="surface-field mt-1.5 w-full rounded-xl px-4 py-2.5 font-normal" /></label>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <label className="text-sm font-semibold text-deep-700">نوع الخطة<select value={planOwnerType} onChange={event => setPlanOwnerType(event.target.value as typeof planOwnerType)} className="surface-field mt-1.5 w-full rounded-xl px-4 py-2.5 font-normal"><option value="student">خطة الطالب</option><option value="female-student">خطة الطالبة</option><option value="teacher">خطة الأستاذ</option><option value="female-teacher">خطة الأستاذة</option></select></label>
           <label className="text-sm font-semibold text-deep-700">اسم {ownerLabel} <span className="font-normal text-deep-400">(اختياري)</span><input value={studentName} onChange={event => setStudentName(event.target.value)} maxLength={100} placeholder={`اسم ${ownerLabel}`} className="surface-field mt-1.5 w-full rounded-xl px-4 py-2.5 font-normal" /></label>
@@ -603,15 +791,29 @@ export default function QuranPlanPage() {
         })}</div>
         <div className="flex flex-wrap gap-2"><button type="button" onClick={() => addTrack('quran')} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-bold">+ إضافة ورد قرآني</button><button type="button" onClick={() => addTrack('quantity')} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-bold">+ إضافة كتب</button><button type="button" onClick={() => addTrack('playlist')} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-bold">+ إضافة YouTube أو SoundCloud</button></div>
         {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 dark:border-red-800 dark:bg-red-950/35 dark:text-red-200">{error}</p>}
-        <button type="submit" className="water-btn w-full rounded-xl px-5 py-3.5 font-bold text-white sm:w-auto">إنشاء الخطة</button>
+        <div className="flex flex-wrap gap-3"><button type="submit" disabled={planBusy} className="water-btn w-full rounded-xl px-5 py-3.5 font-bold text-white sm:w-auto">{savedPlan ? 'معاينة التعديلات' : 'إنشاء الخطة'}</button>{signedIn && <button type="button" disabled={planBusy} onClick={() => void saveCurrentPlan()} className="water-btn-outline w-full rounded-xl px-5 py-3.5 font-bold sm:w-auto">{planBusy ? 'جاري الحفظ…' : savedPlan ? 'حفظ التعديلات' : 'إنشاء وحفظ الخطة'}</button>}</div>
       </form>
-    </section>
+    </section>}
 
     {plan && <section id="plan-preview" className="print-plan mt-7 scroll-mt-5 rounded-3xl border border-water-200 bg-white p-4 shadow-xl dark:border-slate-700 dark:bg-slate-900 sm:p-7">
       <div className="plan-header flex flex-col gap-4 border-b border-water-200 pb-5 dark:border-slate-700 sm:flex-row sm:items-start sm:justify-between"><div className="plan-heading"><p className="plan-kicker text-xs font-bold text-blue-700 dark:text-blue-300">بسم الله الرحمن الرحيم</p><h2 className="plan-title mt-2 text-2xl font-bold text-deep-900">{printTitle}</h2><p className="plan-period mt-2 text-sm text-deep-500">من {displayDate(startDate)} إلى {displayDate(endDate)}</p></div><div className="no-print flex flex-wrap gap-2"><button type="button" onClick={async () => { await navigator.clipboard.writeText(planText()); setCopied(true) }} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">{copied ? 'تم النسخ ✓' : 'نسخ النص'}</button><button type="button" onClick={openExcelPreview} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">تصدير Excel</button><button type="button" onClick={printPlan} className="water-btn rounded-xl px-4 py-2 text-sm font-bold text-white">طباعة الخطة</button></div></div>
+      {!sharedView && <div className="no-print mt-4 space-y-3 rounded-xl border border-water-200 p-3 dark:border-slate-700">
+        {hasUnsavedChanges && <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">التعديلات لم تُحفظ بعد. رابط المشاركة يعرض آخر نسخة محفوظة. احفظ التعديلات قبل تسجيل إنجاز الجدول الجديد.</p>}
+        <div className="flex flex-wrap items-center gap-2">
+          {signedIn ? <><button type="button" disabled={planBusy} onClick={() => void saveCurrentPlan()} className="water-btn rounded-lg px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{planBusy ? 'جاري الحفظ…' : savedPlan ? 'حفظ التعديلات' : 'حفظ الخطة'}</button>{savedPlan && <button type="button" disabled={planBusy} onClick={() => void saveCurrentPlan(true)} className="water-btn-outline rounded-lg px-4 py-2 text-sm font-semibold">حفظ كخطة جديدة</button>}</> : <button type="button" onClick={loginToSave} className="water-btn rounded-lg px-4 py-2 text-sm font-bold text-white">سجّل الدخول لحفظ الخطة</button>}
+          {savedPlan && <><span className="text-sm font-semibold text-deep-600">{savedPlan.archived ? 'مؤرشفة' : savedPlan.completed ? 'مكتملة ✓' : 'جارية'}</span><button type="button" disabled={planBusy} onClick={() => void changeSavedStatus(savedPlan, { completed: !savedPlan.completed })} className="water-btn-outline rounded-lg px-3 py-2 text-sm">{savedPlan.completed ? 'إعادة فتح الخطة' : 'تحديد كمكتملة'}</button><button type="button" disabled={planBusy} onClick={() => void changeSavedStatus(savedPlan, { archived: !savedPlan.archived })} className="water-btn-outline rounded-lg px-3 py-2 text-sm">{savedPlan.archived ? 'استعادة من الأرشيف' : 'أرشفة'}</button><button type="button" disabled={planBusy} onClick={() => deleteSavedPlan(savedPlan)} className="rounded-lg px-3 py-2 text-sm text-red-700 dark:text-red-300">حذف</button></>}
+        </div>
+        {savedPlan && <div className="flex flex-wrap items-center gap-3">
+          <label className="text-sm font-semibold text-deep-700">الوصول إلى الخطة<select aria-label="الوصول إلى الخطة" value={savedPlan.share_mode} disabled={planBusy} onChange={event => void changeSavedStatus(savedPlan, { share_mode: event.target.value as ShareMode })} className="surface-field mr-2 rounded-lg px-3 py-2 font-normal"><option value="private">خاصة — أنا فقط</option><option value="readonly">رابط — قراءة فقط</option><option value="read_mark">رابط — قراءة وتسجيل الإنجاز</option></select></label>
+          {savedPlan.share_token && <><input aria-label="رابط مشاركة الخطة" readOnly value={`${typeof window !== 'undefined' ? window.location.origin : ''}/plan?share=${savedPlan.share_token}`} dir="ltr" className="surface-field min-w-0 flex-1 rounded-lg px-3 py-2 text-xs" /><button type="button" onClick={() => void performPlanAction(async () => { await navigator.clipboard.writeText(`${window.location.origin}/plan?share=${savedPlan.share_token}`); setStorageMessage('تم نسخ رابط المشاركة.') })} className="water-btn-outline rounded-lg px-3 py-2 text-sm">نسخ الرابط</button></>}
+          <p className="w-full text-xs text-deep-500">تغيير نوع الوصول يلغي الرابط السابق. إعادة الخطة إلى «خاصة» تلغي مشاركتها. الروابط لا تسمح بتعديل المدخلات أو حذف الخطة.</p>
+        </div>}
+        {!savedPlan && <p className="text-xs text-deep-500">احفظ الخطة باسم لتعود إليها وتعدلها أو تشارك رابطها. الخطط المحفوظة خاصة افتراضياً.</p>}
+      </div>}
+      {savedPlan && <p className="no-print mt-3 text-sm font-semibold text-deep-600">الإنجاز: <bdi dir="ltr">{completedDates.length} / {savedPlan.study_dates.length}</bdi> يوم{savedPlan.completed ? ' · الخطة مكتملة ✓' : ''}</p>}
       <div className="plan-summary my-4 flex flex-wrap gap-2"><div className="plan-stat plan-stat-days rounded-lg bg-cyan-50 px-3 py-1.5 text-center dark:bg-cyan-950/35"><span className="plan-stat-label block text-xs font-semibold text-blue-700 dark:text-blue-300">أيام الدراسة</span><strong className="block text-base font-bold text-blue-800 dark:text-blue-200">{plan.studyDays} يوم</strong></div>{plan.tracks.map((track, index) => { const style = TRACK_STYLES[index % TRACK_STYLES.length]; const unitLabel = track.kind === 'quantity' ? track.quantityUnit : amountLabel(track, 1).replace(/^1 /, ''); return <div key={track.id} className="plan-stat rounded-lg px-3 py-1.5 text-center" style={{ backgroundColor: style.soft, color: style.ink }}><span className="plan-stat-label block text-xs font-semibold">إجمالي {track.name}</span><strong className="block text-base font-bold">{plan.totals[track.id].amount} {unitLabel}</strong></div> })}</div>
-      <div className="plan-table-wrap overflow-x-auto border border-water-200 dark:border-slate-700"><table className="plan-table w-full border-collapse text-right text-sm" style={{ minWidth: `${Math.max(includeCompletionCheckboxes ? 47 : 44, (includeCompletionCheckboxes ? 21 : 18) + plan.tracks.length * 14)}rem` }}><thead className="bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-100"><tr><th className="px-4 py-3">التاريخ</th><th className="px-4 py-3">اليوم</th>{includeCompletionCheckboxes && <th className="plan-completion-cell px-2 py-3">تم</th>}{plan.tracks.map(track => <th key={track.id} className="px-4 py-3">{track.name}{track.weekdays !== undefined && <span className="no-print mt-0.5 block text-[10px] font-normal opacity-70">أيام مخصصة</span>}</th>)}</tr></thead><tbody className="divide-y divide-water-100 dark:divide-slate-800">{plan.days.map(day => <tr key={day.date} className={day.isStudyDay ? 'plan-study-row bg-white dark:bg-slate-900' : 'plan-rest-row bg-slate-50/75 text-slate-500 dark:bg-slate-950/45 dark:text-slate-400'}><td className="whitespace-nowrap px-4 py-3">{displayDate(day.date)}</td><td className="px-4 py-3 font-semibold">{WEEKDAYS[day.weekday]}</td>{includeCompletionCheckboxes && <td className="plan-completion-cell px-2 py-3">{day.isStudyDay ? <span aria-hidden="true" className="plan-completion-box flex h-6 w-6 items-center justify-center rounded border-2 border-slate-400 bg-white dark:border-slate-500 dark:bg-slate-900" /> : <span aria-hidden="true">—</span>}</td>}{plan.tracks.map((track, index) => <td key={track.id} className="px-4 py-3" style={{ borderInlineStart: `3px solid ${TRACK_STYLES[index % TRACK_STYLES.length].line}` }}>{assignmentCell(day.assignments[track.id], day.isStudyDay, day.paused?.[track.id] === true)}</td>)}</tr>)}</tbody></table></div>
-      <p className="no-print mt-5 text-center text-xs text-deep-400">وُلدت الخطة بواسطة زمزم · يمكن تعديل المدخلات وإعادة إنشائها في أي وقت<br />عند الطباعة: ألغِ تحديد «Headers and footers» و «Background graphics» من خيارات الطباعة للحصول على نسخة نظيفة.</p>
+      <div className="plan-table-wrap overflow-x-auto border border-water-200 dark:border-slate-700"><table className="plan-table w-full border-collapse text-right text-sm" style={{ minWidth: `${Math.max(includeCompletionCheckboxes ? 47 : 44, (includeCompletionCheckboxes ? 21 : 18) + plan.tracks.length * 14)}rem` }}><thead className="bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-100"><tr><th className="px-4 py-3">التاريخ</th><th className="px-4 py-3">اليوم</th>{showCompletion && <th className={`plan-completion-cell px-2 py-3 ${includeCompletionCheckboxes ? '' : 'no-print'}`}>تم</th>}{plan.tracks.map(track => <th key={track.id} className="px-4 py-3">{track.name}{track.weekdays !== undefined && <span className="no-print mt-0.5 block text-[10px] font-normal opacity-70">أيام مخصصة</span>}</th>)}</tr></thead><tbody className="divide-y divide-water-100 dark:divide-slate-800">{plan.days.map(day => <tr key={day.date} className={day.isStudyDay ? 'plan-study-row bg-white dark:bg-slate-900' : 'plan-rest-row bg-slate-50/75 text-slate-500 dark:bg-slate-950/45 dark:text-slate-400'}><td className="whitespace-nowrap px-4 py-3">{displayDate(day.date)}</td><td className="px-4 py-3 font-semibold">{WEEKDAYS[day.weekday]}</td>{showCompletion && <td className={`plan-completion-cell px-2 py-3 ${includeCompletionCheckboxes ? '' : 'no-print'}`}>{day.isStudyDay ? <input type="checkbox" aria-label={`إنجاز يوم ${day.date}`} checked={completedDates.includes(day.date)} disabled={planBusy || scheduleChanged || !!savedPlan?.archived || (sharedView && !savedPlan?.can_mark)} onChange={event => markDay(day.date, event.target.checked)} className="plan-completion-box h-6 w-6 rounded border-2 border-slate-400 accent-blue-700 disabled:opacity-60 dark:border-slate-500" /> : <span aria-hidden="true">—</span>}</td>}{plan.tracks.map((track, index) => <td key={track.id} className="px-4 py-3" style={{ borderInlineStart: `3px solid ${TRACK_STYLES[index % TRACK_STYLES.length].line}` }}>{assignmentCell(day.assignments[track.id], day.isStudyDay, day.paused?.[track.id] === true)}</td>)}</tr>)}</tbody></table></div>
+      <p className="no-print mt-5 text-center text-xs text-deep-400">وُلدت الخطة بواسطة زمزم{!sharedView && ' · يمكن تعديل المدخلات وإعادة إنشائها في أي وقت'}<br />عند الطباعة: ألغِ تحديد «Headers and footers» و «Background graphics» من خيارات الطباعة للحصول على نسخة نظيفة.</p>
     </section>}
     {excelSheets && <ExcelPreviewModal sheets={excelSheets} filename={`zamzam-plan-${startDate}.xlsx`} helpText="راجع جدول الخطة قبل تنزيل ملف Excel." onClose={() => setExcelSheets(null)} />}
   </div></div>
