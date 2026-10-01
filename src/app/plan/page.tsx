@@ -33,7 +33,7 @@ import {
   type QuranAssignment,
   type QuranPlanTrack,
 } from '@/lib/quran-plan'
-import type { ImportedYoutubePlaylist } from '@/lib/youtube-playlist'
+import type { ImportedMediaPlaylist } from '@/lib/media-playlist'
 
 const WEEKDAYS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
 const TRACK_STYLES = [
@@ -288,8 +288,8 @@ function TrackFields({ track, index, count, globalWeekdays, onChange, onMove, on
     setPlaylistLoadingId(itemId)
     setPlaylistImportError('')
     try {
-      const response = await fetch(`/youtube-playlist?url=${encodeURIComponent(url)}`)
-      const data = await response.json() as ImportedYoutubePlaylist | { detail?: string }
+      const response = await fetch(`/media-playlist?url=${encodeURIComponent(url)}`)
+      const data = await response.json() as ImportedMediaPlaylist | { detail?: string }
       if (!response.ok || !('episodes' in data)) throw new Error('playlist_import_failed')
       onChange({
         ...track,
@@ -301,7 +301,7 @@ function TrackFields({ track, index, count, globalWeekdays, onChange, onMove, on
         } : item),
       })
     } catch {
-      setPlaylistImportError('تعذر قراءة رابط YouTube. تأكد أن الفيديو أو القائمة عامة ثم حاول مرة أخرى.')
+      setPlaylistImportError('تعذر قراءة الرابط. استخدم فيديو أو قائمة YouTube أو قائمة SoundCloud عامة ثم حاول مرة أخرى.')
     } finally {
       setPlaylistLoadingId(null)
     }
@@ -357,12 +357,12 @@ function TrackFields({ track, index, count, globalWeekdays, onChange, onMove, on
           {(track.items || []).map(item => track.kind === 'playlist'
             ? <div key={item.id} className="rounded-xl border border-slate-200 bg-white/65 p-3 dark:border-slate-700 dark:bg-slate-900/45">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-                <label className="min-w-0 flex-1 text-xs font-semibold text-deep-700">رابط فيديو أو قائمة YouTube<input type="url" value={item.url || ''} onChange={event => onChange({ ...track, items: track.items?.map(entry => entry.id === item.id ? { ...entry, url: event.target.value, name: '', totalUnits: 0, episodes: [], startUnit: 1 } : entry) })} required placeholder="https://www.youtube.com/watch?v=…" className="surface-field mt-1 w-full rounded-lg px-3 py-2 text-sm font-normal" /></label>
-                <label className="text-xs font-semibold text-deep-700">حلقة البداية<input type="number" min={1} value={item.startUnit ?? 1} onChange={event => onChange({ ...track, items: track.items?.map(entry => entry.id === item.id ? { ...entry, startUnit: Math.max(1, Number(event.target.value)), episodes: [] } : entry) })} className="surface-field mt-1 w-full rounded-lg px-3 py-2 text-sm font-normal sm:w-24" /></label>
+                <label className="min-w-0 flex-1 text-xs font-semibold text-deep-700">رابط YouTube أو قائمة SoundCloud<input type="url" value={item.url || ''} onChange={event => onChange({ ...track, items: track.items?.map(entry => entry.id === item.id ? { ...entry, url: event.target.value, name: '', totalUnits: 0, episodes: [], startUnit: 1 } : entry) })} required placeholder="https://www.youtube.com/watch?v=…" className="surface-field mt-1 w-full rounded-lg px-3 py-2 text-sm font-normal" /></label>
+                <label className="text-xs font-semibold text-deep-700">حلقة البداية<input type="number" min={1} value={item.startUnit ?? 1} onChange={event => onChange({ ...track, items: track.items?.map(entry => entry.id === item.id ? { ...entry, startUnit: Math.max(1, Number(event.target.value)) } : entry) })} className="surface-field mt-1 w-full rounded-lg px-3 py-2 text-sm font-normal sm:w-24" /></label>
                 <button type="button" disabled={!item.url?.trim() || playlistLoadingId === item.id} onClick={() => void loadPlaylist(item.id, item.url || '')} className="rounded-lg bg-blue-700 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50 dark:bg-blue-600">{playlistLoadingId === item.id ? 'جاري جلب الرابط…' : 'جلب المحتوى'}</button>
                 <button type="button" onClick={() => onChange({ ...track, items: track.items?.filter(entry => entry.id !== item.id) })} disabled={(track.items?.length || 0) <= 1} className="rounded-lg px-2 py-2.5 text-xs font-semibold text-red-600 disabled:opacity-30 dark:text-red-300">حذف</button>
               </div>
-              {item.episodes?.length ? <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">✓ {item.name} · {item.episodes.length === 1 ? 'فيديو واحد' : `${item.episodes.length} حلقة`} تم جلبها</p> : <p className="mt-2 text-xs text-deep-500">ألصق رابط فيديو واحد أو قائمة تشغيل ثم اضغط «جلب المحتوى».</p>}
+              {item.episodes?.length ? <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">✓ {item.name} · {item.episodes.length === 1 ? 'مقطع واحد' : `${item.episodes.length} حلقة`} تم جلبها</p> : <p className="mt-2 text-xs text-deep-500">ألصق رابط فيديو YouTube أو قائمة تشغيل من YouTube أو SoundCloud ثم اضغط «جلب المحتوى».</p>}
             </div>
             : <div key={item.id} className="grid gap-2 rounded-xl border border-slate-200 bg-white/65 p-3 dark:border-slate-700 dark:bg-slate-900/45 sm:grid-cols-[minmax(0,1fr)_8rem_8rem_auto]">
               <label className="text-xs font-semibold text-deep-700">اسم الكتاب<input value={item.name} onChange={event => onChange({ ...track, items: track.items?.map(entry => entry.id === item.id ? { ...entry, name: event.target.value } : entry) })} required maxLength={100} placeholder="مثال: الرحيق المختوم" className="surface-field mt-1 w-full rounded-lg px-3 py-2 text-sm font-normal" /></label>
@@ -422,7 +422,7 @@ export default function QuranPlanPage() {
     const id = `custom-${Date.now()}-${tracks.length}`
     setTracks(current => [...current, kind === 'quran'
       ? defaultTrack(id, 'بند جديد')
-      : { ...defaultTrack(id, kind === 'playlist' ? 'مشاهدة' : 'قراءة'), kind, subject: '', quantityUnit: kind === 'playlist' ? 'حلقة' : 'صفحة', items: [{ id: `${id}-item-1`, name: '', totalUnits: kind === 'playlist' ? 0 : 100, startUnit: 1, url: kind === 'playlist' ? '' : undefined, episodes: kind === 'playlist' ? [] : undefined }] }])
+      : { ...defaultTrack(id, kind === 'playlist' ? 'مشاهدة واستماع' : 'قراءة'), kind, subject: '', quantityUnit: kind === 'playlist' ? 'حلقة' : 'صفحة', items: [{ id: `${id}-item-1`, name: '', totalUnits: kind === 'playlist' ? 0 : 100, startUnit: 1, url: kind === 'playlist' ? '' : undefined, episodes: kind === 'playlist' ? [] : undefined }] }])
   }
   const addFollowingWerd = (index: number) => setTracks(current => {
     const source = current[index]
@@ -571,7 +571,7 @@ export default function QuranPlanPage() {
   return <div className="min-h-screen bg-[rgb(var(--bg))] px-3 py-6 sm:px-5 sm:py-10"><div className="mx-auto max-w-6xl">
     <header className="mb-6 flex flex-wrap items-center justify-between gap-3"><Link href="/" className="text-lg font-bold text-blue-700 dark:text-blue-300">💧 زمزم</Link><span className="rounded-full border border-water-200 bg-white/60 px-3 py-1.5 text-xs font-semibold text-deep-600 dark:border-slate-700 dark:bg-slate-900/60">أداة مستقلة · لا تحفظ بيانات</span></header>
     <section className="glass-strong overflow-hidden rounded-3xl">
-      <div className="bg-gradient-to-l from-cyan-700 to-teal-600 px-5 py-7 text-white sm:px-8"><p className="text-sm font-semibold text-blue-100">مولّد خطة يومية</p><h1 className="mt-2 text-2xl font-bold sm:text-3xl">إنشاء خطة مخصصة</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-blue-50/90">أضف أوراداً قرآنية دورية، أو سلسلة كتب محددة الصفحات، أو قوائم YouTube بروابط حلقاتها، وحدد المعدل اليومي لكل بند.</p></div>
+      <div className="bg-gradient-to-l from-cyan-700 to-teal-600 px-5 py-7 text-white sm:px-8"><p className="text-sm font-semibold text-blue-100">مولّد خطة يومية</p><h1 className="mt-2 text-2xl font-bold sm:text-3xl">إنشاء خطة مخصصة</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-blue-50/90">أضف أوراداً قرآنية دورية، أو سلسلة كتب محددة الصفحات، أو قوائم YouTube وSoundCloud بروابط حلقاتها، وحدد المعدل اليومي لكل بند.</p></div>
       <form onSubmit={build} className="space-y-5 p-4 sm:p-7">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <label className="text-sm font-semibold text-deep-700">نوع الخطة<select value={planOwnerType} onChange={event => setPlanOwnerType(event.target.value as typeof planOwnerType)} className="surface-field mt-1.5 w-full rounded-xl px-4 py-2.5 font-normal"><option value="student">خطة الطالب</option><option value="female-student">خطة الطالبة</option><option value="teacher">خطة الأستاذ</option><option value="female-teacher">خطة الأستاذة</option></select></label>
@@ -601,7 +601,7 @@ export default function QuranPlanPage() {
             {group.members.map(({ track, index }, sequencePosition) => <TrackFields key={track.id} track={track} index={index} count={tracks.length} embedded sequencePosition={sequencePosition} styleIndex={firstIndex} globalWeekdays={weekdays} onChange={value => updateTrack(track.id, value)} onMove={direction => moveTrack(index, direction)} onRemove={() => setTracks(current => current.filter(item => item.id !== track.id))} onAddWerd={() => addFollowingWerd(index)} />)}
           </fieldset>
         })}</div>
-        <div className="flex flex-wrap gap-2"><button type="button" onClick={() => addTrack('quran')} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-bold">+ إضافة ورد قرآني</button><button type="button" onClick={() => addTrack('quantity')} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-bold">+ إضافة كتب</button><button type="button" onClick={() => addTrack('playlist')} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-bold">+ إضافة فيديو أو قائمة YouTube</button></div>
+        <div className="flex flex-wrap gap-2"><button type="button" onClick={() => addTrack('quran')} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-bold">+ إضافة ورد قرآني</button><button type="button" onClick={() => addTrack('quantity')} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-bold">+ إضافة كتب</button><button type="button" onClick={() => addTrack('playlist')} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-bold">+ إضافة YouTube أو SoundCloud</button></div>
         {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 dark:border-red-800 dark:bg-red-950/35 dark:text-red-200">{error}</p>}
         <button type="submit" className="water-btn w-full rounded-xl px-5 py-3.5 font-bold text-white sm:w-auto">إنشاء الخطة</button>
       </form>
