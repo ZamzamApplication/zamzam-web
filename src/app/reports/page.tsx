@@ -7,7 +7,7 @@ import { mediaUrl } from '@/lib/format'
 import { currentMonthValue, formatMonthPeriod, monthRange } from '@/lib/month'
 import { formatQuranRange } from '@/lib/quran'
 import { applyExcelTemplate, configuredExcelExportTemplates } from '@/lib/excel-templates'
-import type { Circle, CircleAttendanceRate, QuranProgressEntry, StudentStatsItem } from '@/lib/types'
+import type { Circle, CircleAttendanceRate, QuranProgressEntry, SheikhInfo, StudentStatsItem } from '@/lib/types'
 import ExcelPreviewModal, { type SpreadsheetSheet } from '@/components/ExcelPreviewModal'
 import { attendanceStatusColorClass } from '@/components/AttendanceStatusControl'
 import MonthSwitcher from '@/components/MonthSwitcher'
@@ -17,6 +17,8 @@ import { progressCategoryLabel } from '@/components/TahfizInitialSettingsFields'
 export default function ReportsPage() {
   const router = useRouter()
   const [circles, setCircles] = useState<Circle[]>([])
+  const [sheikhs, setSheikhs] = useState<SheikhInfo[]>([])
+  const [selectedSheikh, setSelectedSheikh] = useState<number | ''>('')
   const [selectedCircle, setSelectedCircle] = useState<number | null>(null)
   const [circleRate, setCircleRate] = useState<CircleAttendanceRate | null>(null)
   const [studentStats, setStudentStats] = useState<StudentStatsItem[]>([])
@@ -60,7 +62,9 @@ export default function ReportsPage() {
     setLoading(true)
     setError('')
     try {
-      const circlesData = await api.getCircles()
+      const [circlesData, sheikhsData] = await Promise.all([api.getCircles(), api.getSheikhs()])
+      setSheikhs(sheikhsData)
+      setSelectedSheikh('')
       setCircles(circlesData)
       const tahfiz = circlesData[0]
       if (tahfiz) {
@@ -79,15 +83,15 @@ export default function ReportsPage() {
 
   useEffect(() => { load() }, [load])
 
-  const loadStatistics = async (circleId: number, from?: string, to?: string) => {
+  const loadStatistics = async (circleId: number, from?: string, to?: string, sheikhId?: number) => {
     const requestId = ++reportRequestId.current
     setReportLoading(true)
     setError('')
     try {
       const [rate, stats, progress] = await Promise.all([
-        api.getCircleAttendanceRate(circleId, from, to),
-        api.getCircleStudentStats(circleId, from, to),
-        api.getProgressReport(from, to),
+        api.getCircleAttendanceRate(circleId, from, to, sheikhId),
+        api.getCircleStudentStats(circleId, from, to, sheikhId),
+        api.getProgressReport(from, to, sheikhId),
       ])
       if (requestId !== reportRequestId.current) return
       setCircleRate(rate)
@@ -114,7 +118,7 @@ export default function ReportsPage() {
     }
     const monthStartDay = circles.find((circle) => circle.id === circleId)?.month_start_day ?? 1
     const range = monthRange(selectedMonth, monthStartDay)
-    await loadStatistics(circleId, range.start, range.end)
+    await loadStatistics(circleId, range.start, range.end, selectedSheikh || undefined)
   }
 
   const handleMonthChange = async (month: string) => {
@@ -123,13 +127,25 @@ export default function ReportsPage() {
     if (!selectedCircle) return
     const monthStartDay = circles.find((circle) => circle.id === selectedCircle)?.month_start_day ?? 1
     const range = monthRange(month, monthStartDay)
-    await loadStatistics(selectedCircle, range.start, range.end)
+    await loadStatistics(selectedCircle, range.start, range.end, selectedSheikh || undefined)
   }
 
   const handleAllTime = async () => {
     if (!selectedCircle) return
     setPeriodMode('all')
-    await loadStatistics(selectedCircle)
+    await loadStatistics(selectedCircle, undefined, undefined, selectedSheikh || undefined)
+  }
+
+  const handleSheikhChange = async (sheikhId: number | '') => {
+    setSelectedSheikh(sheikhId)
+    if (!selectedCircle) return
+    if (periodMode === 'all') {
+      await loadStatistics(selectedCircle, undefined, undefined, sheikhId || undefined)
+      return
+    }
+    const monthStartDay = circles.find((circle) => circle.id === selectedCircle)?.month_start_day ?? 1
+    const range = monthRange(selectedMonth, monthStartDay)
+    await loadStatistics(selectedCircle, range.start, range.end, sheikhId || undefined)
   }
 
   if (loading) return <div className="page-loading" aria-label="جاري التحميل" />
@@ -189,7 +205,7 @@ export default function ReportsPage() {
           ...statusColumns,
           { id: 'rate', label: 'نسبة الحضور' },
         ],
-        rows: sortedStudents.map((student) => Object.fromEntries([
+        rows: displayStudents.map((student) => Object.fromEntries([
           ['student', student.student_name],
           ['sheikh', student.sheikh_name],
           ['sessions', student.total_sessions],
@@ -211,7 +227,7 @@ export default function ReportsPage() {
           { id: 'mistakes', label: 'إجمالي الأخطاء' },
           { id: 'latestRange', label: 'آخر مقدار' },
         ],
-        rows: progressReport.students.map((student) => ({
+        rows: displayProgressStudents.map((student) => ({
           student: student.student_name,
           entries: student.entries,
           quality: student.average_quality,
@@ -257,6 +273,17 @@ export default function ReportsPage() {
 
       {selectedCircle && (
         <div className="glass-card rounded-2xl p-5 mb-6">
+          <label className="mb-4 flex flex-col gap-2 text-sm text-deep-600">
+            <span>الشيخ</span>
+            <select
+              value={selectedSheikh}
+              onChange={(event) => void handleSheikhChange(event.target.value ? Number(event.target.value) : '')}
+              className="surface-field w-full rounded-xl px-3 py-2.5 text-sm"
+            >
+              <option value="">كل الشيوخ</option>
+              {sheikhs.map((sheikh) => <option key={sheikh.id} value={sheikh.id}>{sheikh.name}</option>)}
+            </select>
+          </label>
           <div className="flex gap-2 mb-4">
             <button
               type="button"

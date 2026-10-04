@@ -487,10 +487,11 @@ export const api = {
     })
   },
 
-  getProgressReport(dateFrom?: string, dateTo?: string) {
+  getProgressReport(dateFrom?: string, dateTo?: string, sheikhId?: number) {
     const params = new URLSearchParams()
     if (dateFrom) params.set('date_from', dateFrom)
     if (dateTo) params.set('date_to', dateTo)
+    if (sheikhId !== undefined) params.set('sheikh_id', String(sheikhId))
     const query = params.toString()
     return request<{
       enabled: boolean
@@ -864,18 +865,20 @@ export const api = {
     return request(`/users/${id}`, { method: 'DELETE' })
   },
 
-  getCircleAttendanceRate(circleId: number, dateFrom?: string, dateTo?: string) {
+  getCircleAttendanceRate(circleId: number, dateFrom?: string, dateTo?: string, sheikhId?: number) {
     const params = new URLSearchParams()
     if (dateFrom) params.set('date_from', dateFrom)
     if (dateTo) params.set('date_to', dateTo)
+    if (sheikhId !== undefined) params.set('sheikh_id', String(sheikhId))
     const qs = params.toString()
     return request(`/reports/circle/${circleId}/rate${qs ? `?${qs}` : ''}`)
   },
 
-  getCircleStudentStats(circleId: number, dateFrom?: string, dateTo?: string) {
+  getCircleStudentStats(circleId: number, dateFrom?: string, dateTo?: string, sheikhId?: number) {
     const params = new URLSearchParams()
     if (dateFrom) params.set('date_from', dateFrom)
     if (dateTo) params.set('date_to', dateTo)
+    if (sheikhId !== undefined) params.set('sheikh_id', String(sheikhId))
     const qs = params.toString()
     return request(`/reports/circle/${circleId}/student-stats${qs ? `?${qs}` : ''}`)
   },
