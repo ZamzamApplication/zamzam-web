@@ -32,6 +32,16 @@ export function formatMonth(value: string): string {
   }).format(new Date(year, month - 1, 1))
 }
 
+export function financialMonthValue(value: string, monthStartDay = 1): string {
+  if (monthStartDay === 1) return value
+  const [year, month] = value.split('-').map(Number)
+  const daysInStartMonth = new Date(year, month, 0).getDate()
+  const daysBeforeNextMonth = daysInStartMonth - monthStartDay + 1
+  const daysInNextMonth = monthStartDay - 1
+  // Keep the starting month when both months contain the same number of days.
+  return daysInNextMonth > daysBeforeNextMonth ? shiftMonth(value, 1) : value
+}
+
 export function formatMonthPeriod(value: string, monthStartDay = 1): string {
   if (monthStartDay === 1) return formatMonth(value)
   const range = monthRange(value, monthStartDay)

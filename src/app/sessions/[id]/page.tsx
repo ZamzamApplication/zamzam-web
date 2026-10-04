@@ -18,6 +18,7 @@ function isProgressDraftComplete(draft?: QuranProgressInput) {
 
 function progressRangeChanged(before: QuranProgressInput, after: QuranProgressInput) {
   return before.range_type !== after.range_type
+    || (before.direction || 'forward') !== (after.direction || 'forward')
     || before.from_surah !== after.from_surah
     || before.from_ayah !== after.from_ayah
     || before.to_surah !== after.to_surah

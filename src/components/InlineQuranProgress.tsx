@@ -4,6 +4,7 @@ import type { ProgressCategory, QuranProgressEntry, QuranProgressInput } from '@
 import type { QualityOption } from '@/lib/quran'
 import { SURAHS, surahInfo } from '@/lib/quran'
 import { progressCategoryLabel } from '@/components/TahfizInitialSettingsFields'
+import { continuedProgressRange, isProgressRangeComplete } from '@/lib/quran-progress'
 
 export type ProgressDraftMap = Record<string, QuranProgressInput>
 
@@ -12,24 +13,7 @@ export function progressDraftKey(studentId: number, category: ProgressCategory) 
 }
 
 export function isSurahAyahRangeComplete(draft?: QuranProgressInput) {
-  if (!draft) return false
-  if (draft.range_type === 'page') {
-    const fromPage = draft.from_page || 0
-    const toPage = draft.to_page || 0
-    return fromPage >= 1 && toPage >= fromPage && toPage <= 604
-      && draft.quality_score >= 1 && draft.quality_score <= 5
-  }
-  const fromSurah = draft.from_surah || 0
-  const fromAyah = draft.from_ayah || 0
-  const toSurah = draft.to_surah || 0
-  const toAyah = draft.to_ayah || 0
-  return fromSurah > 0
-    && fromAyah > 0
-    && toSurah > 0
-    && toAyah > 0
-    && (toSurah > fromSurah || (toSurah === fromSurah && toAyah >= fromAyah))
-    && draft.quality_score >= 1
-    && draft.quality_score <= 5
+  return isProgressRangeComplete(draft)
 }
 
 export function progressEntryToInput(entry: QuranProgressEntry): QuranProgressInput {
@@ -38,6 +22,7 @@ export function progressEntryToInput(entry: QuranProgressEntry): QuranProgressIn
     sheikh_id: entry.sheikh_id,
     category: entry.category,
     range_type: entry.range_type,
+    direction: entry.direction || 'forward',
     from_surah: entry.from_surah,
     from_ayah: entry.from_ayah,
     to_surah: entry.to_surah,
@@ -57,6 +42,7 @@ function makeDraft(studentId: number, sheikhId: number | null, category: Progres
     sheikh_id: sheikhId,
     category,
     range_type: 'surah_ayah',
+    direction: 'forward',
     from_surah: 0,
     from_ayah: 0,
     to_surah: 0,
@@ -69,33 +55,11 @@ function makeDraft(studentId: number, sheikhId: number | null, category: Progres
 }
 
 function continueDraft(previous: QuranProgressInput, studentId: number, sheikhId: number | null, category: ProgressCategory): QuranProgressInput {
-  const draft = makeDraft(studentId, sheikhId, category)
-  if (category !== 'new_memorization') {
-    return {
-      ...draft,
-      from_surah: previous.from_surah || 1,
-      from_ayah: previous.from_ayah || 1,
-      to_surah: previous.to_surah || previous.from_surah || 1,
-      to_ayah: previous.to_ayah || previous.from_ayah || 1,
-    }
-  }
-
-  const previousSurah = previous.to_surah || previous.from_surah || 1
-  const previousEnd = previous.to_ayah || previous.from_ayah || 1
-  const hasNextAyah = previousEnd < surahInfo(previousSurah).ayahs
-  const nextSurah = hasNextAyah || previousSurah === 114 ? previousSurah : previousSurah + 1
-  const nextAyah = hasNextAyah ? previousEnd + 1 : previousSurah === 114 ? previousEnd : 1
-  return {
-    ...draft,
-    from_surah: nextSurah,
-    to_surah: nextSurah,
-    from_ayah: nextAyah,
-    to_ayah: nextAyah,
-  }
+  return { ...makeDraft(studentId, sheikhId, category), ...continuedProgressRange({ ...previous, category }) }
 }
 
 export function createRequiredProgressDraft(studentId: number, sheikhId: number | null, category: ProgressCategory, previous?: QuranProgressInput): QuranProgressInput {
-  return previous && (previous.from_surah || 0) > 0 ? continueDraft(previous, studentId, sheikhId, category) : makeDraft(studentId, sheikhId, category)
+  return previous && ((previous.from_surah || 0) > 0 || (previous.from_page || 0) > 0) ? continueDraft(previous, studentId, sheikhId, category) : makeDraft(studentId, sheikhId, category)
 }
 
 function AyahSelect({ value, surah, onChange, label, disabled }: { value: number; surah: number; onChange: (value: number) => void; label: string; disabled: boolean }) {
@@ -173,19 +137,25 @@ export default function InlineQuranProgress({
                 <span className={`rounded-lg px-2 py-1 text-[10px] ${isDirty ? 'bg-amber-50 text-amber-700' : isSaved ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{isDirty ? 'غير محفوظ' : isSaved ? '✓ محفوظ' : 'ابدأ عند الحاجة'}</span>
               </div>
               <div className="mt-2 grid grid-cols-2 gap-2">
+                <label className="col-span-2 text-[11px] text-deep-500">اتجاه الورد
+                  <select value={draft.direction || 'forward'} onChange={(event) => onChange({ ...draft, direction: event.target.value as 'forward' | 'backward', ...(draft.range_type === 'page' ? { to_page: draft.from_page } : { to_surah: fromSurah, to_ayah: draft.from_ayah }) })} disabled={disabled} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm">
+                    <option value="forward">ترتيب المصحف</option><option value="backward">{draft.range_type === 'page' ? 'عكس ترتيب الصفحات' : 'عكس ترتيب السور'}</option>
+                  </select>
+                </label>
+                {draft.direction === 'backward' && <p className="col-span-2 text-[11px] text-deep-500">{draft.range_type === 'page' ? 'تتناقص أرقام الصفحات مع تقدم الورد.' : 'السور بترتيب عكسي، والآيات داخل كل سورة بالترتيب الطبيعي.'}</p>}
                 {draft.range_type === 'page' ? (
                   <>
                     <label className="text-[11px] text-deep-500">من صفحة
                       <input type="number" min={1} max={604} value={draft.from_page || 1} onChange={(event) => onChange({ ...draft, from_page: Number(event.target.value) })} disabled={disabled} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm" />
                     </label>
                     <label className="text-[11px] text-deep-500">إلى صفحة
-                      <input type="number" min={draft.from_page || 1} max={604} value={draft.to_page || draft.from_page || 1} onChange={(event) => onChange({ ...draft, to_page: Number(event.target.value) })} disabled={disabled} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm" />
+                      <input type="number" min={draft.direction === 'backward' ? 1 : draft.from_page || 1} max={draft.direction === 'backward' ? draft.from_page || 604 : 604} value={draft.to_page || draft.from_page || 1} onChange={(event) => onChange({ ...draft, to_page: Number(event.target.value) })} disabled={disabled} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm" />
                     </label>
                   </>
                 ) : (
                   <>
                   <label className="text-[11px] text-deep-500">من سورة
-                    <select value={fromSurah} onChange={(event) => { const nextSurah = Number(event.target.value); const nextToSurah = Math.max(nextSurah, toSurah || nextSurah); onChange({ ...draft, from_surah: nextSurah, to_surah: nextToSurah, from_ayah: 1, to_ayah: 1 }) }} disabled={disabled} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm">
+                    <select value={fromSurah} onChange={(event) => { const nextSurah = Number(event.target.value); const nextToSurah = draft.direction === 'backward' ? Math.min(nextSurah, toSurah || nextSurah) : Math.max(nextSurah, toSurah || nextSurah); onChange({ ...draft, from_surah: nextSurah, to_surah: nextToSurah, from_ayah: 1, to_ayah: 1 }) }} disabled={disabled} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm">
                       <option value={0} disabled hidden>اختر السورة</option>
                       {SURAHS.map((item) => <option key={item.number} value={item.number}>{item.number}. {item.name} — {item.ayahs} آية</option>)}
                     </select>
@@ -194,7 +164,7 @@ export default function InlineQuranProgress({
                   <label className="text-[11px] text-deep-500">إلى سورة
                     <select value={toSurah} onChange={(event) => { const nextSurah = Number(event.target.value); onChange({ ...draft, to_surah: nextSurah, to_ayah: nextSurah === fromSurah ? Math.max(draft.from_ayah || 1, 1) : 1 }) }} disabled={disabled || fromSurah === 0} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm disabled:opacity-60">
                       {fromSurah === 0 && <option value={0} disabled hidden>اختر سورة البداية</option>}
-                      {SURAHS.filter((item) => item.number >= fromSurah).map((item) => <option key={item.number} value={item.number}>{item.number}. {item.name} — {item.ayahs} آية</option>)}
+                      {SURAHS.filter((item) => draft.direction === 'backward' ? item.number <= fromSurah : item.number >= fromSurah).map((item) => <option key={item.number} value={item.number}>{item.number}. {item.name} — {item.ayahs} آية</option>)}
                     </select>
                   </label>
                   <AyahSelect label="إلى آية" value={draft.to_ayah || 1} surah={toSurah} disabled={disabled} onChange={(value) => onChange({ ...draft, to_ayah: toSurah === fromSurah ? Math.max(draft.from_ayah || 1, value) : value })} />
