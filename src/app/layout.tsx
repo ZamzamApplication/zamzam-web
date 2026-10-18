@@ -13,12 +13,13 @@ import TahfizInitialSettingsFields, { DEFAULT_INITIAL_TAHFIZ_SETTINGS, type Tahf
 
 const cairoFont = Cairo({ subsets: ['arabic'], display: 'swap', variable: '--font-cairo' })
 
-type NavIconName = 'home' | 'sessions' | 'attendance' | 'finance' | 'manage' | 'settings'
+type NavIconName = 'home' | 'sessions' | 'attendance' | 'finance' | 'manage' | 'settings' | 'trips'
 
 function NavIcon({ name }: { name: NavIconName }) {
   const paths: Record<NavIconName, React.ReactNode> = {
     home: <><path d="M3 11.5 12 4l9 7.5" /><path d="M5.5 10v10h13V10M9.5 20v-6h5v6" /></>,
     sessions: <><rect x="4" y="5.5" width="16" height="14" rx="2" /><path d="M8 3v5M16 3v5M4 10h16M8 14h3M8 17h7" /></>,
+    trips: <><path d="M4 16h16M5 16V7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v9M5 11h14M9 5v6" /><circle cx="7" cy="18" r="2" /><circle cx="17" cy="18" r="2" /></>,
     attendance: <><path d="M9 5H6a2 2 0 0 0-2 2v12h13v-3" /><path d="M9 3h6v4H9zM9 12l2.2 2.2L20 6" /></>,
     finance: <><rect x="3" y="6" width="18" height="14" rx="2" /><path d="M16 10h5v6h-5a3 3 0 0 1 0-6ZM7 6V4h10v2" /><circle cx="16.5" cy="13" r=".7" fill="currentColor" stroke="none" /></>,
     manage: <><circle cx="9" cy="8" r="3" /><path d="M3.5 20v-2a5.5 5.5 0 0 1 11 0v2M17 8h4M19 6v4M17 15h4" /></>,
@@ -293,6 +294,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const mobileNavItems: { href: string; label: string; icon: NavIconName; adminOnly?: boolean }[] = [
     { href: '/dashboard', label: 'الرئيسية', icon: 'home' },
     { href: '/sessions', label: 'الحلقات', icon: 'sessions' },
+    { href: '/trips', label: 'الرحلات', icon: 'trips', adminOnly: true },
     { href: '/finance', label: 'القسم المالي', icon: 'finance', adminOnly: true },
     { href: '/manage', label: 'الإدارة', icon: 'manage', adminOnly: true },
     { href: '/settings', label: 'الإعدادات', icon: 'settings', adminOnly: true },
@@ -433,6 +435,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               ) : (
                 <>
                   {user?.role !== 'auditor' && <Link href="/sessions" className={navLinkClass('/sessions')} aria-current={isActive('/sessions') ? 'page' : undefined}>الحلقات</Link>}
+                  {(user?.role === 'admin' || user?.role === 'super_admin') && <Link href="/trips" className={navLinkClass('/trips')} aria-current={isActive('/trips') ? 'page' : undefined}>الرحلات</Link>}
                   {(user?.role === 'admin' || user?.role === 'super_admin' || user?.role === 'auditor') && <Link href="/finance" className={navLinkClass('/finance')} aria-current={isActive('/finance') ? 'page' : undefined}>القسم المالي</Link>}
                   {(user?.role === 'admin' || user?.role === 'super_admin') && <Link href="/manage" className={navLinkClass('/manage')} aria-current={isActive('/manage') ? 'page' : undefined}>الإدارة</Link>}
                   {(user?.role === 'admin' || user?.role === 'super_admin') && <Link href="/settings" className={navLinkClass('/settings')} aria-current={isActive('/settings') ? 'page' : undefined}>إعدادات التحفيظ</Link>}

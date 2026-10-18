@@ -1,4 +1,13 @@
 const ACTION_LABELS: Record<string, string> = {
+  'trip.created': 'إنشاء رحلة',
+  'trip.participants_added': 'إضافة مشاركين لرحلة',
+  'trip.participant_updated': 'تعديل مشاركة أو سداد رحلة',
+  'trip.round_started': 'بدء جولة تحقق للرحلة',
+  'trip.checked': 'تسجيل وجود مشارك في رحلة',
+  'trip.headcount_removed': 'استبعاد مشاركة من التحقق الحالي',
+  'trip.status_changed': 'تغيير حالة رحلة',
+  'trip.group_added': 'إضافة مجموعة للرحلة',
+  'trip.group_assigned': 'توزيع مشاركين على مجموعة',
   'attendance.batch_updated': 'تعديل سجل الحضور',
   'feedback.created': 'إرسال ملاحظة للمنصة',
   'feedback.status_changed': 'تغيير حالة ملاحظة',
@@ -47,6 +56,10 @@ const ACTION_LABELS: Record<string, string> = {
 }
 
 const DETAIL_LABELS: Record<string, string> = {
+  trip_id: 'الرحلة',
+  participant_id: 'المشارك',
+  round_id: 'جولة التحقق',
+  group_id: 'المجموعة',
   amount: 'المبلغ',
   changed: 'المعدّل',
   count: 'العدد',

@@ -109,7 +109,7 @@ export default function InlineQuranProgress({
   })
   const studentDirtyKeys = new Set(categoryDefinitions.map(({ key }) => progressDraftKey(student.id, key)).filter((key) => dirtyKeys.has(key)))
   const dirtyDrafts = visibleDrafts.filter((draft) => studentDirtyKeys.has(progressDraftKey(student.id, draft.category)))
-  const dirtyComplete = dirtyDrafts.length > 0 && dirtyDrafts.every(isSurahAyahRangeComplete)
+  const dirtyComplete = dirtyDrafts.length > 0 && dirtyDrafts.every((draft) => draft.quality_score === 0 || isSurahAyahRangeComplete(draft))
 
   return (
     <div className="mt-3 rounded-xl border border-cyan-200/80 bg-cyan-50/45 p-3 dark:border-cyan-900 dark:bg-cyan-950/20 md:col-span-full">
@@ -174,6 +174,7 @@ export default function InlineQuranProgress({
                   <div className="col-span-2">
                     <p className="mb-1 text-[11px] font-semibold text-deep-600">التقييم</p>
                     <div className="flex flex-wrap gap-1">
+                      {draft.quality_score > 0 && <button type="button" onClick={() => onChange({ ...draft, quality_score: 0 })} disabled={disabled} className="rounded-lg border border-red-200 px-2 py-1 text-[10px] font-semibold text-red-600 dark:border-red-900 dark:text-red-400">حذف التقييم</button>}
                       {qualityOptions.map((option) => <button key={option.value} type="button" onClick={() => onChange({ ...draft, quality_score: option.value })} disabled={disabled} className={`rounded-lg border px-2 py-1 text-[10px] font-semibold ${draft.quality_score === option.value ? 'border-cyan-500 bg-cyan-600 text-white' : 'border-water-200 bg-white text-deep-600 dark:bg-slate-900'}`}>{option.label}</button>)}
                     </div>
                   </div>
