@@ -46,5 +46,5 @@ export function formatMonthPeriod(value: string, monthStartDay = 1): string {
   if (monthStartDay === 1) return formatMonth(value)
   const range = monthRange(value, monthStartDay)
   const format = new Intl.DateTimeFormat('ar-EG', { day: 'numeric', month: 'short', year: 'numeric' })
-  return `${format.format(new Date(`${range.start}T12:00:00`))} - ${format.format(new Date(`${range.end}T12:00:00`))}`
+  return `${formatMonth(financialMonthValue(value, monthStartDay))} (${format.format(new Date(`${range.start}T12:00:00`))} - ${format.format(new Date(`${range.end}T12:00:00`))})`
 }

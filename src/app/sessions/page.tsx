@@ -11,7 +11,7 @@ import AsyncState from '@/components/AsyncState'
 import ConfirmDialog from '@/components/ConfirmDialog'
 import { canPermanentlyDeleteSession, sessionDeletionConfirmation } from '@/lib/session-lifecycle'
 import { sessionDateLabelFromCollection } from '@/lib/session-label'
-import { currentMonthValue, financialMonthValue, formatMonth, formatMonthPeriod, monthRange } from '@/lib/month'
+import { currentMonthValue, formatMonthPeriod, monthRange } from '@/lib/month'
 
 export default function SessionsPage() {
   const [allSessions, setAllSessions] = useState<Session[]>([])
@@ -121,7 +121,7 @@ export default function SessionsPage() {
             <option value="">كل الأشهر</option>
             {availableMonths.map((month) => (
               <option key={month} value={month}>
-                {formatMonth(financialMonthValue(month, monthStartDay))}{monthStartDay !== 1 ? ` (${formatMonthPeriod(month, monthStartDay)})` : ''}
+                {formatMonthPeriod(month, monthStartDay)}
               </option>
             ))}
           </select>

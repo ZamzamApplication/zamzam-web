@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { formatDateWithWeekday, mediaUrl } from '@/lib/format'
-import { currentMonthValue, formatMonthPeriod, monthRange } from '@/lib/month'
+import { currentMonthValue, financialMonthValue, formatMonthPeriod, monthRange } from '@/lib/month'
 import { applyExcelTemplate, configuredExcelExportTemplates } from '@/lib/excel-templates'
 import type { User, SheikhInfo, AttendanceGrid, AttendanceGridSession, AttendanceGridStudent, FilterRule, FilterGroup, StudentCustomField } from '@/lib/types'
 import AttendanceFilter from '@/components/AttendanceFilter'
@@ -657,7 +657,7 @@ export default function AttendancePage() {
           </button>
           </div>
           ) : (
-            <MonthSwitcher value={selectedMonth} onChange={setSelectedMonth} label={formatMonthPeriod(selectedMonth, monthStartDay)} />
+            <MonthSwitcher monthStartDay={monthStartDay} value={selectedMonth} onChange={setSelectedMonth} label={formatMonthPeriod(selectedMonth, monthStartDay)} />
           )}
         </div>
       )}
@@ -804,7 +804,7 @@ export default function AttendancePage() {
       {excelSheets && (
         <ExcelPreviewModal
           sheets={excelSheets}
-          filename={`zamzam-attendance-${periodMode === 'month' ? selectedMonth : weekRange.start}.xlsx`}
+          filename={`zamzam-attendance-${periodMode === 'month' ? financialMonthValue(selectedMonth, monthStartDay) : weekRange.start}.xlsx`}
           onClose={() => setExcelSheets(null)}
         />
       )}

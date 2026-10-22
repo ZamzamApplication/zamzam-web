@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { mediaUrl } from '@/lib/format'
-import { currentMonthValue, formatMonthPeriod, monthRange } from '@/lib/month'
+import { currentMonthValue, financialMonthValue, formatMonthPeriod, monthRange } from '@/lib/month'
 import { formatQuranRange } from '@/lib/quran'
 import { applyExcelTemplate, configuredExcelExportTemplates } from '@/lib/excel-templates'
 import type { Circle, CircleAttendanceRate, QuranProgressEntry, SheikhInfo, StudentStatsItem } from '@/lib/types'
@@ -302,7 +302,7 @@ export default function ReportsPage() {
             </button>
           </div>
           {periodMode === 'month' && (
-            <MonthSwitcher value={selectedMonth} onChange={handleMonthChange} disabled={reportLoading} label={formatMonthPeriod(selectedMonth, monthStartDay)} />
+            <MonthSwitcher monthStartDay={monthStartDay} value={selectedMonth} onChange={handleMonthChange} disabled={reportLoading} label={formatMonthPeriod(selectedMonth, monthStartDay)} />
           )}
         </div>
       )}
@@ -483,7 +483,7 @@ export default function ReportsPage() {
       {excelSheets && (
         <ExcelPreviewModal
           sheets={excelSheets}
-          filename={`zamzam-statistics-${periodMode === 'month' ? selectedMonth : 'all-time'}.xlsx`}
+          filename={`zamzam-statistics-${periodMode === 'month' ? financialMonthValue(selectedMonth, monthStartDay) : 'all-time'}.xlsx`}
           onClose={() => setExcelSheets(null)}
         />
       )}
