@@ -1,5 +1,5 @@
 import { request } from './api'
-import { generateQuranPlan, type QuranPlanTrack } from './quran-plan'
+import { generateQuranPlan, type GeneratedQuranPlan, type QuranPlanTrack } from './quran-plan'
 
 export type ShareMode = 'private' | 'readonly' | 'read_mark'
 export type PlanConfiguration = {
@@ -9,6 +9,7 @@ export type PlanConfiguration = {
   endDate: string
   weekdays: number[]
   includeCompletionCheckboxes: boolean
+  completionMode?: 'day' | 'item'
   tracks: QuranPlanTrack[]
 }
 export type SavedPlanSummary = {
@@ -24,6 +25,7 @@ export type SavedPlanSummary = {
   can_edit: boolean
   can_mark: boolean
   completed_dates: string[]
+  completed_items?: Record<string, string[]>
   study_dates: string[]
 }
 export type SavedPlan = SavedPlanSummary & { configuration: PlanConfiguration }
@@ -56,10 +58,41 @@ export function retainedCompletionDates(previous: PlanConfiguration | undefined,
   })
 }
 
+export function assignmentIds(plan: GeneratedQuranPlan): Record<string, string[]> {
+  return Object.fromEntries(plan.days.filter(day => day.isStudyDay).map(day => [day.date,
+    plan.tracks.filter(track => day.assignments[track.id] && !day.paused?.[track.id]).map(track => track.id),
+  ]))
+}
+
+export function completionState(plan: GeneratedQuranPlan, dates: string[], items: Record<string, string[]>, mode: 'day' | 'item' = 'day') {
+  const assignments = assignmentIds(plan)
+  const completedItems: Record<string, string[]> = {}
+  const completedDates: string[] = []
+  for (const [date, ids] of Object.entries(assignments)) {
+    const checked = dates.includes(date) ? ids : ids.filter(id => items[date]?.includes(id))
+    if (checked.length) completedItems[date] = checked
+    if (ids.length ? checked.length === ids.length : dates.includes(date) || mode === 'item') completedDates.push(date)
+  }
+  return { completedItems, completedDates, assignments }
+}
+
+export function retainedCompletionItems(previous: PlanConfiguration | undefined, next: PlanConfiguration, items: Record<string, string[]>): Record<string, string[]> {
+  const after = generateQuranPlan(next)
+  const before = previous ? new Map(generateQuranPlan(previous).days.map(day => [day.date, day])) : null
+  const result: Record<string, string[]> = {}
+  for (const day of after.days) {
+    const retained = (items[day.date] || []).filter(id => day.isStudyDay && day.assignments[id] && !day.paused?.[id]
+      && (!before || (before.get(day.date)?.isStudyDay && !before.get(day.date)?.paused?.[id]
+        && JSON.stringify(before.get(day.date)?.assignments[id]) === JSON.stringify(day.assignments[id]))))
+    if (retained.length) result[day.date] = retained
+  }
+  return result
+}
+
 export const personalPlans = {
   list: () => request<SavedPlanSummary[]>('/personal-plans'),
   get: (id: string) => request<SavedPlan>(`/personal-plans/${encodeURIComponent(id)}`),
-  save: (data: { name: string; configuration: PlanConfiguration; study_dates: string[]; completed_dates: string[] }, previous?: SavedPlan) => request<SavedPlan>(previous ? `/personal-plans/${previous.id}` : '/personal-plans', {
+  save: (data: { name: string; configuration: PlanConfiguration; study_dates: string[]; completed_dates: string[]; assignment_ids: Record<string, string[]>; completed_items: Record<string, string[]> }, previous?: SavedPlan) => request<SavedPlan>(previous ? `/personal-plans/${previous.id}` : '/personal-plans', {
     method: previous ? 'PUT' : 'POST', body: JSON.stringify({ ...data, ...(previous ? { expected_version: previous.version } : {}) }),
   }),
   status: (plan: SavedPlanSummary, changes: { completed?: boolean; archived?: boolean; share_mode?: ShareMode }) => request<SavedPlan>(`/personal-plans/${plan.id}`, {
@@ -67,7 +100,7 @@ export const personalPlans = {
   }),
   remove: (plan: SavedPlanSummary) => request<void>(`/personal-plans/${plan.id}?expected_version=${plan.version}`, { method: 'DELETE' }),
   shared: (token: string) => sharedRequest<SavedPlan>(encodeURIComponent(token)),
-  mark: (plan: SavedPlan, date: string, done: boolean, token?: string) => token
-    ? sharedRequest<SavedPlan>(`${encodeURIComponent(token)}/progress`, { method: 'PATCH', body: JSON.stringify({ date, done, expected_version: plan.version }) })
-    : request<SavedPlan>(`/personal-plans/${plan.id}/progress`, { method: 'PATCH', body: JSON.stringify({ date, done, expected_version: plan.version }) }),
+  mark: (plan: SavedPlan, date: string, done: boolean, token?: string, trackId?: string) => token
+    ? sharedRequest<SavedPlan>(`${encodeURIComponent(token)}/progress`, { method: 'PATCH', body: JSON.stringify({ date, done, track_id: trackId, expected_version: plan.version }) })
+    : request<SavedPlan>(`/personal-plans/${plan.id}/progress`, { method: 'PATCH', body: JSON.stringify({ date, done, track_id: trackId, expected_version: plan.version }) }),
 }

@@ -100,6 +100,39 @@ export async function request<T = any>(path: string, options?: RequestInit): Pro
 }
 
 export const api = {
+  addTripGroup(id: number, name: string) {
+    return request<import('./trips').TripGroup>(`/trips/${id}/groups`, { method: 'POST', body: JSON.stringify({ name }) })
+  },
+  assignTripGroup(id: number, groupId: number | null, participants: { id: number; expected_version: number }[]) {
+    return request(`/trips/${id}/assign-group`, { method: 'POST', body: JSON.stringify({ group_id: groupId, participants }) })
+  },
+  getTrips() {
+    return request<import('./trips').Trip[]>('/trips')
+  },
+  createTrip(body: import('./trips').TripInput) {
+    return request<import('./trips').Trip>('/trips', { method: 'POST', body: JSON.stringify(body) })
+  },
+  getTripStudents() {
+    return request<import('./trips').TripStudent[]>('/trips/students')
+  },
+  getTrip(id: number, roundId?: number) {
+    return request<import('./trips').TripDetail>(`/trips/${id}${roundId ? `?round_id=${roundId}` : ''}`)
+  },
+  addTripParticipants(id: number, studentIds: number[], guests: { name: string; phone: string; is_adult: boolean }[], groupId: number | null = null, guardianId: number | null = null) {
+    return request<{ added: number }>(`/trips/${id}/participants`, { method: 'POST', body: JSON.stringify({ student_ids: studentIds, guests, group_id: groupId, guardian_id: guardianId }) })
+  },
+  updateTripParticipant(id: number, participantId: number, body: { expected_version: number; paid_minor?: number; fee_minor?: number; active?: boolean; notes?: string; payment_exempt?: boolean; exemption_reason?: string; group_id?: number | null; guardian_id?: number | null; is_adult?: boolean }) {
+    return request(`/trips/${id}/participants/${participantId}`, { method: 'PATCH', body: JSON.stringify(body) })
+  },
+  startTripRound(id: number, title: string, expectedVersion: number) {
+    return request<{ id: number }>(`/trips/${id}/rounds`, { method: 'POST', body: JSON.stringify({ title, expected_version: expectedVersion }) })
+  },
+  markTripCheck(id: number, roundId: number, participantId: number, status: import('./trips').CheckStatus, expectedVersion: number) {
+    return request(`/trips/${id}/rounds/${roundId}/checks/${participantId}`, { method: 'PATCH', body: JSON.stringify({ status, expected_version: expectedVersion }) })
+  },
+  setTripStatus(id: number, status: 'planned' | 'completed', expectedVersion: number) {
+    return request(`/trips/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status, expected_version: expectedVersion }) })
+  },
   login(username: string, password: string) {
     return request<TokenResponse>('/auth/login', {
       method: 'POST',
@@ -437,10 +470,10 @@ export const api = {
     }>(`/sessions/${sessionId}/progress`)
   },
 
-  saveSessionProgress(sessionId: number, updates: QuranProgressInput[]) {
+  saveSessionProgress(sessionId: number, updates: QuranProgressInput[], deletions: Pick<QuranProgressInput, 'student_id' | 'category'>[] = []) {
     return request<{ session_id: number; saved: number }>(`/sessions/${sessionId}/progress/batch`, {
       method: 'POST',
-      body: JSON.stringify({ updates }),
+      body: JSON.stringify({ updates, deletions }),
     })
   },
 
@@ -487,10 +520,11 @@ export const api = {
     })
   },
 
-  getProgressReport(dateFrom?: string, dateTo?: string) {
+  getProgressReport(dateFrom?: string, dateTo?: string, sheikhId?: number) {
     const params = new URLSearchParams()
     if (dateFrom) params.set('date_from', dateFrom)
     if (dateTo) params.set('date_to', dateTo)
+    if (sheikhId !== undefined) params.set('sheikh_id', String(sheikhId))
     const query = params.toString()
     return request<{
       enabled: boolean
@@ -864,18 +898,20 @@ export const api = {
     return request(`/users/${id}`, { method: 'DELETE' })
   },
 
-  getCircleAttendanceRate(circleId: number, dateFrom?: string, dateTo?: string) {
+  getCircleAttendanceRate(circleId: number, dateFrom?: string, dateTo?: string, sheikhId?: number) {
     const params = new URLSearchParams()
     if (dateFrom) params.set('date_from', dateFrom)
     if (dateTo) params.set('date_to', dateTo)
+    if (sheikhId !== undefined) params.set('sheikh_id', String(sheikhId))
     const qs = params.toString()
     return request(`/reports/circle/${circleId}/rate${qs ? `?${qs}` : ''}`)
   },
 
-  getCircleStudentStats(circleId: number, dateFrom?: string, dateTo?: string) {
+  getCircleStudentStats(circleId: number, dateFrom?: string, dateTo?: string, sheikhId?: number) {
     const params = new URLSearchParams()
     if (dateFrom) params.set('date_from', dateFrom)
     if (dateTo) params.set('date_to', dateTo)
+    if (sheikhId !== undefined) params.set('sheikh_id', String(sheikhId))
     const qs = params.toString()
     return request(`/reports/circle/${circleId}/student-stats${qs ? `?${qs}` : ''}`)
   },

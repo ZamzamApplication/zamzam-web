@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { formatDateWithWeekday, mediaUrl } from '@/lib/format'
-import { currentMonthValue, formatMonthPeriod, monthRange } from '@/lib/month'
+import { currentMonthValue, financialMonthValue, formatMonthPeriod, monthRange } from '@/lib/month'
 import { applyExcelTemplate, configuredExcelExportTemplates } from '@/lib/excel-templates'
 import type { User, SheikhInfo, AttendanceGrid, AttendanceGridSession, AttendanceGridStudent, FilterRule, FilterGroup, StudentCustomField } from '@/lib/types'
 import AttendanceFilter from '@/components/AttendanceFilter'
@@ -12,6 +12,7 @@ import ExcelPreviewModal, { type SpreadsheetSheet } from '@/components/ExcelPrev
 import MonthSwitcher from '@/components/MonthSwitcher'
 import ScrollableTable from '@/components/ScrollableTable'
 import ConfirmDialog from '@/components/ConfirmDialog'
+import StudentNamesTextModal from '@/components/StudentNamesTextModal'
 import { attendanceStatusColorClass } from '@/components/AttendanceStatusControl'
 import { surahInfo } from '@/lib/quran'
 import type { QuranRangeSnapshot } from '@/lib/types'
@@ -176,6 +177,7 @@ export default function AttendancePage() {
   const [saveFilterName, setSaveFilterName] = useState('')
   const [warningStudent, setWarningStudent] = useState<AttendanceGridStudent | null>(null)
   const [previewPic, setPreviewPic] = useState<string | null>(null)
+  const [showStudentNames, setShowStudentNames] = useState(false)
   const [excelSheets, setExcelSheets] = useState<SpreadsheetSheet[] | null>(null)
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [isDesktop, setIsDesktop] = useState<boolean | null>(null)
@@ -655,7 +657,7 @@ export default function AttendancePage() {
           </button>
           </div>
           ) : (
-            <MonthSwitcher value={selectedMonth} onChange={setSelectedMonth} label={formatMonthPeriod(selectedMonth, monthStartDay)} />
+            <MonthSwitcher monthStartDay={monthStartDay} value={selectedMonth} onChange={setSelectedMonth} label={formatMonthPeriod(selectedMonth, monthStartDay)} />
           )}
         </div>
       )}
@@ -673,9 +675,12 @@ export default function AttendancePage() {
               <h2 className="font-bold text-deep-800">الحضور — {periodLabel}</h2>
               <p className="text-xs text-deep-500 mt-1">سيشمل التصدير النتائج المعروضة بعد التصفية والبحث.</p>
             </div>
-            <button type="button" onClick={openExcelPreview} className="water-btn text-white rounded-lg px-4 py-2 text-sm font-semibold">
-              معاينة وتصدير Excel
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              {isDesktop === false && (<button type="button" onClick={() => setShowStudentNames(true)} disabled={loading || displayStudents.length === 0} className="water-btn-outline shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-50">نسخ أسماء الطلاب</button>)}
+              <button type="button" onClick={openExcelPreview} className="water-btn text-white rounded-lg px-4 py-2 text-sm font-semibold">
+                معاينة وتصدير Excel
+              </button>
+            </div>
           </div>
           {isDesktop === false && <div className="space-y-3">
             {displayStudents.map((student) => (
@@ -721,7 +726,9 @@ export default function AttendancePage() {
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="border-b border-water-200/30">
-                <th className="data-table-header text-right py-3 px-3 text-deep-800 sticky right-0 z-10 min-w-[240px]">الطالب</th>
+                <th className="data-table-header text-right py-3 px-3 text-deep-800 sticky right-0 z-10 min-w-[240px]">
+                  <div className="flex items-center justify-between gap-3"><span>الطالب</span><button type="button" onClick={() => setShowStudentNames(true)} disabled={loading || displayStudents.length === 0} className="water-btn-outline shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-50">نسخ أسماء الطلاب</button></div>
+                </th>
                 {displaySessions.map((s) => (
                   <th key={s.id} className="data-table-header text-center py-3 px-2 text-deep-700 text-xs whitespace-nowrap min-w-[96px]">{sessionDateLabelFromCollection(s, allSessions, formatDateWithWeekday)}</th>
                 ))}
@@ -777,6 +784,8 @@ export default function AttendancePage() {
         </div>
       )}
 
+      {showStudentNames && <StudentNamesTextModal names={displayStudents.map(student => student.name)} onClose={() => setShowStudentNames(false)} />}
+
       {warningStudent && (
         <WarningModal
           student={warningStudent}
@@ -795,7 +804,7 @@ export default function AttendancePage() {
       {excelSheets && (
         <ExcelPreviewModal
           sheets={excelSheets}
-          filename={`zamzam-attendance-${periodMode === 'month' ? selectedMonth : weekRange.start}.xlsx`}
+          filename={`zamzam-attendance-${periodMode === 'month' ? financialMonthValue(selectedMonth, monthStartDay) : weekRange.start}.xlsx`}
           onClose={() => setExcelSheets(null)}
         />
       )}

@@ -1,4 +1,4 @@
-import { SURAHS, surahInfo } from './quran'
+import { SURAHS, surahInfo, nextQuranPoint, nextReverseQuranPoint } from './quran'
 import { QURAN_LINE_END_OFFSETS_BASE64 } from './quran-line-data'
 import { QURAN_PAGE_START_OFFSETS_BASE64 } from './quran-page-data'
 import { QURAN_QUARTER_STARTS } from './quran-quarter-data'
@@ -119,9 +119,7 @@ export function isValidQuranPoint(point: QuranPoint): boolean {
 }
 
 function nextPoint(point: QuranPoint): QuranPoint | null {
-  if (point.ayah < surahInfo(point.surah).ayahs) return { surah: point.surah, ayah: point.ayah + 1 }
-  if (point.surah < SURAHS.length) return { surah: point.surah + 1, ayah: 1 }
-  return null
+  return nextQuranPoint(point)
 }
 
 export function quranNextPoint(point: QuranPoint): QuranPoint | null {
@@ -129,8 +127,7 @@ export function quranNextPoint(point: QuranPoint): QuranPoint | null {
 }
 
 export function quranNextReversePoint(point: QuranPoint): QuranPoint | null {
-  if (point.ayah < surahInfo(point.surah).ayahs) return { surah: point.surah, ayah: point.ayah + 1 }
-  return point.surah > 1 ? { surah: point.surah - 1, ayah: 1 } : null
+  return nextReverseQuranPoint(point)
 }
 
 function reverseOrder(point: QuranPoint): number {

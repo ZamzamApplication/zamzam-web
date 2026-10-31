@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 
 import AsyncState from '@/components/AsyncState'
 import { api } from '@/lib/api'
-import { currentMonthValue, formatMonthPeriod, monthRange } from '@/lib/month'
+import { currentMonthValue, financialMonthValue, formatMonth, formatMonthPeriod, monthRange, shiftMonth } from '@/lib/month'
 import {
   formatSubscriptionMoney,
   majorToMinor,
@@ -538,9 +538,15 @@ export default function SubscriptionsPage() {
     {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300">{error}</div>}
     {notice && <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">{notice}</div>}
 
-    <label className="block max-w-xs text-sm font-semibold text-deep-700">الدورة المالية المعروضة
-      <input type="month" max={currentMonthValue(monthStartDay)} value={period.slice(0, 7)} onChange={event => { if (event.target.value) { setPeriod(monthRange(event.target.value, monthStartDay).start); setPage(1) } }} className="surface-field mt-1 w-full rounded-xl px-3 py-2.5 text-sm" />
-    </label>
+    <div className="text-sm font-semibold text-deep-700">
+      <p>الدورة المالية المعروضة</p>
+      <div className="mt-1 flex flex-wrap items-center gap-3">
+        <button type="button" onClick={() => { setPeriod(monthRange(shiftMonth(period.slice(0, 7), -1), monthStartDay).start); setPage(1) }} className="water-btn-outline rounded-xl px-3 py-2.5 text-sm">الشهر السابق</button>
+        <span aria-live="polite">{formatMonth(financialMonthValue(period.slice(0, 7), monthStartDay))}</span>
+        <button type="button" disabled={period.slice(0, 7) >= currentMonthValue(monthStartDay)} onClick={() => { setPeriod(monthRange(shiftMonth(period.slice(0, 7), 1), monthStartDay).start); setPage(1) }} className="water-btn-outline rounded-xl px-3 py-2.5 text-sm disabled:opacity-50">الشهر التالي</button>
+      </div>
+      <p className="mt-1 text-xs font-normal text-deep-500">{formatMonthPeriod(period.slice(0, 7), monthStartDay)}</p>
+    </div>
 
     <section className="grid grid-cols-3 gap-2">
       {[

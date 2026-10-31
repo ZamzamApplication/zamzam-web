@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 import PlanLibrary from '@/components/PlanLibrary'
 import { api } from '@/lib/api'
-import { personalPlans, retainedCompletionDates, type PlanConfiguration, type SavedPlan, type SavedPlanSummary, type ShareMode } from '@/lib/personal-plans'
+import { personalPlans, completionState, retainedCompletionItems, retainedCompletionDates, type PlanConfiguration, type SavedPlan, type SavedPlanSummary, type ShareMode } from '@/lib/personal-plans'
 
 import ExcelPreviewModal, { type SpreadsheetSheet } from '@/components/ExcelPreviewModal'
 import { SURAHS, surahInfo } from '@/lib/quran'
@@ -394,6 +394,9 @@ export default function QuranPlanPage() {
   const [endDate, setEndDate] = useState(defaults.end)
   const [weekdays, setWeekdays] = useState<number[]>([0, 1, 2, 3, 4, 5, 6])
   const [includeCompletionCheckboxes, setIncludeCompletionCheckboxes] = useState(true)
+  const [completionMode, setCompletionMode] = useState<'day' | 'item'>('day')
+  const [completedItems, setCompletedItems] = useState<Record<string, string[]>>({})
+  const [previewConfiguration, setPreviewConfiguration] = useState<PlanConfiguration | undefined>()
   const [tracks, setTracks] = useState<QuranPlanTrack[]>([defaultTrack('memorization', 'الحفظ'), defaultTrack('revision', 'المراجعة')])
   const [generatedPlan, setPlan] = useState<GeneratedQuranPlan | null>(null)
   const [previewKey, setPreviewKey] = useState('')
@@ -409,14 +412,14 @@ export default function QuranPlanPage() {
   const [planBusy, setPlanBusy] = useState(false)
   const [storageError, setStorageError] = useState('')
   const [storageMessage, setStorageMessage] = useState('')
-  const configuration: PlanConfiguration = { planOwnerType, studentName, startDate, endDate, weekdays, includeCompletionCheckboxes, tracks }
+  const configuration: PlanConfiguration = { planOwnerType, studentName, startDate, endDate, weekdays, includeCompletionCheckboxes, completionMode, tracks }
   const generationKey = JSON.stringify({ startDate, endDate, weekdays, tracks })
   const plan = previewKey === generationKey ? generatedPlan : null
   const showCompletion = includeCompletionCheckboxes || !!savedPlan
-  const hasUnsavedChanges = !!savedPlan && (planName !== savedPlan.name || JSON.stringify(configuration) !== JSON.stringify(savedPlan.configuration))
+  const hasUnsavedChanges = !!savedPlan && (planName !== savedPlan.name || (['planOwnerType', 'studentName', 'startDate', 'endDate', 'weekdays', 'includeCompletionCheckboxes', 'tracks'] as const).some(key => JSON.stringify(configuration[key]) !== JSON.stringify(savedPlan.configuration[key])) || completionMode !== (savedPlan.configuration.completionMode ?? 'day'))
   const scheduleChanged = !!savedPlan && generationKey !== JSON.stringify({ startDate: savedPlan.configuration.startDate, endDate: savedPlan.configuration.endDate, weekdays: savedPlan.configuration.weekdays, tracks: savedPlan.configuration.tracks })
 
-  const applyConfiguration = (config: PlanConfiguration, name: string, done: string[]) => {
+  const applyConfiguration = (config: PlanConfiguration, name: string, done: string[], items: Record<string, string[]> = {}) => {
     const generated = generateQuranPlan(config)
     setPlanOwnerType(config.planOwnerType)
     setStudentName(config.studentName)
@@ -424,9 +427,13 @@ export default function QuranPlanPage() {
     setEndDate(config.endDate)
     setWeekdays(config.weekdays)
     setIncludeCompletionCheckboxes(config.includeCompletionCheckboxes)
+    setCompletionMode(config.completionMode ?? 'day')
+    setPreviewConfiguration(config)
     setTracks(config.tracks)
     setPlanName(name)
-    setCompletedDates(done)
+    const progress = completionState(generated, done, items, config.completionMode)
+    setCompletedDates(progress.completedDates)
+    setCompletedItems(progress.completedItems)
     setPreviewKey(JSON.stringify({ startDate: config.startDate, endDate: config.endDate, weekdays: config.weekdays, tracks: config.tracks }))
     setPlan(generated)
     setStorageMessage('')
@@ -434,13 +441,13 @@ export default function QuranPlanPage() {
   }
 
   const applySavedPlan = (record: SavedPlan) => {
-    applyConfiguration(record.configuration, record.name, record.completed_dates)
+    applyConfiguration(record.configuration, record.name, record.completed_dates, record.completed_items)
     setSavedPlan(record)
   }
 
   const loginToSave = () => {
     try {
-      sessionStorage.setItem('zamzam-plan-login-draft', JSON.stringify({ configuration, name: planName, completedDates }))
+      sessionStorage.setItem('zamzam-plan-login-draft', JSON.stringify({ configuration, name: planName, completedDates, completedItems }))
     } catch { /* Login remains available when temporary browser storage is disabled. */ }
     window.location.assign(`/login?next=${encodeURIComponent(privatePlanId ? `/plan?id=${privatePlanId}` : '/plan')}`)
   }
@@ -471,8 +478,8 @@ export default function QuranPlanPage() {
             const draft = sessionStorage.getItem('zamzam-plan-login-draft')
             if (draft) {
               sessionStorage.removeItem('zamzam-plan-login-draft')
-              const data = JSON.parse(draft) as { configuration: PlanConfiguration; name: string; completedDates: string[] }
-              applyConfiguration(data.configuration, data.name, data.completedDates)
+              const data = JSON.parse(draft) as { configuration: PlanConfiguration; name: string; completedDates: string[]; completedItems?: Record<string, string[]> }
+              applyConfiguration(data.configuration, data.name, data.completedDates, data.completedItems)
             }
           }
         }
@@ -505,12 +512,16 @@ export default function QuranPlanPage() {
 
   const saveCurrentPlan = (asNew = false) => performPlanAction(async () => {
     const generated = generateQuranPlan(configuration)
-    const done = retainedCompletionDates(savedPlan?.configuration, configuration, completedDates)
+    const source = savedPlan?.configuration ?? previewConfiguration
+    const items = retainedCompletionItems(source, configuration, completedItems)
+    const progress = completionState(generated, retainedCompletionDates(source, configuration, completedDates), items, completionMode)
     const record = await personalPlans.save({
       name: planName.trim() || (studentName.trim() ? `خطة ${studentName.trim()}` : 'خطة جديدة'),
       configuration,
       study_dates: generated.days.filter(day => day.isStudyDay).map(day => day.date),
-      completed_dates: done,
+      completed_dates: progress.completedDates,
+      completed_items: progress.completedItems,
+      assignment_ids: progress.assignments,
     }, asNew ? undefined : savedPlan ?? undefined)
     applySavedPlan(record)
     updateLibrary(record)
@@ -531,6 +542,7 @@ export default function QuranPlanPage() {
     if (savedPlan?.id === record.id) {
       setSavedPlan(record)
       setCompletedDates(record.completed_dates)
+      setCompletedItems(record.completed_items ?? {})
     }
     setStorageMessage('تم حفظ التغيير.')
   })
@@ -549,6 +561,9 @@ export default function QuranPlanPage() {
     setSavedPlan(null)
     setPlanName('')
     setCompletedDates([])
+    setCompletedItems({})
+    setCompletionMode('day')
+    setPreviewConfiguration(undefined)
     setPlan(null)
     setPreviewKey('')
     setStudentName('')
@@ -562,12 +577,26 @@ export default function QuranPlanPage() {
     window.history.replaceState(null, '', '/plan')
   }
 
-  const markDay = (date: string, done: boolean) => {
-    if (!savedPlan) { setCompletedDates(current => done ? [...current.filter(day => day !== date), date] : current.filter(day => day !== date)); return }
+  const markDay = (date: string, done: boolean, trackId?: string) => {
+    if (!savedPlan) {
+      if (!plan) return
+      const ids = completionState(plan, [], {}).assignments[date] ?? []
+      const nextItems = { ...completedItems, [date]: trackId
+        ? done ? [...new Set([...(completedItems[date] ?? []), trackId])] : (completedItems[date] ?? []).filter(id => id !== trackId)
+        : done ? ids : [] }
+      const nextDates = completedDates.filter(day => day !== date)
+      if (!trackId && done) nextDates.push(date)
+      const progress = completionState(plan, nextDates, nextItems, completionMode)
+      setCompletedDates(progress.completedDates)
+      setCompletedItems(progress.completedItems)
+      return
+    }
     void performPlanAction(async () => {
-      const record = await personalPlans.mark(savedPlan, date, done, sharedToken ?? undefined)
+      const record = await personalPlans.mark(savedPlan, date, done, sharedToken ?? undefined, trackId)
       setSavedPlan(record)
-      setCompletedDates(record.completed_dates)
+      const progress = completionState(generateQuranPlan(record.configuration), record.completed_dates, record.completed_items ?? {}, completionMode)
+      setCompletedDates(progress.completedDates)
+      setCompletedItems(progress.completedItems)
       if (!sharedView) updateLibrary(record)
     })
   }
@@ -639,9 +668,14 @@ export default function QuranPlanPage() {
     setError('')
     setCopied(false)
     try {
-      setPlan(generateQuranPlan({ startDate, endDate, weekdays, tracks }))
+      const generated = generateQuranPlan(configuration)
+      const source = savedPlan?.configuration ?? previewConfiguration
+      const progress = completionState(generated, retainedCompletionDates(source, configuration, completedDates), retainedCompletionItems(source, configuration, completedItems), completionMode)
+      setPlan(generated)
+      setPreviewConfiguration(configuration)
       setPreviewKey(generationKey)
-      setCompletedDates(retainedCompletionDates(savedPlan?.configuration, configuration, completedDates))
+      setCompletedDates(progress.completedDates)
+      setCompletedItems(progress.completedItems)
       setTimeout(() => document.getElementById('plan-preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
     } catch (reason) {
       const code = reason instanceof Error ? reason.message : ''
@@ -717,7 +751,7 @@ export default function QuranPlanPage() {
             : assignment
               ? `${assignment.text}${completionText(assignment)}${assignment.links?.length ? `\n${assignment.links.map(link => `${link.label}: ${link.url}`).join('\n')}` : ''}`
               : 'اكتمل الورد'
-          return [`track_${index}`, value]
+          return [`track_${index}`, `${completionMode === 'item' && assignment && completedItems[day.date]?.includes(track.id) ? '✓ تم — ' : ''}${value}`]
         })),
       })),
       headerBackgroundColor: '#0E7490',
@@ -732,6 +766,15 @@ export default function QuranPlanPage() {
     if (assignment.links?.length) return <span className="flex flex-col gap-0.5">{assignment.links.map(link => <a key={`${link.label}-${link.url}`} href={link.url} target="_blank" rel="noreferrer" className="font-semibold text-blue-700 underline underline-offset-2 dark:text-blue-300">{link.label}</a>)}</span>
     return <><span>{assignment.text}</span>{completionText(assignment)}</>
   }
+
+  const completionCheckbox = (date: string, track?: QuranPlanTrack) => <input
+    type="checkbox"
+    aria-label={track ? `إنجاز ${track.name} يوم ${date}` : `إنجاز يوم ${date}`}
+    checked={track ? completedItems[date]?.includes(track.id) === true : completedDates.includes(date)}
+    disabled={planBusy || scheduleChanged || (!!savedPlan && completionMode !== (savedPlan.configuration.completionMode ?? 'day')) || !!savedPlan?.archived || (sharedView && !savedPlan?.can_mark)}
+    onChange={event => markDay(date, event.target.checked, track?.id)}
+    className="plan-completion-box h-6 w-6 shrink-0 rounded border-2 border-slate-400 accent-blue-700 disabled:opacity-60 dark:border-slate-500"
+  />
 
   const trackGroups: Array<{ key: string; sequenceId?: string; members: Array<{ track: QuranPlanTrack; index: number }> }> = []
   const groupedSequenceIds = new Set<string>()
@@ -769,6 +812,7 @@ export default function QuranPlanPage() {
         </div>
         <fieldset><legend className="text-sm font-bold text-deep-800">أيام الدراسة</legend><div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-7">{WEEKDAYS.map((day, index) => { const selected = weekdays.includes(index); return <label key={day} className={`cursor-pointer rounded-xl border px-2 py-2.5 text-center text-xs font-semibold transition ${selected ? 'border-cyan-500 bg-cyan-600 text-white' : 'border-water-200 bg-white/50 text-deep-600 dark:border-slate-700 dark:bg-slate-900/50'}`}><input type="checkbox" checked={selected} onChange={() => setWeekdays(current => selected ? current.filter(item => item !== index) : [...current, index])} className="sr-only" />{day}</label> })}</div></fieldset>
         <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-water-200 bg-white/50 px-4 py-3 text-sm font-semibold text-deep-700 dark:border-slate-700 dark:bg-slate-900/50"><input type="checkbox" checked={includeCompletionCheckboxes} onChange={event => setIncludeCompletionCheckboxes(event.target.checked)} className="h-5 w-5 accent-teal-600" />إضافة خانة «تم» إلى الخطة والطباعة</label>
+        <label className="block text-sm font-semibold text-deep-700">طريقة تحديد الإنجاز<select aria-label="طريقة تحديد الإنجاز" value={completionMode} onChange={event => setCompletionMode(event.target.value as 'day' | 'item')} className="surface-field mt-1.5 w-full rounded-xl px-4 py-2.5 font-normal"><option value="day">خانة واحدة لليوم كله</option><option value="item">خانة لكل بند</option></select></label>
         <div className="space-y-4">{trackGroups.map(group => {
           if (!group.sequenceId) {
             const { track, index } = group.members[0]
@@ -812,7 +856,7 @@ export default function QuranPlanPage() {
       </div>}
       {savedPlan && <p className="no-print mt-3 text-sm font-semibold text-deep-600">الإنجاز: <bdi dir="ltr">{completedDates.length} / {savedPlan.study_dates.length}</bdi> يوم{savedPlan.completed ? ' · الخطة مكتملة ✓' : ''}</p>}
       <div className="plan-summary my-4 flex flex-wrap gap-2"><div className="plan-stat plan-stat-days rounded-lg bg-cyan-50 px-3 py-1.5 text-center dark:bg-cyan-950/35"><span className="plan-stat-label block text-xs font-semibold text-blue-700 dark:text-blue-300">أيام الدراسة</span><strong className="block text-base font-bold text-blue-800 dark:text-blue-200">{plan.studyDays} يوم</strong></div>{plan.tracks.map((track, index) => { const style = TRACK_STYLES[index % TRACK_STYLES.length]; const unitLabel = track.kind === 'quantity' ? track.quantityUnit : amountLabel(track, 1).replace(/^1 /, ''); return <div key={track.id} className="plan-stat rounded-lg px-3 py-1.5 text-center" style={{ backgroundColor: style.soft, color: style.ink }}><span className="plan-stat-label block text-xs font-semibold">إجمالي {track.name}</span><strong className="block text-base font-bold">{plan.totals[track.id].amount} {unitLabel}</strong></div> })}</div>
-      <div className="plan-table-wrap overflow-x-auto border border-water-200 dark:border-slate-700"><table className="plan-table w-full border-collapse text-right text-sm" style={{ minWidth: `${Math.max(includeCompletionCheckboxes ? 47 : 44, (includeCompletionCheckboxes ? 21 : 18) + plan.tracks.length * 14)}rem` }}><thead className="bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-100"><tr><th className="px-4 py-3">التاريخ</th><th className="px-4 py-3">اليوم</th>{showCompletion && <th className={`plan-completion-cell px-2 py-3 ${includeCompletionCheckboxes ? '' : 'no-print'}`}>تم</th>}{plan.tracks.map(track => <th key={track.id} className="px-4 py-3">{track.name}{track.weekdays !== undefined && <span className="no-print mt-0.5 block text-[10px] font-normal opacity-70">أيام مخصصة</span>}</th>)}</tr></thead><tbody className="divide-y divide-water-100 dark:divide-slate-800">{plan.days.map(day => <tr key={day.date} className={day.isStudyDay ? 'plan-study-row bg-white dark:bg-slate-900' : 'plan-rest-row bg-slate-50/75 text-slate-500 dark:bg-slate-950/45 dark:text-slate-400'}><td className="whitespace-nowrap px-4 py-3">{displayDate(day.date)}</td><td className="px-4 py-3 font-semibold">{WEEKDAYS[day.weekday]}</td>{showCompletion && <td className={`plan-completion-cell px-2 py-3 ${includeCompletionCheckboxes ? '' : 'no-print'}`}>{day.isStudyDay ? <input type="checkbox" aria-label={`إنجاز يوم ${day.date}`} checked={completedDates.includes(day.date)} disabled={planBusy || scheduleChanged || !!savedPlan?.archived || (sharedView && !savedPlan?.can_mark)} onChange={event => markDay(day.date, event.target.checked)} className="plan-completion-box h-6 w-6 rounded border-2 border-slate-400 accent-blue-700 disabled:opacity-60 dark:border-slate-500" /> : <span aria-hidden="true">—</span>}</td>}{plan.tracks.map((track, index) => <td key={track.id} className="px-4 py-3" style={{ borderInlineStart: `3px solid ${TRACK_STYLES[index % TRACK_STYLES.length].line}` }}>{assignmentCell(day.assignments[track.id], day.isStudyDay, day.paused?.[track.id] === true)}</td>)}</tr>)}</tbody></table></div>
+      <div className="plan-table-wrap overflow-x-auto border border-water-200 dark:border-slate-700"><table className="plan-table w-full border-collapse text-right text-sm" style={{ minWidth: `${Math.max(includeCompletionCheckboxes ? 47 : 44, (includeCompletionCheckboxes ? 21 : 18) + plan.tracks.length * 14)}rem` }}><thead className="bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-100"><tr><th className="px-4 py-3">التاريخ</th><th className="px-4 py-3">اليوم</th>{showCompletion && completionMode === 'day' && <th className={`plan-completion-cell px-2 py-3 ${includeCompletionCheckboxes ? '' : 'no-print'}`}>تم</th>}{plan.tracks.map(track => <th key={track.id} className="px-4 py-3">{track.name}{track.weekdays !== undefined && <span className="no-print mt-0.5 block text-[10px] font-normal opacity-70">أيام مخصصة</span>}</th>)}</tr></thead><tbody className="divide-y divide-water-100 dark:divide-slate-800">{plan.days.map(day => <tr key={day.date} className={day.isStudyDay ? 'plan-study-row bg-white dark:bg-slate-900' : 'plan-rest-row bg-slate-50/75 text-slate-500 dark:bg-slate-950/45 dark:text-slate-400'}><td className="whitespace-nowrap px-4 py-3">{displayDate(day.date)}</td><td className="px-4 py-3 font-semibold">{WEEKDAYS[day.weekday]}</td>{showCompletion && completionMode === 'day' && <td className={`plan-completion-cell px-2 py-3 ${includeCompletionCheckboxes ? '' : 'no-print'}`}>{day.isStudyDay ? completionCheckbox(day.date) : <span aria-hidden="true">—</span>}</td>}{plan.tracks.map((track, index) => <td key={track.id} className="px-4 py-3" style={{ borderInlineStart: `3px solid ${TRACK_STYLES[index % TRACK_STYLES.length].line}` }}><div className="flex items-start gap-2">{showCompletion && completionMode === 'item' && day.isStudyDay && day.assignments[track.id] && !day.paused?.[track.id] && <span className={includeCompletionCheckboxes ? '' : 'no-print'}>{completionCheckbox(day.date, track)}</span>}<div className="min-w-0">{assignmentCell(day.assignments[track.id], day.isStudyDay, day.paused?.[track.id] === true)}</div></div></td>)}</tr>)}</tbody></table></div>
       <p className="no-print mt-5 text-center text-xs text-deep-400">وُلدت الخطة بواسطة زمزم{!sharedView && ' · يمكن تعديل المدخلات وإعادة إنشائها في أي وقت'}<br />عند الطباعة: ألغِ تحديد «Headers and footers» و «Background graphics» من خيارات الطباعة للحصول على نسخة نظيفة.</p>
     </section>}
     {excelSheets && <ExcelPreviewModal sheets={excelSheets} filename={`zamzam-plan-${startDate}.xlsx`} helpText="راجع جدول الخطة قبل تنزيل ملف Excel." onClose={() => setExcelSheets(null)} />}

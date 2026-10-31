@@ -8,11 +8,16 @@ The production site is <https://zamzam-web.fly.dev> and uses the Zamzam API at
 
 Anyone can generate a plan at `/plan`, including Qur'an, books, YouTube videos
 and playlists, and public SoundCloud playlists. Logging in allows users to save
-named plans, edit them, track completed days, mark whole plans complete, and
+named plans, edit them, track completed days or individual daily items, mark whole plans complete, and
 archive, restore, or delete them. Saved plans belong to the individual user.
 
+Choose one completion checkbox for the whole day or separate checkboxes for
+each assigned item. Switching modes keeps partial progress, and completing
+every assigned item completes its day. The choice applies to printing too.
+Editing a schedule retains progress only for assignments that have not changed.
+
 Saved plans are private by default. Owners can enable a read-only link or a link
-that also allows recording daily completion without logging in. Shared progress
+that also allows recording day or item completion without logging in. Shared progress
 is saved on the same plan. Recipients cannot edit its configuration, archive it,
 or delete it. Changing the sharing mode rotates the link; making a plan private
 or deleting it revokes existing links. Archived plans remain readable and pause

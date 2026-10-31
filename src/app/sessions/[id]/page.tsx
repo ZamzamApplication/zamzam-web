@@ -18,6 +18,7 @@ function isProgressDraftComplete(draft?: QuranProgressInput) {
 
 function progressRangeChanged(before: QuranProgressInput, after: QuranProgressInput) {
   return before.range_type !== after.range_type
+    || (before.direction || 'forward') !== (after.direction || 'forward')
     || before.from_surah !== after.from_surah
     || before.from_ayah !== after.from_ayah
     || before.to_surah !== after.to_surah
@@ -507,7 +508,10 @@ export default function SessionAttendancePage() {
     const sessionData = dataRef.current
     if (!sessionData) return true
     const keys = Array.from(dirtyProgressKeys)
-    const updates = keys.map((key) => progressDrafts[key]).filter(Boolean)
+    const changedDrafts = keys.map((key) => progressDrafts[key]).filter(Boolean)
+    const updates = changedDrafts.filter((draft) => draft.quality_score !== 0)
+    const deletions = changedDrafts.filter((draft) => draft.quality_score === 0 && persistedProgressDrafts[progressDraftKey(draft.student_id, draft.category)])
+      .map(({ student_id, category }) => ({ student_id, category }))
     const incompleteDraft = updates.find((draft) => !isProgressDraftComplete(draft))
     if (incompleteDraft) {
       const incompleteStudent = sessionData.sheikh_groups.flatMap((group) => group.students).find((student) => student.id === incompleteDraft.student_id)
@@ -521,20 +525,20 @@ export default function SessionAttendancePage() {
       return false
     }
     if (dirtyProgressKeys.size === 0) return true
-    if (updates.length === 0) return true
     const editedSavedRanges = keys.filter((key) => (
       persistedProgressDrafts[key]
-      && progressDrafts[key]
+      && progressDrafts[key]?.quality_score > 0
       && progressRangeChanged(persistedProgressDrafts[key], progressDrafts[key])
     ))
     if (editedSavedRanges.length > 0 && !window.confirm(`سيتم تعديل مقدار محفوظ في ${editedSavedRanges.length} سجل/سجلات، وسيُحفظ التغيير في سجل التدقيق. هل تريد المتابعة؟`)) {
       return false
     }
+    if (deletions.length > 0 && !window.confirm(`سيتم حذف ${deletions.length} سجل/سجلات متابعة محفوظة مع التقييم والمقدار. هل تريد المتابعة؟`)) return false
     setProgressSaving(true)
     setSaveState('saving')
     setSaveError('')
     try {
-      await api.saveSessionProgress(sessionData.session_id, updates)
+      if (updates.length > 0 || deletions.length > 0) await api.saveSessionProgress(sessionData.session_id, updates, deletions)
       const refreshed = await api.getSessionProgress(sessionData.session_id)
       const refreshedDrafts = Object.fromEntries(refreshed.entries.map((entry) => [progressDraftKey(entry.student_id, entry.category), progressEntryToInput(entry)]))
       const refreshedSuggestions = Object.fromEntries((refreshed.suggested_entries || []).map((entry) => [progressDraftKey(entry.student_id, entry.category), entry]))

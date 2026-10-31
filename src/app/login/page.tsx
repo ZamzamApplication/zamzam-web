@@ -90,7 +90,7 @@ export default function LoginPage() {
             <div className="mb-7">
               <span className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-50 text-2xl shadow-sm ring-1 ring-cyan-100 dark:bg-cyan-950/50 dark:ring-cyan-900">🔐</span>
               <h1 className="text-2xl font-bold text-deep-900 sm:text-3xl">مرحباً بعودتك</h1>
-              <p className="mt-2 text-sm leading-6 text-deep-500">سجّل دخولك للمتابعة من حيث توقفت وإدارة يومك بسهولة.</p>
+              <p className="mt-2 text-sm leading-6 text-deep-500">سجّل دخولك للمتابعة من حيث توقفت وإدارة حلقاتك بسهولة.</p>
             </div>
 
             {error && (

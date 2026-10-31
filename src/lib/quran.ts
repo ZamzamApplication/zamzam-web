@@ -22,7 +22,18 @@ export function surahInfo(number: number): SurahInfo {
   return SURAHS[number - 1] || SURAHS[0]
 }
 
+export function nextQuranPoint(point: { surah: number; ayah: number }): { surah: number; ayah: number } | null {
+  if (point.ayah < surahInfo(point.surah).ayahs) return { surah: point.surah, ayah: point.ayah + 1 }
+  return point.surah < SURAHS.length ? { surah: point.surah + 1, ayah: 1 } : null
+}
+
+export function nextReverseQuranPoint(point: { surah: number; ayah: number }): { surah: number; ayah: number } | null {
+  if (point.ayah < surahInfo(point.surah).ayahs) return { surah: point.surah, ayah: point.ayah + 1 }
+  return point.surah > 1 ? { surah: point.surah - 1, ayah: 1 } : null
+}
+
 export function formatQuranRange(range: {
+  direction?: 'forward' | 'backward'
   range_type: 'surah_ayah' | 'page'
   from_surah?: number | null
   from_ayah?: number | null
@@ -31,17 +42,18 @@ export function formatQuranRange(range: {
   from_page?: number | null
   to_page?: number | null
 }) {
+  const suffix = range.direction === 'backward' ? ' (عكسي)' : ''
   if (range.range_type === 'page') {
     return range.from_page === range.to_page
-      ? `صفحة ${range.from_page}`
-      : `صفحات ${range.from_page}–${range.to_page}`
+      ? `صفحة ${range.from_page}${suffix}`
+      : `صفحات ${range.from_page}–${range.to_page}${suffix}`
   }
   const fromName = surahInfo(range.from_surah || 1).name
   const toName = surahInfo(range.to_surah || range.from_surah || 1).name
   if (range.from_surah === range.to_surah) {
-    return `${fromName} ${range.from_ayah}–${range.to_ayah}`
+    return `${fromName} ${range.from_ayah}–${range.to_ayah}${suffix}`
   }
-  return `${fromName} ${range.from_ayah} ← ${toName} ${range.to_ayah}`
+  return `${fromName} ${range.from_ayah} ← ${toName} ${range.to_ayah}${suffix}`
 }
 
 export const QUALITY_OPTIONS = [

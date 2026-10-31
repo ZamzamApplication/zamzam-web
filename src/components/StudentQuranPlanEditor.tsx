@@ -10,7 +10,7 @@ import { progressCategoryLabel } from '@/components/TahfizInitialSettingsFields'
 type QuranPlanDraft = Omit<StudentQuranPlan, 'id' | 'student_id' | 'updated_at'>
 
 function defaultPlan(category: WardCategory): QuranPlanDraft {
-  return { category, increment_unit: 'ayahs', increment_amount: 1, next_surah: 1, next_ayah: 1, next_page: null, completed_at: null }
+  return { category, direction: 'forward', increment_unit: 'ayahs', increment_amount: 1, next_surah: 1, next_ayah: 1, next_page: null, completed_at: null }
 }
 
 export default function StudentQuranPlanEditor({ studentId, initiallyEnabled, configuredCategories }: {
@@ -38,7 +38,7 @@ export default function StudentQuranPlanEditor({ studentId, initiallyEnabled, co
         setStudentEnabled(result.student_enabled)
         setCategories(result.categories)
         setPlans(result.plans.map(plan => ({
-          category: plan.category, increment_unit: plan.increment_unit, increment_amount: plan.increment_amount,
+          category: plan.category, direction: plan.direction || 'forward', increment_unit: plan.increment_unit, increment_amount: plan.increment_amount,
           next_surah: plan.next_surah, next_ayah: plan.next_ayah, next_page: plan.next_page, completed_at: plan.completed_at,
         })))
         setLoaded(true)
@@ -101,6 +101,8 @@ export default function StudentQuranPlanEditor({ studentId, initiallyEnabled, co
             <legend className="px-1 text-sm font-bold text-deep-800">{progressCategoryLabel(plan.category)}</legend>
             {plan.completed_at && <p className="mb-3 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-200">اكتمل الورد ✓ — عدّل نقطة البداية لبدء دورة جديدة.</p>}
             <div className="mt-1 grid grid-cols-2 gap-3">
+              <label className="col-span-2 text-xs text-deep-600">اتجاه الورد<select value={plan.direction || 'forward'} onChange={event => updatePlan(plan.category, { direction: event.target.value as 'forward' | 'backward' })} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm"><option value="forward">ترتيب المصحف</option><option value="backward">{plan.increment_unit === 'pages' ? 'عكس ترتيب الصفحات' : 'عكس ترتيب السور'}</option></select></label>
+              {plan.direction === 'backward' && <p className="col-span-2 text-[11px] text-deep-500">{plan.increment_unit === 'pages' ? 'تتناقص أرقام الصفحات مع تقدم الورد.' : 'السور من الناس إلى الفاتحة، والآيات داخل كل سورة بالترتيب الطبيعي.'}</p>}
               <label className="text-xs text-deep-600">الوحدة<select value={plan.increment_unit} onChange={event => {
                 const unit = event.target.value as QuranPlanDraft['increment_unit']
                 updatePlan(plan.category, { increment_unit: unit, next_page: unit === 'pages' ? (plan.next_page || 1) : null, next_surah: unit === 'pages' ? null : (plan.next_surah || 1), next_ayah: unit === 'pages' ? null : (plan.next_ayah || 1) })

@@ -571,10 +571,12 @@ export interface CircleStudentStatsResponse {
 
 export type ProgressCategory = string
 export type QuranRangeType = 'surah_ayah' | 'page'
+export type QuranDirection = 'forward' | 'backward'
 export type WardCategory = string
 export type WardIncrementUnit = 'ayahs' | 'lines' | 'pages' | 'juz' | 'hizb' | 'quarter' | 'half_page'
 
 export interface QuranRangeSnapshot {
+  direction?: QuranDirection
   range_type: QuranRangeType
   from_surah: number | null
   from_ayah: number | null
@@ -585,6 +587,7 @@ export interface QuranRangeSnapshot {
 }
 
 export interface StudentQuranPlan {
+  direction?: QuranDirection
   id?: number
   student_id: number
   category: WardCategory
@@ -598,6 +601,7 @@ export interface StudentQuranPlan {
 }
 
 export interface QuranProgressEntry {
+  direction?: QuranDirection
   id: number
   session_id: number
   student_id: number
@@ -641,6 +645,7 @@ export interface QuranProgressRevision {
 }
 
 export interface QuranProgressInput {
+  direction?: QuranDirection
   student_id: number
   sheikh_id?: number | null
   category: ProgressCategory
