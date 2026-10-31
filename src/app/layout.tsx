@@ -297,7 +297,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     { href: '/sessions', label: 'الحلقات', icon: 'sessions' },
     { href: '/trips', label: 'الرحلات', icon: 'trips', adminOnly: true },
     { href: '/finance', label: 'القسم المالي', icon: 'finance', adminOnly: true },
-    { href: '/registration', label: 'التسجيل العام', icon: 'manage', adminOnly: true },
     { href: '/manage', label: 'الإدارة', icon: 'manage', adminOnly: true },
     { href: '/settings', label: 'الإعدادات', icon: 'settings', adminOnly: true },
   ]
@@ -426,7 +425,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </button>
             </div>
           </header>
-          {(user?.role === 'admin' || user?.role === 'super_admin') && !isDedicatedPlatform && <div className="px-4 py-2 md:hidden"><RegistrationNotifications tenantId={user.tahfiz_id} /></div>}
           <nav className="nav-glass hidden md:block px-6 py-3 sticky top-0 z-40" aria-label="التنقل الرئيسي">
             <div className="max-w-6xl mx-auto flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2 md:gap-3 flex-wrap">
@@ -440,8 +438,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   {user?.role !== 'auditor' && <Link href="/sessions" className={navLinkClass('/sessions')} aria-current={isActive('/sessions') ? 'page' : undefined}>الحلقات</Link>}
                   {(user?.role === 'admin' || user?.role === 'super_admin') && <Link href="/trips" className={navLinkClass('/trips')} aria-current={isActive('/trips') ? 'page' : undefined}>الرحلات</Link>}
                   {(user?.role === 'admin' || user?.role === 'super_admin' || user?.role === 'auditor') && <Link href="/finance" className={navLinkClass('/finance')} aria-current={isActive('/finance') ? 'page' : undefined}>القسم المالي</Link>}
-                  {(user?.role === 'admin' || user?.role === 'super_admin') && <RegistrationNotifications tenantId={user.tahfiz_id} />}
-                  {(user?.role === 'admin' || user?.role === 'super_admin') && <Link href="/manage" className={navLinkClass('/manage')} aria-current={isActive('/manage') ? 'page' : undefined}>الإدارة</Link>}
+                  {(user?.role === 'admin' || user?.role === 'super_admin') && <Link href="/manage" className={navLinkClass('/manage')} aria-current={isActive('/manage') ? 'page' : undefined}>الإدارة<RegistrationNotifications tenantId={user.tahfiz_id} /></Link>}
                   {(user?.role === 'admin' || user?.role === 'super_admin') && <Link href="/settings" className={navLinkClass('/settings')} aria-current={isActive('/settings') ? 'page' : undefined}>إعدادات التحفيظ</Link>}
                   {user?.role === 'super_admin' && <Link href="/platform" className={navLinkClass('/platform')} aria-current={isActive('/platform') ? 'page' : undefined}>المنصة</Link>}
                 </>
@@ -469,7 +466,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 aria-current={isActive(item.href) ? 'page' : undefined}
               >
                 <NavIcon name={item.icon} />
-                <span>{item.label}</span>
+                <span>{item.label}{item.href === '/manage' && <RegistrationNotifications tenantId={user.tahfiz_id} />}</span>
               </Link>
             ))}
           </nav>}

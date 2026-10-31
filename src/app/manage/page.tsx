@@ -1,7 +1,8 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useCallback, useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import StudentRegistrationManagement from '@/components/StudentRegistrationManagement'
 import Link from 'next/link'
 import { api } from '@/lib/api'
 import { mediaUrl } from '@/lib/format'
@@ -2012,12 +2013,17 @@ function WarningsTab({ sheikhs }: { sheikhs: SheikhInfo[] }) {
 
 // ─── Main Page ──────────────────────────────────────────────────────────────
 
-export default function ManagePage() {
+function ManageContent() {
+  const searchParams = useSearchParams()
   const router = useRouter()
   const [sheikhs, setSheikhs] = useState<(SheikhInfo & { students: StudentInfo[] })[]>([])
   const [circles, setCircles] = useState<Circle[]>([])
   const [users, setUsers] = useState<UserInfo[]>([])
-  const [activeTab, setActiveTab] = useState<'sheikhs' | 'users' | 'circles' | 'warnings'>('sheikhs')
+  const [activeTab, setActiveTab] = useState<'sheikhs' | 'users' | 'circles' | 'warnings' | 'registration'>('sheikhs')
+  useEffect(() => {
+    const section = searchParams.get('section')
+    setActiveTab(section === 'registration' || section === 'users' || section === 'warnings' ? section : 'sheikhs')
+  }, [searchParams])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [expandedSheikhs, setExpandedSheikhs] = useState<Set<number>>(new Set())
@@ -2174,6 +2180,7 @@ export default function ManagePage() {
     { key: 'sheikhs', label: 'الشيوخ والطلاب' },
     { key: 'users', label: 'المستخدمين' },
     { key: 'warnings', label: 'الإنذارات' },
+    { key: 'registration', label: 'تسجيل الطلاب' },
   ] as const
 
   return (
@@ -2190,7 +2197,7 @@ export default function ManagePage() {
         {tabs.map((t) => (
           <button
             key={t.key}
-            onClick={() => setActiveTab(t.key)}
+            onClick={() => { setActiveTab(t.key); router.replace(`/manage?section=${t.key}`, { scroll: false }) }}
             className={`px-4 py-2 text-sm font-medium transition border-b-2 -mb-px ${
               activeTab === t.key ? 'text-blue-700 dark:text-blue-400 border-cyan-500' : 'text-deep-500 border-transparent hover:text-deep-700'
             }`}
@@ -2199,6 +2206,8 @@ export default function ManagePage() {
           </button>
         ))}
       </div>
+
+      {activeTab === 'registration' && <StudentRegistrationManagement />}
 
       {/* ─── Sheikhs & Students Tab ─────────────────────────────────────── */}
       {activeTab === 'sheikhs' && (
@@ -2358,4 +2367,8 @@ export default function ManagePage() {
 
     </div>
   )
+}
+
+export default function ManagePage() {
+  return <Suspense fallback={<p role="status">جارٍ تحميل الإدارة…</p>}><ManageContent /></Suspense>
 }

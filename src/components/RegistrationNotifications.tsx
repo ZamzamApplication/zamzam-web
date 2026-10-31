@@ -1,7 +1,7 @@
 'use client'
-import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { request } from '@/lib/api'
+
 export default function RegistrationNotifications({
   tenantId,
 }: {
@@ -13,8 +13,8 @@ export default function RegistrationNotifications({
     setCount(0)
     const load = () =>
       request<{ pending_count: number }>('/student-registration/notifications')
-        .then((r) => {
-          if (alive) setCount(r.pending_count)
+        .then((result) => {
+          if (alive) setCount(result.pending_count)
         })
         .catch(() => {})
     void load()
@@ -24,21 +24,14 @@ export default function RegistrationNotifications({
       clearInterval(timer)
     }
   }, [tenantId])
+  if (!count) return null
   return (
-    <Link
-      href="/registration"
-      className="nav-link"
-      aria-label={`طلبات التسجيل، ${count} بانتظار المراجعة`}
+    <span
+      role="status"
+      aria-label={`${count} طلبات تسجيل بانتظار المراجعة`}
+      className="mr-2 rounded-full bg-amber-100 px-2 text-xs font-bold text-amber-900"
     >
-      طلبات التسجيل
-      {count > 0 && (
-        <span
-          role="status"
-          className="mr-2 rounded-full bg-amber-100 px-2 text-xs font-bold text-amber-900"
-        >
-          {count}
-        </span>
-      )}
-    </Link>
+      {count}
+    </span>
   )
 }
