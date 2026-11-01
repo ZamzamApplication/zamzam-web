@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import type { PublicRegistration } from '@/lib/student-registration'
 import RegistrationFields from '@/components/RegistrationFields'
+import OpenInApp from '@/components/OpenInApp'
 
 export default function RegisterStudent() {
   const { token } = useParams<{ token: string }>()
@@ -59,6 +60,7 @@ export default function RegisterStudent() {
   }
   return (
     <main className="min-h-screen bg-gradient-to-br from-cyan-50 to-emerald-50 px-4 py-12 dark:from-slate-950 dark:to-slate-900">
+      <div className="mx-auto max-w-xl"><OpenInApp kind="register" token={token} /></div>
       <div className="mx-auto max-w-xl rounded-3xl border border-cyan-100 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-800 sm:p-10">
         <p className="mb-3 text-sm font-bold text-cyan-700">
           {form?.tahfiz_name || 'زمزم • تسجيل الطلاب'}

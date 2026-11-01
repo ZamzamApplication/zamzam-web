@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { api } from '@/lib/api'
 import type { TahfizInvitation } from '@/lib/types'
 import AsyncState from '@/components/AsyncState'
+import OpenInApp from '@/components/OpenInApp'
 
 const STATUS_LABELS: Record<TahfizInvitation['status'], string> = {
   active: 'صالحة للاستخدام',
@@ -54,6 +55,7 @@ export default function InvitationPage() {
 
   return (
     <div className="mx-auto max-w-xl py-8">
+      <OpenInApp kind="invite" token={token} />
       <section className="glass-strong rounded-2xl p-6 text-center md:p-8">
         <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-cyan-100 text-2xl dark:bg-cyan-900/40">✉</div>
         <p className="mt-5 text-sm font-semibold text-blue-700 dark:text-blue-300">دعوة للانضمام إلى تحفيظ</p>

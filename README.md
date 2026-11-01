@@ -61,3 +61,20 @@ matches `origin/master`, run:
 ```
 
 The script deploys only the web application and checks its production endpoint.
+
+### Android public app links
+
+Invitation and student registration pages offer an Android intent link to
+`com.zamzammobile`, with the original website page as fallback when the app is not
+installed. Other devices continue using the website.
+
+`/.well-known/assetlinks.json` returns a Digital Asset Links statement when
+`ANDROID_APP_LINKS_SHA256_CERT_FINGERPRINTS` is configured with comma-separated
+SHA-256 signing certificate fingerprints (`AA:BB:…`, 32 bytes). Empty or invalid
+configuration grants no domain association. Set this to the production signing
+certificate; never trust the repository's public debug key. For Play installs,
+use the app signing certificate from Play Console. The current internal APK's
+Open-in-app button works without publishing a debug certificate. Automatic HTTPS
+opening becomes available after release certificate configuration and Android
+verification. No automatic browser redirect attempts are used, since Chrome can
+block app launches without a user gesture.
