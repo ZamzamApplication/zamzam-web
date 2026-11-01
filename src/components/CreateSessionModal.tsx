@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { ScheduleForm } from './SessionSchedules'
 import { api } from '@/lib/api'
 import type { StudentCategory, StudentInfo } from '@/lib/types'
 import { toggleCategorySelection, toggleStudentGroupSelection } from '@/lib/student-categories'
@@ -13,10 +14,12 @@ function todayLocalDate(): string {
   return `${year}-${month}-${day}`
 }
 
-export default function CreateSessionModal({ onClose, onCreated }: {
+export default function CreateSessionModal({ onClose, onCreated, onScheduled }: {
+  onScheduled?: () => void
   onClose: () => void
   onCreated: (sessionId: number) => void
 }) {
+  const [weekly, setWeekly] = useState(false)
   const [sessionDate, setSessionDate] = useState(todayLocalDate)
   const [sessionName, setSessionName] = useState('')
   const [multipleEnabled, setMultipleEnabled] = useState(false)
@@ -103,8 +106,10 @@ export default function CreateSessionModal({ onClose, onCreated }: {
 
   return (
     <div className="mobile-sheet-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={onClose}>
-      <div className={`mobile-sheet glass-strong max-h-[90vh] overflow-y-auto rounded-2xl p-6 w-full ${multipleEnabled ? 'max-w-2xl' : 'max-w-sm'} mx-4`} onClick={event => event.stopPropagation()}>
+      <div className={`mobile-sheet glass-strong max-h-[90vh] overflow-y-auto rounded-2xl p-6 w-full ${multipleEnabled || weekly ? 'max-w-2xl' : 'max-w-sm'} mx-4`} onClick={event => event.stopPropagation()}>
         <h2 className="text-xl font-bold text-deep-800 mb-4">إضافة حلقة جديدة</h2>
+        <div className="mb-4 flex gap-2"><button type="button" aria-pressed={!weekly} onClick={() => setWeekly(false)} className={`min-h-11 flex-1 rounded-xl px-3 ${!weekly ? 'water-btn text-white' : 'water-btn-outline'}`}>مرة واحدة</button><button type="button" aria-pressed={weekly} onClick={() => setWeekly(true)} className={`min-h-11 flex-1 rounded-xl px-3 ${weekly ? 'water-btn text-white' : 'water-btn-outline'}`}>تكرار أسبوعي</button></div>
+        {weekly ? <ScheduleForm onSaved={() => { onScheduled?.(); onClose() }} /> : <>
         {error && <div className="mb-4 rounded-xl border border-red-200 bg-red-50/80 px-4 py-2 text-center text-sm text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -160,7 +165,7 @@ export default function CreateSessionModal({ onClose, onCreated }: {
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 water-btn-outline rounded-xl text-sm">إلغاء</button>
             <button type="submit" disabled={loading || loadingOptions || (multipleEnabled && (!sessionName || selectedStudents.size === 0))} className="flex-1 px-4 py-2.5 water-btn text-white rounded-xl text-sm font-medium disabled:opacity-50">{loading ? 'جاري...' : 'إضافة'}</button>
           </div>
-        </form>
+        </form></>}
       </div>
     </div>
   )

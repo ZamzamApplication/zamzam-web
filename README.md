@@ -78,3 +78,11 @@ Open-in-app button works without publishing a debug certificate. Automatic HTTPS
 opening becomes available after release certificate configuration and Android
 verification. No automatic browser redirect attempts are used, since Chrome can
 block app launches without a user gesture.
+
+Weekly halaqat can be configured from **إضافة حلقة → تكرار أسبوعي** or the
+**الجداول الأسبوعية** section on the sessions page. Administrators select days,
+dates, timezone and, in multiple-session mode, all active students, dynamic
+categories, or selected students. They can edit, pause/resume, and skip untouched
+upcoming occurrences. Changes affect newly generated sessions; existing sessions
+remain visible. Reopening a completed session now takes one tap and remains
+version-checked and audited.
