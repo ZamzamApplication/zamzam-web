@@ -328,8 +328,6 @@ export default function SessionAttendancePage() {
   const [savedProgressKeys, setSavedProgressKeys] = useState<Set<string>>(new Set())
   const [dirtyProgressKeys, setDirtyProgressKeys] = useState<Set<string>>(new Set())
   const [progressSaving, setProgressSaving] = useState(false)
-  const [showReopen, setShowReopen] = useState(false)
-  const [reopenReason, setReopenReason] = useState('')
   const [reopening, setReopening] = useState(false)
   const [studentSearch, setStudentSearch] = useState('')
   const [thresholdAlerts, setThresholdAlerts] = useState<AttendanceThresholdAlert[]>([])
@@ -720,14 +718,12 @@ export default function SessionAttendancePage() {
   }
 
   const handleReopen = async () => {
-    if (!data || reopenReason.trim().length < 3) return
+    if (!data || reopening) return
     setReopening(true)
     setSaveError('')
     try {
-      const result = await api.reopenSession(data.session_id, reopenReason.trim(), data.version)
+      const result = await api.reopenSession(data.session_id, 'إعادة فتح الحلقة للتعديل', data.version)
       setData((current) => current ? { ...current, is_confirmed: false, status: 'reopened', version: result.version } : current)
-      setShowReopen(false)
-      setReopenReason('')
     } catch (err: any) {
       setSaveError(err.message || 'تعذر إعادة فتح الحلقة')
       setSaveState('error')
@@ -887,8 +883,8 @@ export default function SessionAttendancePage() {
             </button>
           )}
           {data.is_confirmed && (userRole === 'admin' || userRole === 'super_admin') && (
-            <button type="button" onClick={() => setShowReopen(true)} className="water-btn-outline px-4 py-2 rounded-xl text-sm flex-1 md:flex-none">
-              إعادة فتح الحلقة
+            <button type="button" onClick={handleReopen} disabled={reopening} className="water-btn-outline px-4 py-2 rounded-xl text-sm flex-1 md:flex-none">
+              {reopening ? 'جاري إعادة الفتح...' : 'إعادة فتح الحلقة'}
             </button>
           )}
         </div>
@@ -1007,19 +1003,6 @@ export default function SessionAttendancePage() {
         </div>
       )}
 
-      {showReopen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="reopen-title" onClick={() => setShowReopen(false)}>
-          <div className="glass-strong w-full max-w-md rounded-2xl p-6" onClick={(event) => event.stopPropagation()}>
-            <h2 id="reopen-title" className="text-xl font-bold text-deep-800">إعادة فتح الحلقة</h2>
-            <p className="mt-2 text-sm text-deep-500">سيتم السماح بتعديل الحضور والمتابعة، وسيُحفظ السبب في سجل التدقيق.</p>
-            <textarea value={reopenReason} onChange={(event) => setReopenReason(event.target.value)} rows={3} autoFocus className="surface-field mt-4 w-full rounded-xl px-4 py-3 text-sm" placeholder="سبب إعادة الفتح" />
-            <div className="mt-4 flex gap-3">
-              <button type="button" onClick={() => setShowReopen(false)} className="water-btn-outline flex-1 rounded-xl px-4 py-2">إلغاء</button>
-              <button type="button" onClick={handleReopen} disabled={reopening || reopenReason.trim().length < 3} className="water-btn flex-1 rounded-xl px-4 py-2 text-white disabled:opacity-50">{reopening ? 'جاري...' : 'إعادة الفتح'}</button>
-            </div>
-          </div>
-        </div>
-      )}
       {showMembership && data.explicit_membership && <SessionMembershipModal
         sessionId={data.session_id}
         expectedVersion={data.version}

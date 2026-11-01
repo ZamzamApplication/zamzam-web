@@ -1,3 +1,4 @@
+import type { ScheduleInput, SessionSchedule } from './session-schedules'
 import { getApiRuntime } from './api-runtime'
 import type {
   AttendanceThresholdAlert,
@@ -334,6 +335,16 @@ export const api = {
     return request<Session[]>('/sessions/upcoming')
   },
 
+  getSessionSchedules() { return request<SessionSchedule[]>('/session-schedules') },
+  createSessionSchedule(input: ScheduleInput) {
+    return request<SessionSchedule>('/session-schedules', { method: 'POST', body: JSON.stringify(input) })
+  },
+  updateSessionSchedule(id: number, input: ScheduleInput & { expected_version: number }) {
+    return request<SessionSchedule>(`/session-schedules/${id}`, { method: 'PUT', body: JSON.stringify(input) })
+  },
+  skipSessionOccurrence(id: number, date: string, expected_version: number) {
+    return request<SessionSchedule>(`/session-schedules/${id}/skip`, { method: 'POST', body: JSON.stringify({ date, expected_version }) })
+  },
   getAllSessions() {
     return request<Session[]>('/sessions/all')
   },

@@ -7,6 +7,7 @@ import { api } from '@/lib/api'
 import { formatDateWithWeekday } from '@/lib/format'
 import type { Session } from '@/lib/types'
 import CreateSessionModal from '@/components/CreateSessionModal'
+import SessionSchedules from '@/components/SessionSchedules'
 import AsyncState from '@/components/AsyncState'
 import ConfirmDialog from '@/components/ConfirmDialog'
 import { canPermanentlyDeleteSession, sessionDeletionConfirmation } from '@/lib/session-lifecycle'
@@ -114,6 +115,8 @@ export default function SessionsPage() {
         </div>
       </div>
 
+      {canManage && <SessionSchedules onChanged={() => void load()} />}
+
       <div className="mb-5">
         <label className="block max-w-xl text-sm font-semibold text-deep-700">
           تصفية حسب الشهر
@@ -200,6 +203,7 @@ export default function SessionsPage() {
         <CreateSessionModal
           onClose={() => setShowModal(false)}
           onCreated={handleCreated}
+          onScheduled={() => void load()}
         />
       )}
       <ConfirmDialog

@@ -252,6 +252,7 @@ export default function DashboardPage() {
         <CreateSessionModal
           onClose={() => setShowModal(false)}
           onCreated={handleCreated}
+          onScheduled={() => void load()}
         />
       )}
     </div>
