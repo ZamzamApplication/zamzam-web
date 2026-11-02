@@ -369,7 +369,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     return (
       <html lang="ar" dir="rtl" suppressHydrationWarning>
         <head>
-          <title>زمزم لتحفيظ القرآن</title>
+          <title>زمزم — رفيق رحلتكم مع القرآن</title>
+          <meta name="description" content="مساحة عربية لإدارة حلقات تحفيظ القرآن. نظّم الحلقات والطلاب، سجّل الحضور، وتابع خطط الحفظ والمراجعة والتقارير مع زمزم." />
           <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
           <link rel="manifest" href="/manifest.webmanifest" />
           <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
@@ -382,12 +383,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </head>
         <body className={`${cairoFont.variable} font-cairo`}>
           <PwaRegistration />
-          <header className="fixed top-0 left-0 right-0 z-50 px-6 py-4 flex justify-between items-center">
-            <Link href="/" className="text-xl font-bold text-white drop-shadow-lg">
-              💧 زمزم
-            </Link>
-          </header>
-          <main>{children}</main>
+          {children}
         </body>
       </html>
     )
