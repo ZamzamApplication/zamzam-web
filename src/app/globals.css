@@ -59,7 +59,9 @@
   .print-receipt,
   .print-receipt *,
   .print-plan,
-  .print-plan * {
+  .print-plan *,
+  .registration-poster,
+  .registration-poster * {
     visibility: visible !important;
   }
 

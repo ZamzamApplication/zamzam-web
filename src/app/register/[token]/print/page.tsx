@@ -3,14 +3,31 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import RegistrationQr from '@/components/RegistrationQr'
 import type { PublicRegistration } from '@/lib/student-registration'
+import styles from './poster.module.css'
+
+const DESIGNS = [
+  { id: 'zamzam', name: 'زمزم', hint: 'مائي · فيروزي', colors: ['#0891b2', '#14b8a6'] },
+  { id: 'emerald', name: 'زمرّد', hint: 'كلاسيكي · أخضر وذهبي', colors: ['#065f46', '#d97706'] },
+  { id: 'night', name: 'ليل', hint: 'داكن · كحلي وذهبي', colors: ['#0b1f2a', '#e2b65c'] },
+  { id: 'minimal', name: 'بسيط', hint: 'هادئ · أبيض ورمادي', colors: ['#f1f5f9', '#0891b2'] },
+] as const
+
+type DesignId = (typeof DESIGNS)[number]['id']
 
 export default function RegistrationPoster() {
   const { token } = useParams<{ token: string }>()
   const [form, setForm] = useState<PublicRegistration | null>(null),
     [error, setError] = useState(''),
-    [url, setUrl] = useState('')
+    [url, setUrl] = useState(''),
+    [design, setDesign] = useState<DesignId>('zamzam')
   useEffect(() => {
     setUrl(`${location.origin}/register/${token}`)
+    const params = new URLSearchParams(location.search)
+    const requested = params.get('design')
+    const stored = localStorage.getItem('registration-poster-design')
+    const initial = DESIGNS.find((item) => item.id === requested)?.id ||
+      DESIGNS.find((item) => item.id === stored)?.id
+    if (initial) setDesign(initial)
     fetch(`/api/student-registration/public/${encodeURIComponent(token)}`, {
       credentials: 'omit',
       cache: 'no-store',
@@ -21,50 +38,152 @@ export default function RegistrationPoster() {
       })
       .catch((e) => setError(e.message))
   }, [token])
+  function chooseDesign(next: DesignId) {
+    setDesign(next)
+    try {
+      localStorage.setItem('registration-poster-design', next)
+    } catch {
+      // Storage can be unavailable in private browsing; the choice still applies.
+    }
+  }
+  const description = form?.description || ''
   return (
-    <main className="poster-page min-h-screen bg-slate-100 p-6 text-center text-slate-900">
-      <style>{`@page { size: A4; margin: 15mm; } @media print { .poster-controls { display:none!important; } .poster-page { padding:0!important; background:white!important; } .registration-poster { box-shadow:none!important; min-height:250mm; break-inside:avoid; } }`}</style>
-      <div className="poster-controls mx-auto mb-6 flex max-w-xl justify-center gap-3">
-        <button
-          disabled={!form}
-          className="water-btn rounded-xl px-5 py-3"
-          onClick={() => window.print()}
+    <main className={styles.page}>
+      <section className={styles.toolbar} aria-label="خيارات الطباعة">
+        <div className={styles.toolbarHead}>
+          <h1>ملصق التسجيل</h1>
+          <p>اختر التصميم الذي يناسب تحفيظك، ثم اطبعه أو احفظه بصيغة PDF.</p>
+        </div>
+        <div
+          className={styles.designGrid}
+          role="group"
+          aria-label="تصميم الملصق"
         >
-          طباعة / حفظ PDF
-        </button>
-      </div>
-      {error && <p role="alert">{error}</p>}
-      {form && (
-        <article className="registration-poster mx-auto flex min-h-[850px] max-w-[720px] flex-col items-center justify-center rounded-3xl border-[10px] border-emerald-800 bg-white px-8 py-16 shadow-xl">
-          <div className="mb-8 text-sm font-bold tracking-widest text-emerald-700">
-            أهلاً بكم في رحاب القرآن الكريم
-          </div>
-          <h1 className="text-4xl font-extrabold text-emerald-950">
-            {form.tahfiz_name}
-          </h1>
-          <div className="my-8 h-1 w-20 bg-amber-500" />
-          <h2 className="text-2xl font-bold">{form.title}</h2>
-          <p className="my-6 max-w-md whitespace-pre-wrap text-lg text-slate-600">
-            {form.description.length > 400
-              ? `${form.description.slice(0, 400)}…`
-              : form.description}
-          </p>
-          {url && <RegistrationQr url={url} />}
-          <p className="mt-6 text-2xl font-bold text-emerald-800">
-            امسح الرمز وابدأ رحلة الحفظ
-          </p>
-          <p className="mt-3 text-sm text-slate-500">
-            افتح كاميرا هاتفك • املأ النموذج • انتظر موافقة الإدارة
-          </p>
-          <p
-            dir="ltr"
-            className="mt-6 max-w-full break-all text-xs text-slate-500"
+          {DESIGNS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={styles.designOption}
+              aria-pressed={design === item.id}
+              onClick={() => chooseDesign(item.id)}
+            >
+              <span className={styles.designSwatch} aria-hidden="true">
+                {item.colors.map((color) => (
+                  <span key={color} style={{ background: color }} />
+                ))}
+              </span>
+              <span>
+                <span className={styles.designName}>{item.name}</span>
+                <span className={styles.designHint}>{item.hint}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+        <div className={styles.actions}>
+          <button
+            type="button"
+            disabled={!form}
+            className={`water-btn ${styles.printButton}`}
+            onClick={() => window.print()}
           >
-            {url}
+            طباعة / حفظ PDF
+          </button>
+          <a
+            className={`water-btn-outline ${styles.previewLink}`}
+            href={`/register/${token}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            معاينة نموذج التسجيل
+          </a>
+        </div>
+      </section>
+
+      <div className={styles.previewWrap}>
+        {error && (
+          <p role="alert" className={styles.error}>
+            {error}
           </p>
-          <p className="mt-10 text-xs text-slate-400">زمزم • إدارة التحفيظ</p>
-        </article>
-      )}
+        )}
+        {!form && !error && (
+          <p role="status" className={styles.loading}>
+            جارٍ تحميل الملصق…
+          </p>
+        )}
+        {form && (
+          <article
+            className={`registration-poster ${styles.poster} ${styles[design]}`}
+            data-design={design}
+          >
+            {(design === 'zamzam' || design === 'night') && (
+              <>
+                <span
+                  className={`${styles.ornament} ${styles.ornamentA}`}
+                  aria-hidden="true"
+                />
+                <span
+                  className={`${styles.ornament} ${styles.ornamentB}`}
+                  aria-hidden="true"
+                />
+              </>
+            )}
+            <header className={styles.posterHeader}>
+              <span className={styles.brandMark} aria-hidden="true">
+                💧
+              </span>
+              <span className={styles.brandName}>زمزم</span>
+            </header>
+            <div className={styles.content}>
+              <p className={styles.kicker}>أهلاً بكم في رحاب القرآن الكريم</p>
+              <h1 className={styles.tahfiz}>
+                {form.tahfiz_name || 'إدارة التحفيظ'}
+              </h1>
+              <span className={styles.divider} aria-hidden="true" />
+              <h2 className={styles.title}>{form.title}</h2>
+              {description && (
+                <p className={styles.description}>
+                  {description.length > 360
+                    ? `${description.slice(0, 360)}…`
+                    : description}
+                </p>
+              )}
+              {url && (
+                <div className={styles.qrCard}>
+                  <RegistrationQr url={url} className={styles.qr} />
+                </div>
+              )}
+              <p className={styles.cta}>امسح الرمز وابدأ رحلة الحفظ</p>
+              <p className={styles.steps}>
+                افتح كاميرا هاتفك • املأ النموذج • انتظر موافقة الإدارة
+              </p>
+              <p dir="ltr" className={styles.url}>
+                {url}
+              </p>
+            </div>
+            <footer className={styles.posterFooter}>
+              زمزم · إدارة التحفيظ
+            </footer>
+            {design === 'zamzam' && (
+              <svg
+                className={styles.waves}
+                viewBox="0 0 600 120"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M0 60c60-28 120-28 180 0s120 28 180 0 120-28 240 0v60H0Z"
+                  fill="currentColor"
+                />
+                <path
+                  d="M0 82c60-22 120-22 180 0s120 22 180 0 120-22 240 0v38H0Z"
+                  fill="currentColor"
+                  opacity=".55"
+                />
+              </svg>
+            )}
+          </article>
+        )}
+      </div>
     </main>
   )
 }

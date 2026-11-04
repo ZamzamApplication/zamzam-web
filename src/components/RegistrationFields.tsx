@@ -16,7 +16,7 @@ export default function RegistrationFields({
         const value = values[field.id] || ''
         const props = {
           id: `registration-field-${field.id}`,
-          className: 'surface-field rounded-xl px-3 py-2 w-full',
+          className: 'surface-field mt-2 w-full rounded-xl px-4 py-3 font-normal',
           required: field.is_required,
           value,
           onChange: (
@@ -27,7 +27,7 @@ export default function RegistrationFields({
           <label
             key={field.id}
             htmlFor={props.id}
-            className="block space-y-2 text-sm"
+            className="block text-sm font-semibold text-deep-700"
           >
             <span>
               {field.name}

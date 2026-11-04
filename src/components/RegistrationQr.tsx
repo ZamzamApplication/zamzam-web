@@ -1,7 +1,13 @@
 'use client'
 import qrcode from 'qrcode-generator'
 import { useMemo } from 'react'
-export default function RegistrationQr({ url }: { url: string }) {
+export default function RegistrationQr({
+  url,
+  className = 'mx-auto h-64 w-64 max-w-full',
+}: {
+  url: string
+  className?: string
+}) {
   const code = useMemo(() => {
     const qr = qrcode(0, 'M')
     qr.addData(url)
@@ -18,7 +24,7 @@ export default function RegistrationQr({ url }: { url: string }) {
       role="img"
       aria-label="رمز التسجيل QR"
       viewBox={`0 0 ${size + 8} ${size + 8}`}
-      className="mx-auto h-64 w-64 max-w-full"
+      className={className}
       shapeRendering="crispEdges"
     >
       <rect width={size + 8} height={size + 8} fill="white" />
