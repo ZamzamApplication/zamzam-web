@@ -4,6 +4,8 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import type { PublicRegistration } from '@/lib/student-registration'
 import RegistrationFields from '@/components/RegistrationFields'
+import RegistrationStudentFields from '@/components/RegistrationStudentFields'
+import { DEFAULT_STUDENT_FIELDS, selectedStudentData, type RegistrationStudentData } from '@/lib/student-registration'
 import OpenInApp from '@/components/OpenInApp'
 
 const steps = [
@@ -15,11 +17,14 @@ const steps = [
 export default function RegisterStudent() {
   const { token } = useParams<{ token: string }>()
   const [form, setForm] = useState<PublicRegistration | null>(null)
+  const [studentData, setStudentData] = useState<RegistrationStudentData>({})
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [error, setError] = useState(''),
     [success, setSuccess] = useState(false),
     [busy, setBusy] = useState(false)
   useEffect(() => {
+    setStudentData({})
+    setAnswers({})
     fetch(`/api/student-registration/public/${encodeURIComponent(token)}`, {
       credentials: 'omit',
       cache: 'no-store',
@@ -45,8 +50,7 @@ export default function RegisterStudent() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name: data.get('name'),
-            phone: data.get('phone') || null,
-            birthday: data.get('birthday') || null,
+            ...selectedStudentData(studentData, form?.student_fields ?? DEFAULT_STUDENT_FIELDS),
             website: data.get('website'),
             answers,
           }),
@@ -215,28 +219,14 @@ export default function RegisterStudent() {
                           className="surface-field mt-2 w-full rounded-xl px-4 py-3 font-normal"
                         />
                       </label>
-                      <label className="block text-sm font-semibold text-deep-700">
-                        رقم التواصل
-                        <input
-                          name="phone"
-                          autoComplete="tel"
-                          type="tel"
-                          maxLength={20}
-                          dir="ltr"
-                          inputMode="tel"
-                          placeholder="01xxxxxxxxx"
-                          className="surface-field mt-2 w-full rounded-xl px-4 py-3 text-right font-normal"
-                        />
-                      </label>
-                      <label className="block text-sm font-semibold text-deep-700">
-                        تاريخ الميلاد
-                        <input
-                          name="birthday"
-                          type="date"
-                          className="surface-field mt-2 w-full rounded-xl px-4 py-3 font-normal"
-                        />
-                      </label>
                     </div>
+                    <RegistrationStudentFields
+                      fields={form.student_fields ?? DEFAULT_STUDENT_FIELDS}
+                      requiredFields={form.required_student_fields}
+                      options={form.student_field_options}
+                      value={studentData}
+                      onChange={setStudentData}
+                    />
                     <div hidden aria-hidden="true">
                       <input name="website" tabIndex={-1} autoComplete="off" />
                     </div>
