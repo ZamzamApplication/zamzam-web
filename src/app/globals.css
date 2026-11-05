@@ -61,7 +61,9 @@
   .print-plan,
   .print-plan *,
   .registration-poster,
-  .registration-poster * {
+  .registration-poster *,
+  .registration-stickers,
+  .registration-stickers * {
     visibility: visible !important;
   }
 

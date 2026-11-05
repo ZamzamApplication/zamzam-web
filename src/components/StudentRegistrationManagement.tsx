@@ -283,7 +283,7 @@ export default function RegistrationManagement() {
                 target="_blank"
                 rel="noreferrer"
               >
-                QR وملصق الطباعة
+                QR والملصق
               </a>
               <a href={`/register/${f.token}`} target="_blank" rel="noreferrer">
                 معاينة
