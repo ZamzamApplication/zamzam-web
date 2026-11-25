@@ -14,13 +14,14 @@ import TahfizInitialSettingsFields, { DEFAULT_INITIAL_TAHFIZ_SETTINGS, type Tahf
 
 const cairoFont = Cairo({ subsets: ['arabic'], display: 'swap', variable: '--font-cairo' })
 
-type NavIconName = 'home' | 'sessions' | 'attendance' | 'finance' | 'manage' | 'settings' | 'trips'
+type NavIconName = 'home' | 'sessions' | 'attendance' | 'finance' | 'manage' | 'settings' | 'trips' | 'competitions'
 
 function NavIcon({ name }: { name: NavIconName }) {
   const paths: Record<NavIconName, React.ReactNode> = {
     home: <><path d="M3 11.5 12 4l9 7.5" /><path d="M5.5 10v10h13V10M9.5 20v-6h5v6" /></>,
     sessions: <><rect x="4" y="5.5" width="16" height="14" rx="2" /><path d="M8 3v5M16 3v5M4 10h16M8 14h3M8 17h7" /></>,
     trips: <><path d="M4 16h16M5 16V7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v9M5 11h14M9 5v6" /><circle cx="7" cy="18" r="2" /><circle cx="17" cy="18" r="2" /></>,
+    competitions: <><path d="M8 4h8v5a4 4 0 0 1-8 0V4ZM8 6H5v1a3 3 0 0 0 3 3M16 6h3v1a3 3 0 0 1-3 3M12 13v4M8.5 20h7M9.5 17h5v3h-5z" /></>,
     attendance: <><path d="M9 5H6a2 2 0 0 0-2 2v12h13v-3" /><path d="M9 3h6v4H9zM9 12l2.2 2.2L20 6" /></>,
     finance: <><rect x="3" y="6" width="18" height="14" rx="2" /><path d="M16 10h5v6h-5a3 3 0 0 1 0-6ZM7 6V4h10v2" /><circle cx="16.5" cy="13" r=".7" fill="currentColor" stroke="none" /></>,
     manage: <><circle cx="9" cy="8" r="3" /><path d="M3.5 20v-2a5.5 5.5 0 0 1 11 0v2M17 8h4M19 6v4M17 15h4" /></>,
@@ -223,7 +224,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const isInvitePage = pathname.startsWith('/invite/')
   const isPlanPage = pathname === '/plan'
   const isPendingPage = pathname === '/pending'
-  const isPublicAuthPage = isLoginPage || isSignupPage || isInvitePage || isPlanPage || pathname.startsWith('/register/')
+  const isLeaderboardPage = pathname.startsWith('/leaderboard/')
+  const isPublicAuthPage = isLoginPage || isSignupPage || isInvitePage || isPlanPage || pathname.startsWith('/register/') || isLeaderboardPage
   const isLandingPage = pathname === '/'
   const isDedicatedPlatform = pathname === '/platform'
   const isActive = (href: string) => pathname === href || (href !== '/dashboard' && pathname.startsWith(`${href}/`))
@@ -295,6 +297,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const mobileNavItems: { href: string; label: string; icon: NavIconName; adminOnly?: boolean }[] = [
     { href: '/dashboard', label: 'الرئيسية', icon: 'home' },
     { href: '/sessions', label: 'الحلقات', icon: 'sessions' },
+    { href: '/competitions', label: 'المسابقات', icon: 'competitions' },
     { href: '/trips', label: 'الرحلات', icon: 'trips', adminOnly: true },
     { href: '/finance', label: 'القسم المالي', icon: 'finance', adminOnly: true },
     { href: '/manage', label: 'الإدارة', icon: 'manage', adminOnly: true },
@@ -350,6 +353,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
           <meta name="apple-mobile-web-app-title" content="زمزم" />
           <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+          {/* Leaderboards list children's names: shareable by link, never indexed. */}
+          {isLeaderboardPage && <meta name="robots" content="noindex, nofollow" />}
         </head>
         <body className={`${cairoFont.variable} font-cairo`}><PwaRegistration />{children}</body>
       </html>
@@ -432,6 +437,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               ) : (
                 <>
                   {user?.role !== 'auditor' && <Link href="/sessions" className={navLinkClass('/sessions')} aria-current={isActive('/sessions') ? 'page' : undefined}>الحلقات</Link>}
+                  {user?.role !== 'auditor' && <Link href="/competitions" className={navLinkClass('/competitions')} aria-current={isActive('/competitions') ? 'page' : undefined}>المسابقات</Link>}
                   {(user?.role === 'admin' || user?.role === 'super_admin') && <Link href="/trips" className={navLinkClass('/trips')} aria-current={isActive('/trips') ? 'page' : undefined}>الرحلات</Link>}
                   {(user?.role === 'admin' || user?.role === 'super_admin' || user?.role === 'auditor') && <Link href="/finance" className={navLinkClass('/finance')} aria-current={isActive('/finance') ? 'page' : undefined}>القسم المالي</Link>}
                   {(user?.role === 'admin' || user?.role === 'super_admin') && <Link href="/manage" className={navLinkClass('/manage')} aria-current={isActive('/manage') ? 'page' : undefined}>الإدارة<RegistrationNotifications tenantId={user.tahfiz_id} /></Link>}

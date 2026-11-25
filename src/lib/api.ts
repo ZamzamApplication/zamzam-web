@@ -101,6 +101,39 @@ export async function request<T = any>(path: string, options?: RequestInit): Pro
 }
 
 export const api = {
+  getCompetitions() {
+    return request<import('./competitions').Competition[]>('/competitions')
+  },
+  createCompetition(body: import('./competitions').CompetitionInput) {
+    return request<import('./competitions').Competition>('/competitions', { method: 'POST', body: JSON.stringify(body) })
+  },
+  getCompetition(id: number) {
+    return request<import('./competitions').CompetitionDetail>(`/competitions/${id}`)
+  },
+  updateCompetition(id: number, body: import('./competitions').CompetitionInput & { expected_version: number }) {
+    return request<import('./competitions').Competition>(`/competitions/${id}`, { method: 'PUT', body: JSON.stringify(body) })
+  },
+  setCompetitionStatus(id: number, status: import('./competitions').CompetitionStatus, expectedVersion: number) {
+    return request<import('./competitions').Competition>(`/competitions/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status, expected_version: expectedVersion }) })
+  },
+  setCompetitionPublicLink(id: number, enabled: boolean, regenerate: boolean, expectedVersion: number) {
+    return request<import('./competitions').Competition>(`/competitions/${id}/public-link`, { method: 'POST', body: JSON.stringify({ enabled, regenerate, expected_version: expectedVersion }) })
+  },
+  getCompetitionStudents() {
+    return request<import('./competitions').CompetitionStudent[]>('/competitions/students')
+  },
+  addCompetitionParticipants(id: number, body: { student_ids?: number[]; sheikh_ids?: number[]; category_ids?: number[] }) {
+    return request<{ added: number; already_participating: number }>(`/competitions/${id}/participants`, { method: 'POST', body: JSON.stringify(body) })
+  },
+  removeCompetitionParticipant(id: number, participantId: number) {
+    return request(`/competitions/${id}/participants/${participantId}`, { method: 'DELETE' })
+  },
+  recordCompetitionEntries(id: number, date: string, participantIds: number[], done: boolean) {
+    return request<{ changed: number; unchanged: number }>(`/competitions/${id}/entries`, { method: 'POST', body: JSON.stringify({ date, participant_ids: participantIds, done }) })
+  },
+  getStudentCompetitions(studentId: number, date: string) {
+    return request<import('./competitions').StudentCompetitionCard[]>(`/competitions/student/${studentId}?on=${encodeURIComponent(date)}`)
+  },
   addTripGroup(id: number, name: string) {
     return request<import('./trips').TripGroup>(`/trips/${id}/groups`, { method: 'POST', body: JSON.stringify({ name }) })
   },

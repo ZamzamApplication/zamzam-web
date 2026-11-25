@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 
 import AsyncState from '@/components/AsyncState'
 import StudentCustomFieldsEditor from '@/components/StudentCustomFieldsEditor'
+import StudentCompetitionsCard from '@/components/competitions/StudentCompetitionsCard'
 import StudentQuranPlanEditor from '@/components/StudentQuranPlanEditor'
 import { api } from '@/lib/api'
 import { mediaUrl } from '@/lib/format'
@@ -97,6 +98,8 @@ export default function StudentProfilePage() {
           <button type="button" onClick={() => router.push(`/finance?student_id=${profile.id}`)} className="text-sm font-bold text-blue-700 dark:text-blue-300">فتح سجل الاشتراك</button>
         </div>}
       </section>
+
+      <StudentCompetitionsCard studentId={profile.id} />
 
       <section className="glass-card rounded-2xl p-5">
         <StudentCustomFieldsEditor values={customFieldValues} onChange={setCustomFieldValues} />
