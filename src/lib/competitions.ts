@@ -12,6 +12,7 @@ export interface Competition {
   completion_threshold: number | null
   public_enabled: boolean
   name_display: 'short' | 'full'
+  show_photos: boolean
   public_limit: number
   version: number
   updated_at: string
@@ -20,7 +21,7 @@ export interface Competition {
   participant_count?: number
 }
 
-export type CompetitionInput = Pick<Competition, 'title' | 'description' | 'start_date' | 'end_date' | 'points_per_check' | 'completion_threshold' | 'name_display' | 'public_limit'>
+export type CompetitionInput = Pick<Competition, 'title' | 'description' | 'start_date' | 'end_date' | 'points_per_check' | 'completion_threshold' | 'name_display' | 'show_photos' | 'public_limit'>
 
 export interface CompetitionParticipant { id: number; student_id: number | null; name: string; can_record: boolean }
 export interface CompetitionEntry { participant_id: number; date: string; points: number }
@@ -43,7 +44,7 @@ export interface CompetitionDetail {
 }
 export interface CompetitionStudent { id: number; name: string; sheikh_id: number | null; sheikh_name: string; category_ids: number[] }
 
-export interface PublicLeaderboardRow { rank: number; trophy: Trophy | null; name: string; points: number; days: number; best_streak: number; completed: boolean }
+export interface PublicLeaderboardRow { rank: number; trophy: Trophy | null; name: string; points: number; days: number; best_streak: number; completed: boolean; photo?: string | null }
 export interface PublicLeaderboard {
   title: string
   description: string
@@ -55,6 +56,7 @@ export interface PublicLeaderboard {
   completion_threshold: number | null
   participant_count: number
   hidden_count: number
+  show_photos?: boolean
   updated_at: string
   leaderboard: PublicLeaderboardRow[]
 }

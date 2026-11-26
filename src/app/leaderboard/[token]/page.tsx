@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import TrophyCup from '@/components/competitions/TrophyCup'
+import StudentAvatar from '@/components/competitions/StudentAvatar'
 import { Podium } from '@/components/competitions/CompetitionWorkspace'
 import { arabicNumber, shortDate, type PublicLeaderboard } from '@/lib/competitions'
 
@@ -53,11 +54,12 @@ export default function LeaderboardPage() {
           </section>
 
           <section className="glass-card mt-8 rounded-[2rem] px-3 pb-0 pt-8 sm:px-8" aria-label="المراكز الأولى">
-            {anyOnPodium ? <Podium rows={board.leaderboard} /> : <p className="pb-8 text-center text-sm text-deep-500">لم تُسجل نقاط بعد — كن أول المتصدرين!</p>}
+            {anyOnPodium ? <Podium rows={board.leaderboard} showPhotos={board.show_photos} /> : <p className="pb-8 text-center text-sm text-deep-500">لم تُسجل نقاط بعد — كن أول المتصدرين!</p>}
           </section>
 
           {rest.length > 0 && <ol className="mt-5 space-y-2" aria-label="بقية الترتيب">{rest.map((row, index) => <li key={`${row.name}-${index}`} className="glass-card flex items-center gap-3 rounded-2xl px-4 py-3">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-water-50 text-sm font-extrabold text-deep-700 dark:bg-slate-800">{arabicNumber(row.rank)}</span>
+            {board.show_photos && <StudentAvatar photo={row.photo} name={row.name} className="h-11 w-11 text-base" />}
             <span className="min-w-0 flex-1"><span className="block truncate font-bold text-deep-900">{row.name}{row.completed && <span className="mr-1" title="أتم المسابقة">⭐</span>}</span><span className="text-xs text-deep-500">{arabicNumber(row.days)} يوم · أطول سلسلة {arabicNumber(row.best_streak)}</span></span>
             <span className="text-lg font-extrabold text-deep-900">{arabicNumber(row.points)}<span className="mr-1 text-xs font-semibold text-deep-500">نقطة</span></span>
           </li>)}</ol>}

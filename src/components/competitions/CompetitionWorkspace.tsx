@@ -8,6 +8,7 @@ import ConfirmDialog from '@/components/ConfirmDialog'
 import RegistrationQr from '@/components/RegistrationQr'
 import ScrollableTable from '@/components/ScrollableTable'
 import TrophyCup from '@/components/competitions/TrophyCup'
+import StudentAvatar from '@/components/competitions/StudentAvatar'
 import { AddCompetitorsDialog, CompetitionFormDialog } from '@/components/competitions/CompetitionForms'
 import { matchesTripSearch } from '@/lib/trips'
 import {
@@ -131,7 +132,7 @@ export default function CompetitionWorkspace({ competitionId }: { competitionId:
 
     {isAdmin && <section className="glass-card rounded-3xl p-5 sm:p-6" aria-labelledby="public-link-title">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div><h2 id="public-link-title" className="font-bold text-deep-900">لوحة المتصدرين العامة</h2><p className="mt-1 text-xs leading-5 text-deep-500">رابط يفتحه أي شخص دون تسجيل دخول. يعرض {competition.name_display === 'short' ? 'الاسم الأول وأول حرف من الثاني' : 'الأسماء كاملة'} و{competition.public_limit ? `أول ${arabicNumber(competition.public_limit)} مراكز` : 'كل من لديه نقاط'} فقط.</p></div>
+        <div><h2 id="public-link-title" className="font-bold text-deep-900">لوحة المتصدرين العامة</h2><p className="mt-1 text-xs leading-5 text-deep-500">رابط يفتحه أي شخص دون تسجيل دخول. يعرض {competition.name_display === 'short' ? 'الاسم الأول وأول حرف من الثاني' : 'الأسماء كاملة'}{competition.show_photos ? ' مع صور الطلاب' : ''} و{competition.public_limit ? `أول ${arabicNumber(competition.public_limit)} مراكز` : 'كل من لديه نقاط'} فقط.</p></div>
         <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-bold"><input type="checkbox" role="switch" checked={competition.public_enabled} disabled={busy} onChange={e => setLink(e.target.checked)} className="h-5 w-5 accent-amber-500" />{competition.public_enabled ? 'مفعّل' : 'متوقف'}</label>
       </div>
       {competition.public_enabled && shareUrl && <div className="mt-4 space-y-3">
@@ -198,12 +199,13 @@ function GridView({ detail, done, pending, canRecord, today, onToggle }: { detai
   </section>
 }
 
-export function Podium({ rows }: { rows: { name: string; points: number; trophy: CompetitionStanding['trophy']; rank: number; completed?: boolean }[] }) {
+export function Podium({ rows, showPhotos = false }: { rows: { name: string; points: number; trophy: CompetitionStanding['trophy']; rank: number; completed?: boolean; photo?: string | null }[]; showPhotos?: boolean }) {
   const podium = podiumOrder(rows)
   if (!podium.length) return null
   const heights: Record<string, string> = { gold: 'h-28 sm:h-32', silver: 'h-20 sm:h-24', bronze: 'h-14 sm:h-16' }
   return <ol className="flex items-end justify-center gap-2 sm:gap-4" aria-label="منصة التتويج">{podium.map((row, index) => row.trophy && <li key={`${row.name}-${index}`} className="flex w-1/3 max-w-[11rem] flex-col items-center text-center">
     <TrophyCup trophy={row.trophy} labelled className={row.trophy === 'gold' ? 'h-16 w-16 drop-shadow-lg sm:h-20 sm:w-20' : 'h-12 w-12 sm:h-14 sm:w-14'} />
+    {showPhotos && <StudentAvatar photo={row.photo} name={row.name} className={`mt-2 ring-4 ${TROPHY_META[row.trophy].ring} ${row.trophy === 'gold' ? 'h-20 w-20 text-2xl sm:h-24 sm:w-24' : 'h-14 w-14 text-lg sm:h-16 sm:w-16'}`} />}
     <span className="mt-2 line-clamp-2 text-sm font-extrabold text-deep-900 sm:text-base">{row.name}{row.completed && <span className="mr-1" title="أتم المسابقة">⭐</span>}</span>
     <span className={`text-xs font-bold ${TROPHY_META[row.trophy].text}`}>{arabicNumber(row.points)} نقطة</span>
     <span className={`mt-2 grid w-full place-items-center rounded-t-2xl ${heights[row.trophy]} ${row.trophy === 'gold' ? 'bg-gradient-to-b from-amber-300 to-amber-500 text-amber-950' : row.trophy === 'silver' ? 'bg-gradient-to-b from-slate-200 to-slate-400 text-slate-800' : 'bg-gradient-to-b from-orange-300 to-orange-500 text-orange-950'} text-2xl font-black`}>{arabicNumber(row.rank)}</span>

@@ -16,8 +16,8 @@ function FormError({ error }: { error: string }) {
 export function CompetitionFormDialog({ competition, onClose, onSaved }: { competition?: Competition; onClose: () => void; onSaved: (competition: Competition) => void }) {
   const today = localToday()
   const [values, setValues] = useState<CompetitionInput>(() => competition
-    ? { title: competition.title, description: competition.description, start_date: competition.start_date, end_date: competition.end_date, points_per_check: competition.points_per_check, completion_threshold: competition.completion_threshold, name_display: competition.name_display, public_limit: competition.public_limit }
-    : { title: '', description: '', start_date: today, end_date: addDays(today, 29), points_per_check: 1, completion_threshold: null, name_display: 'short', public_limit: 10 })
+    ? { title: competition.title, description: competition.description, start_date: competition.start_date, end_date: competition.end_date, points_per_check: competition.points_per_check, completion_threshold: competition.completion_threshold, name_display: competition.name_display, show_photos: competition.show_photos ?? false, public_limit: competition.public_limit }
+    : { title: '', description: '', start_date: today, end_date: addDays(today, 29), points_per_check: 1, completion_threshold: null, name_display: 'short', show_photos: false, public_limit: 10 })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const set = <K extends keyof CompetitionInput>(key: K, value: CompetitionInput[K]) => setValues(current => ({ ...current, [key]: value }))
@@ -47,7 +47,9 @@ export function CompetitionFormDialog({ competition, onClose, onSaved }: { compe
           <label className="text-sm font-semibold">طريقة عرض الأسماء<select value={values.name_display} onChange={e => set('name_display', e.target.value as CompetitionInput['name_display'])} className={tripField}><option value="short">الاسم الأول + أول حرف (أحمد م.)</option><option value="full">الاسم كاملاً</option></select></label>
           <label className="text-sm font-semibold">عدد المراكز المعروضة<select value={values.public_limit} onChange={e => set('public_limit', Number(e.target.value))} className={tripField}>{[3, 5, 10, 20, 50].map(n => <option key={n} value={n}>أول {n}</option>)}<option value={0}>كل من لديه نقاط</option></select></label>
         </div>
-        <p className="mt-2 text-xs leading-5 text-deep-500">لا تظهر الصور أو أرقام الهواتف أبداً، ولا يظهر من ليس لديه نقاط.</p>
+        <label className="mt-3 flex min-h-11 cursor-pointer items-start gap-3 text-sm font-semibold"><input type="checkbox" checked={values.show_photos} onChange={e => set('show_photos', e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-amber-500" /><span>عرض صور الطلاب على اللوحة<span className="mt-1 block text-xs font-normal leading-5 text-deep-500">تظهر الصورة الشخصية لكل طالب في الترتيب. الرابط عام ويمكن لأي شخص يصله رؤيتها، ففعّلها فقط بموافقة الأهالي.</span></span></label>
+        {values.show_photos && values.name_display === 'full' && <p role="note" className="mt-2 rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">ستظهر الأسماء الكاملة مع الصور لأي شخص يفتح الرابط.</p>}
+        <p className="mt-2 text-xs leading-5 text-deep-500">لا تظهر أرقام الهواتف أو أي بيانات أخرى أبداً، ولا يظهر من ليس لديه نقاط.</p>
       </fieldset>
       <FormError error={error} />
       <button disabled={busy} className={`${primary} w-full`}>{busy ? 'جاري الحفظ…' : competition ? 'حفظ التعديلات' : 'إنشاء المسابقة ←'}</button>
