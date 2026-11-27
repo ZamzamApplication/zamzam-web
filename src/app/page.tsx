@@ -51,7 +51,7 @@ export default function LandingPage() {
     <div className={styles.page}>
       <a href="#main-content" className={styles.skip}>انتقل إلى المحتوى</a>
       <header className={styles.header}>
-        <Link href="/" className={styles.brand} aria-label="زمزم — الرئيسية"><span className={styles.brandMark} aria-hidden="true">💧</span><span>زمزم<small>رفيق رحلتكم مع القرآن</small></span></Link>
+        <Link href="/" className={styles.brand} aria-label="زمزم — الرئيسية"><span className={styles.brandMark} aria-hidden="true"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ width: '1.25em', height: '1.25em' }}><path d="M12 3.5c3.5 4.3 6 7.6 6 10.5a6 6 0 0 1-12 0c0-2.9 2.5-6.2 6-10.5Z" /></svg></span><span>زمزم<small>رفيق رحلتكم مع القرآن</small></span></Link>
         <nav className={styles.nav} aria-label="التنقل الرئيسي"><a href="#features">لماذا زمزم؟</a><a href="#how-it-works">كيف تبدأ؟</a><Link href="/plan">خطة الحفظ</Link></nav>
         <div className={styles.headerActions}><button type="button" onClick={toggleTheme} className={styles.theme} aria-label={dark ? 'تفعيل الوضع النهاري' : 'تفعيل الوضع الليلي'} aria-pressed={dark}><Icon name="moon" /></button><Link className={styles.login} href={user ? '/dashboard' : '/login'}>{user ? 'لوحة التحكم' : 'تسجيل الدخول'}<Icon name="arrow" /></Link></div>
       </header>
@@ -102,7 +102,7 @@ export default function LandingPage() {
 
         <section className={styles.cta}><div className={styles.ctaMotif} aria-hidden="true">۞</div><p>لكل جهدٍ في تعليم القرآن أثر.</p><h2>امنح رسالتك مساحة تليق بها.</h2><Link href={startHref} className={styles.primary}>{user ? 'افتح لوحة التحكم' : 'أنشئ حساب تحفيظك'}<Icon name="arrow" /></Link><span>زمزم · رفيق رحلتكم مع القرآن</span></section>
       </main>
-      <footer className={styles.footer}><Link href="/" className={styles.brand}><span className={styles.brandMark} aria-hidden="true">💧</span>زمزم</Link><p>صُنع لخدمة أهل القرآن.</p><div><Link href="/plan">إنشاء خطة حفظ</Link><span>© {new Date().getFullYear()} زمزم</span></div></footer>
+      <footer className={styles.footer}><Link href="/" className={styles.brand}><span className={styles.brandMark} aria-hidden="true"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ width: '1.25em', height: '1.25em' }}><path d="M12 3.5c3.5 4.3 6 7.6 6 10.5a6 6 0 0 1-12 0c0-2.9 2.5-6.2 6-10.5Z" /></svg></span>زمزم</Link><p>صُنع لخدمة أهل القرآن.</p><div><Link href="/plan">إنشاء خطة حفظ</Link><span>© {new Date().getFullYear()} زمزم</span></div></footer>
     </div>
   )
 }

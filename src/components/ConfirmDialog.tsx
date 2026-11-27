@@ -7,6 +7,9 @@ interface ConfirmDialogProps {
   title: string
   message: string
   confirmLabel?: string
+  cancelLabel?: string
+  busyLabel?: string
+  tone?: 'danger' | 'default'
   busy?: boolean
   onConfirm: () => void
   onClose: () => void
@@ -17,6 +20,9 @@ export default function ConfirmDialog({
   title,
   message,
   confirmLabel = 'تأكيد',
+  cancelLabel = 'إلغاء',
+  busyLabel = 'جارٍ التنفيذ...',
+  tone = 'danger',
   busy = false,
   onConfirm,
   onClose,
@@ -37,21 +43,26 @@ export default function ConfirmDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[95] flex items-end justify-center bg-slate-950/45 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !busy) onClose()
       }}
     >
-      <div className="glass-card w-full max-w-md rounded-2xl p-5 shadow-2xl" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message">
+      <div className="glass-strong w-full max-w-md rounded-t-2xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-2xl" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message">
         <h2 id="confirm-title" className="text-lg font-bold text-deep-900">{title}</h2>
-        <p id="confirm-message" className="mt-2 text-sm leading-6 text-deep-500">{message}</p>
-        <div className="mt-6 flex justify-end gap-2">
-          <button ref={cancelRef} type="button" onClick={onClose} disabled={busy} className="water-btn-outline rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50">
-            إلغاء
+        <p id="confirm-message" className="mt-2 whitespace-pre-line text-sm leading-6 text-deep-500">{message}</p>
+        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button ref={cancelRef} type="button" onClick={onClose} disabled={busy} className="water-btn-outline rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-50">
+            {cancelLabel}
           </button>
-          <button type="button" onClick={onConfirm} disabled={busy} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50">
-            {busy ? 'جارٍ الحذف...' : confirmLabel}
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={busy}
+            className={`rounded-xl px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50 ${tone === 'danger' ? 'bg-red-600 hover:bg-red-700' : 'water-btn'}`}
+          >
+            {busy ? busyLabel : confirmLabel}
           </button>
         </div>
       </div>

@@ -69,17 +69,17 @@ function StudentAvatar({
   onZoomPic?: (url: string) => void
 }) {
   return profilePic ? (
-    <img
+    <button type="button" onClick={(e) => {
+        e.stopPropagation()
+        onZoomPic?.(mediaUrl(profilePic)!)
+      }} aria-label="تكبير الصورة" className="shrink-0 rounded-full"><img
       src={mediaUrl(profilePic)!}
       alt=""
       loading="lazy"
       decoding="async"
-      className={`${className} rounded-full object-cover border border-water-300 shrink-0 cursor-pointer hover:opacity-80 transition`}
-      onClick={(e) => {
-        e.stopPropagation()
-        onZoomPic?.(mediaUrl(profilePic)!)
-      }}
-    />
+      className={`${className} rounded-full object-cover border border-water-300 shrink-0 hover:opacity-80 transition`}
+     
+    /></button>
   ) : (
     <div className={`${className} rounded-full bg-water-200/50 flex items-center justify-center text-deep-400 text-xs border border-water-300 shrink-0`}>
       {name.charAt(0)}
@@ -490,13 +490,13 @@ export default function AttendancePage() {
         </div>
       )}
 
-      <div className="glass-card rounded-lg p-4 md:p-5 mb-6 space-y-4">
+      <div className="glass-card rounded-xl p-4 md:p-5 mb-6 space-y-4">
         {grid?.scope !== 'assigned_students' && <div>
           <label className="block text-sm font-semibold text-deep-800 mb-2">اختر الشيخ</label>
           <select
             value={selectedSheikh}
             onChange={(e) => setSelectedSheikh(e.target.value ? Number(e.target.value) : '')}
-            className="surface-field w-full px-4 py-2.5 rounded-lg text-sm"
+            className="surface-field w-full px-4 py-2.5 rounded-xl text-sm"
           >
             <option value="">كل الشيوخ</option>
             {sheikhs.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -506,7 +506,7 @@ export default function AttendancePage() {
         <div className="flex gap-2 flex-wrap items-center">
           <button
             onClick={() => setShowFilter(!showFilter)}
-            className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-semibold transition ${
+            className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-sm font-semibold transition ${
               hasActiveFilter
                 ? 'bg-cyan-600 text-white shadow-md dark:bg-cyan-700'
                 : 'water-btn-outline'
@@ -517,7 +517,7 @@ export default function AttendancePage() {
           {hasActiveFilter && (
             <button
               onClick={clearFilter}
-              className="flex-1 sm:flex-none px-3 py-2 rounded-lg text-sm font-medium border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50/70 dark:hover:bg-red-900/30 transition"
+              className="flex-1 sm:flex-none px-3 py-2 rounded-xl text-sm font-medium border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50/70 dark:hover:bg-red-900/30 transition"
             >
               إلغاء التصفية
             </button>
@@ -570,7 +570,7 @@ export default function AttendancePage() {
 
         {showSaveModal && (
           <div className="mobile-sheet-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={() => setShowSaveModal(false)}>
-            <div className="mobile-sheet glass-strong rounded-lg p-6 w-full max-w-xs mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="mobile-sheet glass-strong rounded-xl p-6 w-full max-w-xs mx-4" onClick={(e) => e.stopPropagation()}>
               <h3 className="text-sm font-bold text-deep-800 mb-3">
                 {activeSavedFilter
                   ? (activeSavedFilter.can_edit === false ? 'حفظ نسخة من التصفية' : 'حفظ تعديلات التصفية')
@@ -581,12 +581,12 @@ export default function AttendancePage() {
                 value={saveFilterName}
                 onChange={(e) => setSaveFilterName(e.target.value)}
                 placeholder="اسم التصفية"
-                className="surface-field w-full px-4 py-2.5 rounded-lg text-sm mb-3"
+                className="surface-field w-full px-4 py-2.5 rounded-xl text-sm mb-3"
                 onKeyDown={(e) => { if (e.key === 'Enter') handleSaveFilter() }}
               />
               <div className="flex gap-3">
-                <button onClick={() => setShowSaveModal(false)} className="flex-1 px-4 py-2 water-btn-outline rounded-lg text-sm">إلغاء</button>
-                <button onClick={handleSaveFilter} disabled={!saveFilterName.trim()} className="flex-1 px-4 py-2 water-btn text-white rounded-lg text-sm font-medium disabled:opacity-50">حفظ</button>
+                <button onClick={() => setShowSaveModal(false)} className="flex-1 px-4 py-2 water-btn-outline rounded-xl text-sm">إلغاء</button>
+                <button onClick={handleSaveFilter} disabled={!saveFilterName.trim()} className="flex-1 px-4 py-2 water-btn text-white rounded-xl text-sm font-medium disabled:opacity-50">حفظ</button>
               </div>
             </div>
           </div>
@@ -608,28 +608,28 @@ export default function AttendancePage() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="بحث عن طالب..."
-          className="surface-field w-full px-4 py-2.5 rounded-lg text-sm"
+          className="surface-field w-full px-4 py-2.5 rounded-xl text-sm"
         />
       </div>
 
       {loading && (
-        <div className="glass-card rounded-lg p-8 text-center text-deep-600/80">جاري التحميل...</div>
+        <div className="glass-card rounded-xl p-8 text-center text-deep-600/80">جاري التحميل...</div>
       )}
 
       {grid && !loading && (
-        <div className="glass-card rounded-lg px-3 py-3 md:px-5 mb-4">
+        <div className="glass-card rounded-xl px-3 py-3 md:px-5 mb-4">
           <div className="flex gap-2 mb-4">
             <button
               type="button"
               onClick={() => setPeriodMode('week')}
-              className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold ${periodMode === 'week' ? 'water-btn text-white' : 'water-btn-outline'}`}
+              className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold ${periodMode === 'week' ? 'water-btn text-white' : 'water-btn-outline'}`}
             >
               عرض أسبوعي
             </button>
             <button
               type="button"
               onClick={() => setPeriodMode('month')}
-              className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold ${periodMode === 'month' ? 'water-btn text-white' : 'water-btn-outline'}`}
+              className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold ${periodMode === 'month' ? 'water-btn text-white' : 'water-btn-outline'}`}
             >
               عرض شهري
             </button>
@@ -639,7 +639,7 @@ export default function AttendancePage() {
           <button
             type="button"
             onClick={() => setWeekPage((page) => page + 1)}
-            className="water-btn-outline rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap"
+            className="water-btn-outline rounded-xl px-3 py-2 text-sm font-medium whitespace-nowrap"
           >
             أسبوع أقدم
           </button>
@@ -651,7 +651,7 @@ export default function AttendancePage() {
             type="button"
             onClick={() => setWeekPage((page) => Math.max(0, page - 1))}
             disabled={weekPage === 0}
-            className="water-btn-outline rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
+            className="water-btn-outline rounded-xl px-3 py-2 text-sm font-medium whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
           >
             أسبوع أحدث
           </button>
@@ -663,28 +663,28 @@ export default function AttendancePage() {
       )}
 
       {grid && displaySessions.length === 0 && (
-        <div className="glass-card rounded-lg p-8 text-center text-deep-600/80">
+        <div className="glass-card rounded-xl p-8 text-center text-deep-600/80">
           لا توجد حلقات في هذه الفترة
         </div>
       )}
 
       {grid && displaySessions.length > 0 && (
-        <div className="glass-card rounded-lg p-3 md:p-5">
+        <div className="glass-card rounded-xl p-3 md:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <div>
               <h2 className="font-bold text-deep-800">الحضور — {periodLabel}</h2>
               <p className="text-xs text-deep-500 mt-1">سيشمل التصدير النتائج المعروضة بعد التصفية والبحث.</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {isDesktop === false && (<button type="button" onClick={() => setShowStudentNames(true)} disabled={loading || displayStudents.length === 0} className="water-btn-outline shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-50">نسخ أسماء الطلاب</button>)}
-              <button type="button" onClick={openExcelPreview} className="water-btn text-white rounded-lg px-4 py-2 text-sm font-semibold">
+              {isDesktop === false && (<button type="button" onClick={() => setShowStudentNames(true)} disabled={loading || displayStudents.length === 0} className="water-btn-outline shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold disabled:opacity-50">نسخ أسماء الطلاب</button>)}
+              <button type="button" onClick={openExcelPreview} className="water-btn text-white rounded-xl px-4 py-2 text-sm font-semibold">
                 معاينة وتصدير Excel
               </button>
             </div>
           </div>
           {isDesktop === false && <div className="space-y-3">
             {displayStudents.map((student) => (
-              <div key={student.id} className="rounded-lg border border-water-200/80 bg-white/85 dark:bg-slate-800/70 overflow-hidden">
+              <div key={student.id} className="rounded-xl border border-water-200/80 bg-white/85 dark:bg-slate-800/70 overflow-hidden">
                 <div className="px-4 py-3 border-b border-water-200/30 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <StudentAvatar name={student.name} profilePic={student.profile_pic} className="w-9 h-9" onZoomPic={setPreviewPic} />
@@ -699,7 +699,7 @@ export default function AttendancePage() {
                         setNotice(null)
                         setWarningStudent(student)
                       }}
-                      className="shrink-0 px-3 py-1.5 rounded-lg text-xs border border-red-200 dark:border-red-800 text-red-600 dark:text-red-300 hover:bg-red-50/70 dark:hover:bg-red-900/30 transition"
+                      className="shrink-0 px-3 py-1.5 rounded-xl text-xs border border-red-200 dark:border-red-800 text-red-600 dark:text-red-300 hover:bg-red-50/70 dark:hover:bg-red-900/30 transition"
                     >
                       إضافة إنذار
                     </button>
@@ -711,7 +711,7 @@ export default function AttendancePage() {
                     return (
                       <div key={s.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
                         <span className="text-xs text-deep-600 truncate">{sessionDateLabelFromCollection(s, allSessions, formatDateWithWeekday)}</span>
-                        <span className={`shrink-0 inline-block rounded-lg border px-2 py-1 text-xs font-medium ${statusColorClass(status)}`}>
+                        <span className={`shrink-0 inline-block rounded-xl border px-2 py-1 text-xs font-medium ${statusColorClass(status)}`}>
                           {status}
                         </span>
                       </div>
@@ -727,7 +727,7 @@ export default function AttendancePage() {
             <thead>
               <tr className="border-b border-water-200/30">
                 <th className="data-table-header text-right py-3 px-3 text-deep-800 sticky right-0 z-10 min-w-[240px]">
-                  <div className="flex items-center justify-between gap-3"><span>الطالب</span><button type="button" onClick={() => setShowStudentNames(true)} disabled={loading || displayStudents.length === 0} className="water-btn-outline shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-50">نسخ أسماء الطلاب</button></div>
+                  <div className="flex items-center justify-between gap-3"><span>الطالب</span><button type="button" onClick={() => setShowStudentNames(true)} disabled={loading || displayStudents.length === 0} className="water-btn-outline shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold disabled:opacity-50">نسخ أسماء الطلاب</button></div>
                 </th>
                 {displaySessions.map((s) => (
                   <th key={s.id} className="data-table-header text-center py-3 px-2 text-deep-700 text-xs whitespace-nowrap min-w-[96px]">{sessionDateLabelFromCollection(s, allSessions, formatDateWithWeekday)}</th>
@@ -752,7 +752,7 @@ export default function AttendancePage() {
                             setNotice(null)
                             setWarningStudent(student)
                           }}
-                          className="shrink-0 px-3 py-1.5 rounded-lg text-xs border border-red-200 dark:border-red-800 text-red-600 dark:text-red-300 hover:bg-red-50/70 dark:hover:bg-red-900/30 transition"
+                          className="shrink-0 px-3 py-1.5 rounded-xl text-xs border border-red-200 dark:border-red-800 text-red-600 dark:text-red-300 hover:bg-red-50/70 dark:hover:bg-red-900/30 transition"
                         >
                           إضافة إنذار
                         </button>
@@ -766,7 +766,7 @@ export default function AttendancePage() {
                         {status == null ? (
                           <span className="text-deep-300" aria-label="لم يكن الطالب مسجلاً في هذه الحلقة">—</span>
                         ) : (
-                          <span className={`inline-block rounded-lg border px-2 py-1 text-xs font-medium ${statusColorClass(status)}`}>
+                          <span className={`inline-block rounded-xl border px-2 py-1 text-xs font-medium ${statusColorClass(status)}`}>
                             {status}
                           </span>
                         )}
@@ -960,7 +960,7 @@ ${selectedLabels.map((label) => `* ${label}`).join('\n') || '* ...'}
                       />
                       <span className="text-sm text-deep-800">{sessionDateLabelFromCollection(session, sessions, formatDateWithWeekday)}</span>
                     </span>
-                    <span className={`rounded-lg border px-2 py-1 text-xs font-medium ${attendanceStatusColorClass(statusColors[status])}`}>
+                    <span className={`rounded-xl border px-2 py-1 text-xs font-medium ${attendanceStatusColorClass(statusColors[status])}`}>
                       {status}
                     </span>
                   </label>
@@ -975,7 +975,7 @@ ${selectedLabels.map((label) => `* ${label}`).join('\n') || '* ...'}
               onClick={handleCopy}
               aria-label="نسخ نص الإنذار"
               title="نسخ نص الإنذار"
-              className="absolute top-3 left-3 rounded-lg p-1.5 text-deep-500 hover:bg-water-100/60 hover:text-deep-800 transition"
+              className="absolute top-3 left-3 rounded-xl p-1.5 text-deep-500 hover:bg-water-100/60 hover:text-deep-800 transition"
             >
               {copied ? (
                 <span className="text-xs text-green-600">تم</span>

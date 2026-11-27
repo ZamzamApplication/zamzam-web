@@ -16,6 +16,8 @@ import type { Circle, ExcusedPeriodInfo, ExcusedWeekdayInfo, QuranProgressEntry,
 import AsyncState from '@/components/AsyncState'
 import StudentCustomFieldsEditor from '@/components/StudentCustomFieldsEditor'
 import { progressCategoryLabel } from '@/components/TahfizInitialSettingsFields'
+import { confirmAction, toast } from '@/lib/ui-feedback'
+import Icon from '@/components/Icon'
 
 const WEEKDAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
 function normalizeExcusedWeekdays(days: (ExcusedWeekdayInfo | number)[] | undefined): ExcusedWeekdayInfo[] {
@@ -504,7 +506,7 @@ function AddStudentModal({ sheikhId, sheikhName, onClose, onCreated }: { sheikhI
         <div className="border-t border-water-200/30 pt-3">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-deep-700">أرقام ولي الأمر</span>
-            <button type="button" onClick={addParentPhone} className="text-xs water-btn-outline px-2 py-1 rounded-lg">+ إضافة</button>
+            <button type="button" onClick={addParentPhone} className="text-xs water-btn-outline px-2 py-1 rounded-xl">+ إضافة</button>
           </div>
           {parentPhones.map((pp, i) => (
             <div key={i} className="space-y-1.5 mb-2 p-2 rounded-xl bg-water-100/20">
@@ -619,7 +621,7 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
   }
 
   const cancelExcusedPeriod = async (period: ExcusedPeriodInfo) => {
-    if (!window.confirm(`إلغاء فترة العذر: ${period.reason}؟`)) return
+    if (!await confirmAction(`إلغاء فترة العذر: ${period.reason}؟`)) return
     setPeriodBusy(true)
     setPeriodError('')
     try {
@@ -864,7 +866,7 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
         <div className="border-t border-water-200/30 pt-3">
           <div className="mb-3 flex items-center justify-between gap-2">
             <div><span className="block text-sm font-bold text-deep-700">فترة غياب بعذر</span><span className="text-xs text-deep-500">للسفر أو المرض أو أي عذر ممتد.</span></div>
-            {excusedPeriods.some(period => period.status === 'active') && <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-bold text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">عذر نشط</span>}
+            {excusedPeriods.some(period => period.status === 'active') && <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">عذر نشط</span>}
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
             <label className="text-xs font-medium text-deep-700">من تاريخ<input type="date" value={periodForm.start_date} onChange={event => setPeriodForm({ ...periodForm, start_date: event.target.value })} className="surface-field mt-1 w-full rounded-xl px-3 py-2" /></label>
@@ -878,7 +880,7 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
           </div>
           <div className="mt-4 max-h-52 space-y-2 overflow-y-auto">
             {excusedPeriods.length === 0 ? <p className="text-xs font-medium text-deep-600">لا توجد فترات عذر مسجلة.</p> : excusedPeriods.map(period => <article key={period.id} className="rounded-xl border border-water-200 bg-white/35 p-3 dark:bg-slate-800/30">
-              <div className="flex items-start justify-between gap-2"><div><p className="text-xs font-bold text-deep-800">{period.reason}</p><p className="mt-1 text-[11px] text-deep-500">{period.start_date} — {period.end_date}</p></div><span className="rounded-full bg-water-50 px-2 py-1 text-[10px] text-deep-700 dark:bg-slate-800">{excusedPeriodStatusLabel(period.status)}</span></div>
+              <div className="flex items-start justify-between gap-2"><div><p className="text-xs font-bold text-deep-800">{period.reason}</p><p className="mt-1 text-xs text-deep-500">{period.start_date} — {period.end_date}</p></div><span className="rounded-full bg-water-50 px-2 py-1 text-xs text-deep-700 dark:bg-slate-800">{excusedPeriodStatusLabel(period.status)}</span></div>
               {period.status !== 'cancelled' && <div className="mt-2 flex flex-wrap gap-2"><button type="button" disabled={periodBusy} onClick={() => startEditingPeriod(period)} className="text-xs font-semibold text-blue-700 dark:text-blue-300">تعديل</button>{period.status === 'active' && <button type="button" disabled={periodBusy} onClick={() => void endExcusedPeriodEarly(period)} className="text-xs font-semibold text-amber-700 dark:text-amber-300">عودة مبكرة</button>}{(period.status === 'active' || period.status === 'upcoming') && <button type="button" disabled={periodBusy} onClick={() => void cancelExcusedPeriod(period)} className="text-xs font-semibold text-red-600 dark:text-red-300">إلغاء الفترة</button>}</div>}
             </article>)}
           </div>
@@ -913,7 +915,7 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
                     ) : (
                       <>
                         <p className="text-xs text-deep-800">{w.reason}</p>
-                        <p className="text-[10px] text-deep-400">{new Date(w.created_at).toLocaleDateString('ar-SA')}</p>
+                        <p className="text-xs text-deep-400">{new Date(w.created_at).toLocaleDateString('ar-SA')}</p>
                       </>
                     )}
                   </div>
@@ -943,7 +945,7 @@ function EditStudentModal({ student, sheikhName, onClose, onUpdated }: { student
         <div className="border-t border-water-200/30 pt-3">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-deep-700">أرقام ولي الأمر</span>
-            <button type="button" onClick={addParentPhone} className="text-xs water-btn-outline px-2 py-1 rounded-lg">+ إضافة</button>
+            <button type="button" onClick={addParentPhone} className="text-xs water-btn-outline px-2 py-1 rounded-xl">+ إضافة</button>
           </div>
           {parentPhones.map((pp, i) => (
             <div key={i} className="space-y-1.5 mb-2 p-2 rounded-xl bg-water-100/20">
@@ -1014,7 +1016,7 @@ function InviteUserModal({ sheikhs, onClose }: { sheikhs: SheikhInfo[]; onClose:
   }
 
   const revoke = async (invitation: TahfizInvitation) => {
-    if (!confirm('إلغاء رابط الدعوة؟')) return
+    if (!await confirmAction({ title: 'إلغاء الدعوة', message: 'لن يعمل رابط الدعوة بعد ذلك.', confirmLabel: 'إلغاء الدعوة', cancelLabel: 'رجوع' })) return
     setLoading(true)
     setError('')
     try {
@@ -1058,8 +1060,8 @@ function InviteUserModal({ sheikhs, onClose }: { sheikhs: SheikhInfo[]; onClose:
       {createdLink && (
         <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/80 p-3 dark:border-emerald-800 dark:bg-emerald-900/20">
           <p className="text-xs font-bold text-emerald-800 dark:text-emerald-200">انسخ الرابط الآن — لن يظهر كاملاً مرة أخرى</p>
-          <input readOnly value={createdLink} dir="ltr" className="surface-field mt-2 w-full rounded-lg px-3 py-2 text-xs" />
-          <button type="button" onClick={copy} className="water-btn-outline mt-2 w-full rounded-lg px-3 py-2 text-sm">{copied ? 'تم النسخ ✓' : 'نسخ الرابط'}</button>
+          <input readOnly value={createdLink} dir="ltr" className="surface-field mt-2 w-full rounded-xl px-3 py-2 text-xs" />
+          <button type="button" onClick={copy} className="water-btn-outline mt-2 w-full rounded-xl px-3 py-2 text-sm">{copied ? 'تم النسخ ✓' : 'نسخ الرابط'}</button>
         </div>
       )}
 
@@ -1270,8 +1272,8 @@ function DeleteSheikhModal({ sheikh, onClose, onDeleted }: {
     setConfirmed(false)
   }
 
-  const markAllForDeletion = () => {
-    if (!preview || !window.confirm('تحديد جميع الطلاب للحذف النهائي مع سجلاتهم؟')) return
+  const markAllForDeletion = async () => {
+    if (!preview || !await confirmAction('تحديد جميع الطلاب للحذف النهائي مع سجلاتهم؟')) return
     setResolutions(Object.fromEntries(preview.students.map(student => [
       student.id,
       { action: 'delete', sheikhId: '' },
@@ -1354,15 +1356,15 @@ function DeleteSheikhModal({ sheikh, onClose, onDeleted }: {
                 const choice = resolutions[student.id] || { action: '', sheikhId: '' }
                 return <div key={student.id} className="grid gap-3 rounded-xl border border-water-200 p-3 md:grid-cols-[minmax(0,1fr)_180px_220px] md:items-center">
                   <div className="min-w-0"><p className="truncate font-semibold text-deep-900">{student.name}</p><p className="mt-0.5 text-xs text-deep-500">{student.student_id ? `#${student.student_id}` : `المعرف ${student.id}`} · {student.status}{student.phone ? ` · ${student.phone}` : ''}</p></div>
-                  <select aria-label={`قرار الطالب ${student.name}`} value={choice.action} onChange={event => updateResolution(student.id, { action: event.target.value as DraftResolution['action'], sheikhId: '' })} className="surface-field rounded-lg px-3 py-2 text-sm">
+                  <select aria-label={`قرار الطالب ${student.name}`} value={choice.action} onChange={event => updateResolution(student.id, { action: event.target.value as DraftResolution['action'], sheikhId: '' })} className="surface-field rounded-xl px-3 py-2 text-sm">
                     <option value="">اختر الإجراء</option>
                     <option value="reassign" disabled={preview.destination_sheikhs.length === 0}>نقل إلى شيخ آخر</option>
                     <option value="delete">حذف الطالب نهائياً</option>
                   </select>
-                  {choice.action === 'reassign' ? <select aria-label={`الشيخ الجديد للطالب ${student.name}`} value={choice.sheikhId} onChange={event => updateResolution(student.id, { sheikhId: event.target.value ? Number(event.target.value) : '' })} className="surface-field rounded-lg px-3 py-2 text-sm">
+                  {choice.action === 'reassign' ? <select aria-label={`الشيخ الجديد للطالب ${student.name}`} value={choice.sheikhId} onChange={event => updateResolution(student.id, { sheikhId: event.target.value ? Number(event.target.value) : '' })} className="surface-field rounded-xl px-3 py-2 text-sm">
                     <option value="">اختر الشيخ الجديد</option>
                     {preview.destination_sheikhs.map(target => <option key={target.id} value={target.id}>{target.name}</option>)}
-                  </select> : choice.action === 'delete' ? <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-900/20 dark:text-red-200">سيُحذف الطالب وكل سجلات حضوره وتقدمه.</p> : <span className="text-xs text-deep-400">لم يُحدد قرار بعد</span>}
+                  </select> : choice.action === 'delete' ? <p className="rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-900/20 dark:text-red-200">سيُحذف الطالب وكل سجلات حضوره وتقدمه.</p> : <span className="text-xs text-deep-400">لم يُحدد قرار بعد</span>}
                 </div>
               })}
             </div>
@@ -1572,7 +1574,7 @@ function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete, onMo
       <div className="glass-strong max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl p-6 mx-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-col items-center mb-4">
           {student.profile_pic ? (
-            <img src={mediaUrl(student.profile_pic)!} alt="" className="w-20 h-20 rounded-full object-cover border-2 border-water-300 mb-3 cursor-pointer hover:opacity-80 transition" onClick={() => onZoomPic?.(mediaUrl(student.profile_pic)!)} />
+            <button type="button" onClick={() => onZoomPic?.(mediaUrl(student.profile_pic)!)} aria-label="تكبير الصورة" className="shrink-0 rounded-full"><img src={mediaUrl(student.profile_pic)!} alt="" className="w-20 h-20 rounded-full object-cover border-2 border-water-300 mb-3 hover:opacity-80 transition" /></button>
           ) : (
             <div className="w-20 h-20 rounded-full bg-water-200/50 flex items-center justify-center text-deep-400 text-2xl border-2 border-water-300 mb-3">
               {student.name.charAt(0)}
@@ -1637,11 +1639,11 @@ function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete, onMo
             {student.warnings.length > 0 && (
               <div className="space-y-1 mt-1 mb-1">
                 {student.warnings.map((w) => (
-                  <div key={w.id} className="flex items-start gap-1.5 bg-red-50/40 dark:bg-red-900/20 rounded-lg px-2 py-1.5">
+                  <div key={w.id} className="flex items-start gap-1.5 bg-red-50/40 dark:bg-red-900/20 rounded-xl px-2 py-1.5">
                     <span className="text-red-500 text-xs mt-0.5">⚠</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs text-deep-700">{w.reason}</p>
-                      <p className="text-[10px] text-deep-400">{new Date(w.created_at).toLocaleDateString('ar-SA')}</p>
+                      <p className="text-xs text-deep-400">{new Date(w.created_at).toLocaleDateString('ar-SA')}</p>
                     </div>
                   </div>
                 ))}
@@ -1654,7 +1656,7 @@ function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete, onMo
               <span className="text-deep-500 text-xs block mb-2">أرقام ولي الأمر</span>
               {student.parent_phones.map((p, i) => (
                 <div key={i} className="flex items-center py-1 text-sm">
-                  <span className="text-deep-600 bg-water-100/50 px-2 py-0.5 rounded-lg text-xs ml-2">{p.parent_type}</span>
+                  <span className="text-deep-600 bg-water-100/50 px-2 py-0.5 rounded-xl text-xs ml-2">{p.parent_type}</span>
                   <span className="text-deep-800 font-medium flex-1">{p.name || ''}</span>
                   <span className="text-deep-600" dir="ltr">{p.phone_number}</span>
                 </div>
@@ -1674,7 +1676,7 @@ function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete, onMo
               ) : (
                 <div className="mt-2 space-y-1.5">
                   {progressEntries.slice(0, 5).map((entry) => (
-                    <div key={entry.id} className="rounded-lg bg-white/60 px-2.5 py-2 text-xs dark:bg-slate-800/50">
+                    <div key={entry.id} className="rounded-xl bg-white/60 px-2.5 py-2 text-xs dark:bg-slate-800/50">
                       <div className="flex justify-between gap-2">
                         <span className="font-semibold">{progressCategoryLabel(entry.category)}</span>
                         <span>{entry.quality_score}/5 — {entry.mistakes} أخطاء</span>
@@ -1688,7 +1690,7 @@ function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete, onMo
               {progressTrend.length > 0 && (
                 <div className="mt-3 border-t border-cyan-200/60 pt-3">
                   <p className="mb-2 text-xs font-semibold text-deep-700">اتجاه التقييم — آخر {progressTrend.length} سجلاً</p>
-                  <div className="flex h-24 items-end gap-1 rounded-lg bg-white/50 px-2 pt-2 dark:bg-slate-800/40" role="img" aria-label="اتجاه تقييم تقدم الطالب">
+                  <div className="flex h-24 items-end gap-1 rounded-xl bg-white/50 px-2 pt-2 dark:bg-slate-800/40" role="img" aria-label="اتجاه تقييم تقدم الطالب">
                     {progressTrend.map((point) => (
                       <div key={point.entry_id} className="group flex min-w-0 flex-1 flex-col items-center justify-end">
                         <span className="mb-1 text-[9px] font-semibold text-deep-500">{point.quality_score}</span>
@@ -1707,7 +1709,7 @@ function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete, onMo
                   <summary className="cursor-pointer text-xs font-semibold text-deep-700">سجل تعديلات المتابعة ({progressRevisions.length})</summary>
                   <div className="mt-2 space-y-2">
                     {progressRevisions.slice(0, 10).map((revision) => (
-                      <div key={revision.id} className="rounded-lg bg-amber-50/75 px-2.5 py-2 text-[11px] dark:bg-amber-950/25">
+                      <div key={revision.id} className="rounded-xl bg-amber-50/75 px-2.5 py-2 text-xs dark:bg-amber-950/25">
                         <p className="font-semibold text-deep-800">{revision.editor_username} — {new Date(revision.created_at).toLocaleString('ar-EG')}</p>
                         <p className="mt-1 text-deep-500">
                           {formatQuranRange(revision.before as QuranProgressEntry)} ← {formatQuranRange(revision.after as QuranProgressEntry)}
@@ -1724,28 +1726,28 @@ function ViewStudentModal({ student, sheikhName, onClose, onEdit, onDelete, onMo
               <div className="mt-3 border-t border-cyan-200/60 pt-3">
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <p className="text-xs font-semibold text-deep-700">إضافة هدف للطالب</p>
-                  <select value={goalRangeType} onChange={(event) => setGoalRangeType(event.target.value as QuranRangeType)} className="surface-field rounded-lg px-2 py-1 text-xs">
+                  <select value={goalRangeType} onChange={(event) => setGoalRangeType(event.target.value as QuranRangeType)} className="surface-field rounded-xl px-2 py-1 text-xs">
                     <option value="page">بالصفحات</option>
                     <option value="surah_ayah">بالسورة والآية</option>
                   </select>
                 </div>
                 {goalRangeType === 'page' ? (
                   <div className="grid grid-cols-2 gap-1.5">
-                    <input aria-label="صفحة بداية الهدف" type="number" min={1} max={604} value={goalFromPage} onChange={(event) => setGoalFromPage(Number(event.target.value))} className="surface-field min-w-0 rounded-lg px-2 py-1.5 text-xs" />
-                    <input aria-label="صفحة نهاية الهدف" type="number" min={goalFromPage} max={604} value={goalToPage} onChange={(event) => setGoalToPage(Number(event.target.value))} className="surface-field min-w-0 rounded-lg px-2 py-1.5 text-xs" />
+                    <input aria-label="صفحة بداية الهدف" type="number" min={1} max={604} value={goalFromPage} onChange={(event) => setGoalFromPage(Number(event.target.value))} className="surface-field min-w-0 rounded-xl px-2 py-1.5 text-xs" />
+                    <input aria-label="صفحة نهاية الهدف" type="number" min={goalFromPage} max={604} value={goalToPage} onChange={(event) => setGoalToPage(Number(event.target.value))} className="surface-field min-w-0 rounded-xl px-2 py-1.5 text-xs" />
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-1.5">
-                    <input aria-label="سورة البداية" placeholder="سورة البداية" type="number" min={1} max={114} value={goalFromSurah} onChange={(event) => setGoalFromSurah(Number(event.target.value))} className="surface-field min-w-0 rounded-lg px-2 py-1.5 text-xs" />
-                    <input aria-label="آية البداية" placeholder="آية البداية" type="number" min={1} value={goalFromAyah} onChange={(event) => setGoalFromAyah(Number(event.target.value))} className="surface-field min-w-0 rounded-lg px-2 py-1.5 text-xs" />
-                    <input aria-label="سورة النهاية" placeholder="سورة النهاية" type="number" min={1} max={114} value={goalToSurah} onChange={(event) => setGoalToSurah(Number(event.target.value))} className="surface-field min-w-0 rounded-lg px-2 py-1.5 text-xs" />
-                    <input aria-label="آية النهاية" placeholder="آية النهاية" type="number" min={1} value={goalToAyah} onChange={(event) => setGoalToAyah(Number(event.target.value))} className="surface-field min-w-0 rounded-lg px-2 py-1.5 text-xs" />
+                    <input aria-label="سورة البداية" placeholder="سورة البداية" type="number" min={1} max={114} value={goalFromSurah} onChange={(event) => setGoalFromSurah(Number(event.target.value))} className="surface-field min-w-0 rounded-xl px-2 py-1.5 text-xs" />
+                    <input aria-label="آية البداية" placeholder="آية البداية" type="number" min={1} value={goalFromAyah} onChange={(event) => setGoalFromAyah(Number(event.target.value))} className="surface-field min-w-0 rounded-xl px-2 py-1.5 text-xs" />
+                    <input aria-label="سورة النهاية" placeholder="سورة النهاية" type="number" min={1} max={114} value={goalToSurah} onChange={(event) => setGoalToSurah(Number(event.target.value))} className="surface-field min-w-0 rounded-xl px-2 py-1.5 text-xs" />
+                    <input aria-label="آية النهاية" placeholder="آية النهاية" type="number" min={1} value={goalToAyah} onChange={(event) => setGoalToAyah(Number(event.target.value))} className="surface-field min-w-0 rounded-xl px-2 py-1.5 text-xs" />
                   </div>
                 )}
-                <input aria-label="تاريخ الهدف" type="date" value={goalDate} onChange={(event) => setGoalDate(event.target.value)} className="surface-field mt-1.5 w-full rounded-lg px-2 py-1.5 text-xs" />
-                <button type="button" onClick={addGoal} disabled={goalBusy || (goalRangeType === 'page' && goalToPage < goalFromPage)} className="water-btn-outline mt-2 w-full rounded-lg px-3 py-1.5 text-xs disabled:opacity-50">{goalBusy ? 'جاري...' : 'إضافة الهدف'}</button>
+                <input aria-label="تاريخ الهدف" type="date" value={goalDate} onChange={(event) => setGoalDate(event.target.value)} className="surface-field mt-1.5 w-full rounded-xl px-2 py-1.5 text-xs" />
+                <button type="button" onClick={addGoal} disabled={goalBusy || (goalRangeType === 'page' && goalToPage < goalFromPage)} className="water-btn-outline mt-2 w-full rounded-xl px-3 py-1.5 text-xs disabled:opacity-50">{goalBusy ? 'جاري...' : 'إضافة الهدف'}</button>
                 {goals.filter((goal) => goal.status === 'active').map((goal) => (
-                  <div key={goal.id} className="mt-2 flex items-center justify-between rounded-lg bg-white/60 px-2 py-1.5 text-xs dark:bg-slate-800/50">
+                  <div key={goal.id} className="mt-2 flex items-center justify-between rounded-xl bg-white/60 px-2 py-1.5 text-xs dark:bg-slate-800/50">
                     <span>{goal.range_type === 'page' ? `صفحات ${goal.from_page}–${goal.to_page}` : `سورة ${goal.from_surah}:${goal.from_ayah} إلى ${goal.to_surah}:${goal.to_ayah}`}</span>
                     <button type="button" onClick={async () => { await api.updateStudentGoal(student.id, goal.id, { status: 'completed' }); await loadProgress() }} className="font-semibold text-emerald-600">إكمال</button>
                   </div>
@@ -1837,16 +1839,18 @@ function StudentStatusTabs({
                   key={s.id}
                   className="flex items-center justify-between gap-3 px-5 py-2.5 hover:bg-water-100/30"
                 >
-                  <div className="flex items-center gap-3 cursor-pointer" onClick={() => onViewStudent(s)}>
+                  <div className="flex items-center gap-3">
                     {s.profile_pic ? (
-                      <img src={mediaUrl(s.profile_pic)!} alt="" className="w-8 h-8 rounded-full object-cover border border-water-300 cursor-pointer hover:opacity-80 transition" onClick={(e) => { e.stopPropagation(); onZoomPic?.(mediaUrl(s.profile_pic)!) }} />
+                      <button type="button" onClick={(e) => { e.stopPropagation(); onZoomPic?.(mediaUrl(s.profile_pic)!) }} aria-label="تكبير الصورة" className="shrink-0 rounded-full"><img src={mediaUrl(s.profile_pic)!} alt="" className="w-8 h-8 rounded-full object-cover border border-water-300 hover:opacity-80 transition" /></button>
                     ) : (
                       <div className="w-8 h-8 rounded-full bg-water-200/50 flex items-center justify-center text-deep-400 text-xs border border-water-300">
                         {s.name.charAt(0)}
                       </div>
                     )}
-                    <span className="text-deep-600 text-xs ml-1">{s.student_id ? `#${s.student_id}` : `#${s.id}`}</span>
-                    <span className="text-deep-800">{s.name}</span>
+                    <button type="button" onClick={() => onViewStudent(s)} className="flex items-center gap-1 text-right hover:text-blue-700 hover:underline">
+                      <span className="text-deep-600 text-xs ml-1">{s.student_id ? `#${s.student_id}` : `#${s.id}`}</span>
+                      <span className="text-deep-800">{s.name}</span>
+                    </button>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="inline-flex gap-1" aria-label={`ترتيب ${s.name}`}>
@@ -1914,7 +1918,7 @@ function WarningsTab({ sheikhs }: { sheikhs: SheikhInfo[] }) {
 
   const handleSend = async () => {
     if (selectedIds.size === 0) return
-    if (!confirm('إرسال الإنذارات المحددة؟')) return
+    if (!await confirmAction({ title: 'إرسال الإنذارات', message: 'إرسال الإنذارات المحددة؟', confirmLabel: 'إرسال', tone: 'default' })) return
     setSending(true)
     setResult(null)
     try {
@@ -2032,11 +2036,14 @@ function ManageContent() {
   const [allStudents, setAllStudents] = useState<StudentInfo[]>([])
   const [studentsView, setStudentsView] = useState<'sheikh' | 'table'>('sheikh')
   useEffect(() => {
+    const fromUrl = new URLSearchParams(window.location.search).get('view')
+    if (fromUrl === 'table' || fromUrl === 'sheikh') { setStudentsView(fromUrl); return }
     try { if (localStorage.getItem('manage-students-view') === 'table') setStudentsView('table') } catch { /* storage unavailable */ }
   }, [])
   const changeStudentsView = (next: 'sheikh' | 'table') => {
     setStudentsView(next)
     try { localStorage.setItem('manage-students-view', next) } catch { /* storage unavailable */ }
+    router.replace(`/manage?section=sheikhs&view=${next}`, { scroll: false })
   }
 
   useEffect(() => {
@@ -2113,7 +2120,6 @@ function ManageContent() {
   const [moveStudentId, setMoveStudentId] = useState<number | null>(null)
   const [showMoveStudent, setShowMoveStudent] = useState(false)
   const [resettingStudentOrder, setResettingStudentOrder] = useState(false)
-  const [studentOrderNotice, setStudentOrderNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const handleReorder = async (sheikhId: number, studentId: number, direction: -1 | 1) => {
     const sheikh = sheikhs.find((s) => s.id === sheikhId)
     if (!sheikh) return
@@ -2128,18 +2134,17 @@ function ManageContent() {
   }
 
   const resetStudentOrderAlphabetically = async () => {
-    if (!window.confirm('سيتم إعادة ترتيب جميع الطلاب أبجديًا داخل قائمة كل شيخ. هل تريد المتابعة؟')) return
+    if (!await confirmAction({ title: 'ترتيب الطلاب أبجديًا', message: 'سيتم إعادة ترتيب جميع الطلاب أبجديًا داخل قائمة كل شيخ.', confirmLabel: 'ترتيب', tone: 'default' })) return
     setResettingStudentOrder(true)
-    setStudentOrderNotice(null)
     try {
       await Promise.all(sheikhs.map((sheikh) => {
         const studentIds = alphabetizeStudents(sheikh.students).map(student => student.id)
         return studentIds.length > 0 ? api.reorderStudents(sheikh.id, studentIds) : Promise.resolve()
       }))
       await load(true)
-      setStudentOrderNotice({ type: 'success', text: 'تمت إعادة ترتيب الطلاب أبجديًا.' })
+      toast('تمت إعادة ترتيب الطلاب أبجديًا.', { tone: 'success' })
     } catch (err: any) {
-      setStudentOrderNotice({ type: 'error', text: err.message || 'تعذر إعادة ترتيب الطلاب أبجديًا.' })
+      toast(err.message || 'تعذر إعادة ترتيب الطلاب أبجديًا.', { tone: 'error' })
     } finally {
       setResettingStudentOrder(false)
     }
@@ -2159,13 +2164,13 @@ function ManageContent() {
   }
 
   const handleDeleteUser = async (id: number) => {
-    if (!confirm('حذف المستخدم؟')) return
+    if (!await confirmAction({ title: 'حذف المستخدم', message: 'سيفقد المستخدم الوصول إلى التحفيظ.', confirmLabel: 'حذف' })) return
     await api.deleteUser(id)
     load()
   }
 
   const handleDeleteCircle = async (id: number) => {
-    if (!confirm('تحذير: سيتم حذف الحلقة وجميع ما فيها بما في ذلك الحلقات وسجلات الحضور والشيوخ. هل أنت متأكد؟')) return
+    if (!await confirmAction('تحذير: سيتم حذف الحلقة وجميع ما فيها بما في ذلك الحلقات وسجلات الحضور والشيوخ. هل أنت متأكد؟')) return
     await api.deleteCircle(id)
     load()
   }
@@ -2200,14 +2205,17 @@ function ManageContent() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-deep-500 text-sm">إجمالي الطلاب المقيدين: {sheikhs.reduce((sum, s) => sum + s.students.filter((st) => st.status === 'مقيد').length, 0)}</p>
         <div className="flex flex-wrap gap-2">
-          <Link href="/audit-log" className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">📋 سجل التدقيق</Link>
+          <Link href="/audit-log" className="water-btn-outline inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold"><Icon name="audit" className="h-4 w-4" /> سجل التدقيق</Link>
         </div>
       </div>
 
-      <div className="mobile-scroll-tabs flex gap-2 mb-6 border-b border-water-200/30">
+      <div role="tablist" aria-label="أقسام الإدارة" className="mobile-scroll-tabs flex gap-2 mb-6 border-b border-water-200/30">
         {tabs.map((t) => (
           <button
             key={t.key}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === t.key}
             onClick={() => { setActiveTab(t.key); router.replace(`/manage?section=${t.key}`, { scroll: false }) }}
             className={`px-4 py-2 text-sm font-medium transition border-b-2 -mb-px ${
               activeTab === t.key ? 'text-blue-700 dark:text-blue-400 border-cyan-500' : 'text-deep-500 border-transparent hover:text-deep-700'
@@ -2231,9 +2239,9 @@ function ManageContent() {
                 role="tab"
                 aria-selected={studentsView === key}
                 onClick={() => changeStudentsView(key)}
-                className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${studentsView === key ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-700 dark:text-blue-300' : 'text-deep-500 hover:text-deep-700'}`}
+                className={`rounded-xl px-4 py-1.5 text-sm font-medium transition ${studentsView === key ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-700 dark:text-blue-300' : 'text-deep-500 hover:text-deep-700'}`}
               >
-                {key === 'sheikh' ? '▤ ' : '▦ '}{label}
+                <span className="inline-flex items-center gap-1.5"><Icon name={key === 'sheikh' ? 'list' : 'table'} className="h-4 w-4" />{label}</span>
               </button>
             ))}
           </div>
@@ -2255,8 +2263,8 @@ function ManageContent() {
             <input value={studentSearch} onChange={event => setStudentSearch(event.target.value)} placeholder="ابحث باسم الطالب أو رقمه أو هاتفه أو الشيخ..." className="surface-field w-full rounded-xl py-2.5 pr-4 pl-10 text-sm" />
             {studentSearch && <button type="button" onClick={() => setStudentSearch('')} aria-label="مسح البحث" className="absolute left-3 top-1/2 -translate-y-1/2 text-deep-400">×</button>}
           </label>
-          <div className="flex justify-between items-center gap-3 mb-4">
-            <button onClick={toggleAllSheikhs} className="water-btn-outline px-4 py-2 rounded-xl text-sm">
+          <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
+            <button type="button" onClick={toggleAllSheikhs} className="water-btn-outline whitespace-nowrap px-4 py-2 rounded-xl text-sm">
               {allExpanded ? 'طي الكل' : 'فتح الكل'}
             </button>
             <div className="flex flex-wrap gap-2">
@@ -2265,12 +2273,12 @@ function ManageContent() {
               <button onClick={() => setShowAddSheikh(true)} className="water-btn text-white px-4 py-2 rounded-xl text-sm">+ إضافة شيخ</button>
             </div>
           </div>
-          {studentOrderNotice && <p role={studentOrderNotice.type === 'error' ? 'alert' : 'status'} className={`mb-4 rounded-xl border px-4 py-2 text-sm font-semibold ${studentOrderNotice.type === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300' : 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300'}`}>{studentOrderNotice.text}</p>}
 
           {visibleSheikhs.length === 0 ? (
             <div className="glass-card rounded-2xl p-8 text-center text-deep-600/60">
-              <div className="text-4xl mb-3">💧</div>
-              لا يوجد شيوخ بعد
+              <Icon name="manage" className="mx-auto mb-3 h-10 w-10 text-water-500" />
+              <p className="font-semibold text-deep-700">لا يوجد شيوخ بعد</p>
+              <button type="button" onClick={() => setShowAddSheikh(true)} className="water-btn mt-4 rounded-xl px-4 py-2 text-sm font-semibold text-white">إضافة أول شيخ</button>
             </div>
           ) : (
             <div className="space-y-4">
@@ -2278,16 +2286,16 @@ function ManageContent() {
                 const isExpanded = normalizedStudentSearch ? true : expandedSheikhs.has(sheikh.id)
                 return (
                 <div key={sheikh.id} className="glass-card rounded-2xl overflow-hidden">
-                  <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-4 bg-water-100/30 cursor-pointer" onClick={() => toggleSheikh(sheikh.id)}>
-                    <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-wrap">
-                      <span className={`text-deep-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}>{'<'}</span>
+                  <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-4 bg-water-100/30">
+                    <button type="button" onClick={() => toggleSheikh(sheikh.id)} aria-expanded={isExpanded} className="flex items-center gap-2 sm:gap-3 min-w-0 flex-wrap text-right">
+                      <Icon name="chevron-down" className={`h-4 w-4 shrink-0 text-deep-400 transition-transform duration-200 ${isExpanded ? '' : 'rotate-90'}`} />
                       <span className="text-lg font-bold text-deep-800 truncate">{sheikh.name}</span>
                       <span className="text-xs bg-water-200/50 text-deep-600 px-2 py-0.5 rounded-full">{sheikh.students.filter(student => student.status === 'مقيد').length} طالب مقيد</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 sm:flex" onClick={(e) => e.stopPropagation()}>
+                    </button>
+                    <div className="grid grid-cols-3 gap-2 sm:flex">
                       <button onClick={() => setAddingStudent({ id: sheikh.id, name: sheikh.name })} className="water-btn-outline px-3 py-2 rounded-xl text-xs">+ طالب</button>
                       <button onClick={() => setEditSheikh(sheikh)} className="water-btn-outline px-3 py-2 rounded-xl text-xs">تعديل</button>
-                      <button onClick={() => setDeleteSheikhTarget(sheikh)} className="px-3 py-2 rounded-xl text-xs border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50/50 dark:hover:bg-red-900/30 transition">حذف</button>
+                      <button type="button" onClick={() => setDeleteSheikhTarget(sheikh)} className="px-3 py-2 rounded-xl text-xs text-red-600 dark:text-red-400 hover:bg-red-50/60 dark:hover:bg-red-900/30 transition">حذف</button>
                     </div>
                   </div>
                    {isExpanded && (
@@ -2316,7 +2324,7 @@ function ManageContent() {
       {activeTab === 'users' && (
         <div>
           <div className="mb-4 flex flex-wrap justify-end gap-2">
-            <button onClick={() => setShowInviteUser(true)} className="water-btn-outline px-4 py-2 rounded-xl text-sm">🔗 دعوة مستخدم</button>
+            <button type="button" onClick={() => setShowInviteUser(true)} className="water-btn-outline inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm"><Icon name="link" className="h-4 w-4" /> دعوة مستخدم</button>
             <button onClick={() => setShowAddUser(true)} className="water-btn text-white px-4 py-2 rounded-xl text-sm">+ إضافة مستخدم</button>
           </div>
 

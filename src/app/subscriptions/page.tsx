@@ -15,6 +15,7 @@ import {
   selectedOutstandingTotal,
   SUBSCRIPTION_PAYMENT_METHODS,
 } from '@/lib/subscriptions'
+import { confirmAction } from '@/lib/ui-feedback'
 import type {
   ExpenseCategory,
   ExpenseRecord,
@@ -341,7 +342,7 @@ export default function SubscriptionsPage() {
       setError('أدخل رسومًا شهرية صحيحة أكبر من صفر.')
       return
     }
-    if (!window.confirm('سيتم إنشاء رسوم الدورة الحالية كاملة لكل الطلاب المقيدين، دون إضافة ديون للأشهر السابقة. هل تريد التفعيل؟')) return
+    if (!await confirmAction({ title: 'تفعيل الاشتراكات', message: 'سيتم إنشاء رسوم الدورة الحالية كاملة لكل الطلاب المقيدين، دون إضافة ديون للأشهر السابقة.', confirmLabel: 'تفعيل', tone: 'default' })) return
     setBusy(true)
     setError('')
     try {
@@ -376,7 +377,7 @@ export default function SubscriptionsPage() {
   async function saveFee(scope: 'current' | 'future', feeMinor: number | null) {
     if (!editingRecord) return
     const scopeLabel = scope === 'current' ? 'هذا الشهر فقط' : 'الأشهر القادمة فقط'
-    if (!window.confirm(`تأكيد تعديل رسوم ${editingRecord.student_name} لـ ${scopeLabel}؟ سيُسجّل التغيير في سجل التدقيق.`)) return
+    if (!await confirmAction({ title: 'تعديل الرسوم', message: `تأكيد تعديل رسوم ${editingRecord.student_name} لـ ${scopeLabel}؟ سيُسجّل التغيير في سجل التدقيق.`, confirmLabel: 'حفظ التعديل', tone: 'default' })) return
     setBusy(true)
     setError('')
     try {
@@ -398,7 +399,7 @@ export default function SubscriptionsPage() {
   }
 
   async function makeUnpaid(record: SubscriptionMonthRecord) {
-    if (!window.confirm(`إلغاء سداد ${record.student_name} لهذا الشهر؟ ستُمسح بيانات الدفع مع الاحتفاظ بسجل العملية.`)) return
+    if (!await confirmAction(`إلغاء سداد ${record.student_name} لهذا الشهر؟ ستُمسح بيانات الدفع مع الاحتفاظ بسجل العملية.`)) return
     setBusy(true)
     setError('')
     try {
@@ -476,7 +477,7 @@ export default function SubscriptionsPage() {
       setError('أضف تصنيفًا واحدًا مفعلًا على الأقل، وتأكد من أن كل الأسماء مكتملة.')
       return
     }
-    if (!settingsEnabled && !window.confirm('إيقاف الاشتراكات يمنع إنشاء سجلات جديدة، لكنه لا يحذف السجلات الحالية. هل تريد المتابعة؟')) return
+    if (!settingsEnabled && !await confirmAction('إيقاف الاشتراكات يمنع إنشاء سجلات جديدة، لكنه لا يحذف السجلات الحالية. هل تريد المتابعة؟')) return
     setBusy(true)
     setError('')
     try {
@@ -504,7 +505,7 @@ export default function SubscriptionsPage() {
   }
 
   async function removeExpense(expense: ExpenseRecord) {
-    if (!window.confirm(`حذف المصروف «${expense.name}»؟ سيبقى الإجراء محفوظًا في سجل التدقيق.`)) return
+    if (!await confirmAction(`حذف المصروف «${expense.name}»؟ سيبقى الإجراء محفوظًا في سجل التدقيق.`)) return
     setBusy(true); setError('')
     try { await api.deleteExpense(expense.id); setNotice('تم حذف المصروف.'); await loadFinance() }
     catch (reason: any) { setError(reason.message || 'تعذر حذف المصروف') }
@@ -553,7 +554,7 @@ export default function SubscriptionsPage() {
         ['المحصل عن رسوم الدورة', overview?.collected_subscriptions_minor ?? 0, 'text-emerald-600'],
         ['المصروفات', overview?.expenses_minor ?? 0, 'text-red-600'],
         ['صافي الوضع المالي', overview?.net_cash_minor ?? 0, (overview?.net_cash_minor ?? 0) >= 0 ? 'text-blue-700' : 'text-red-600'],
-      ].map(([label, value, color]) => <div key={String(label)} className="glass-card rounded-xl px-3 py-2"><p className="text-[11px] text-deep-500">{label}</p><p className={`mt-1 text-sm font-bold ${color}`}>{formatSubscriptionMoney(Number(value), currency)}</p></div>)}
+      ].map(([label, value, color]) => <div key={String(label)} className="glass-card rounded-xl px-3 py-2"><p className="text-xs text-deep-500">{label}</p><p className={`mt-1 text-sm font-bold ${color}`}>{formatSubscriptionMoney(Number(value), currency)}</p></div>)}
     </section>
     <p className="text-xs text-deep-500">الملخص المالي يشمل جميع عمليات الدورة. الفلاتر أدناه تغيّر القوائم وملخص الاشتراكات فقط.</p>
 
@@ -578,9 +579,9 @@ export default function SubscriptionsPage() {
         ['المتوقع', summary.expected_minor, 'text-deep-900'],
         ['المحصل عن رسوم الدورة', summary.collected_minor, 'text-emerald-600'],
         ['غير المحصل', summary.unpaid_minor, 'text-amber-600'],
-      ].map(([label, value, color]) => <div key={String(label)} className="glass-card rounded-xl px-3 py-2"><p className="text-[11px] text-deep-500">{label}</p><p className={`mt-0.5 text-sm font-bold ${color}`}>{formatSubscriptionMoney(Number(value), currency)}</p></div>)}
-      <div className="glass-card rounded-xl px-3 py-2"><p className="text-[11px] text-deep-500">مدفوع</p><p className="mt-0.5 text-sm font-bold text-emerald-600">{summary.paid_count}</p></div>
-      <div className="glass-card rounded-xl px-3 py-2"><p className="text-[11px] text-deep-500">غير مدفوع</p><p className="mt-0.5 text-sm font-bold text-amber-600">{summary.unpaid_count}</p></div>
+      ].map(([label, value, color]) => <div key={String(label)} className="glass-card rounded-xl px-3 py-2"><p className="text-xs text-deep-500">{label}</p><p className={`mt-0.5 text-sm font-bold ${color}`}>{formatSubscriptionMoney(Number(value), currency)}</p></div>)}
+      <div className="glass-card rounded-xl px-3 py-2"><p className="text-xs text-deep-500">مدفوع</p><p className="mt-0.5 text-sm font-bold text-emerald-600">{summary.paid_count}</p></div>
+      <div className="glass-card rounded-xl px-3 py-2"><p className="text-xs text-deep-500">غير مدفوع</p><p className="mt-0.5 text-sm font-bold text-amber-600">{summary.unpaid_count}</p></div>
     </section>
 
     <section className="glass-card rounded-2xl p-4">
@@ -612,10 +613,10 @@ export default function SubscriptionsPage() {
           <div><p className="text-xs text-deep-500">الرسوم</p><p className="font-bold text-deep-900">{formatSubscriptionMoney(record.fee_minor, currency)}</p></div>
           <div className="text-sm"><p className="text-xs text-deep-500">{record.is_paid ? 'بيانات الدفع' : 'الفترة'}</p><p className="text-deep-700">{record.is_paid ? `${record.payment_date} · ${paymentMethodLabel(record.payment_method)}` : `${record.period_start} — ${record.period_end}`}</p></div>
           <div className="flex flex-wrap gap-2 md:justify-end">
-            {isAuditor ? (record.is_paid && <button type="button" disabled={busy} onClick={() => void showReceipt(record)} className="water-btn-outline rounded-lg px-3 py-1.5 text-xs">الإيصال</button>) : <>
-            {record.is_paid ? <><button type="button" disabled={busy} onClick={() => void showReceipt(record)} className="water-btn-outline rounded-lg px-3 py-1.5 text-xs">الإيصال</button>{record.student_id !== null && <button type="button" disabled={busy} onClick={() => setEditingRecord(record)} className="water-btn-outline rounded-lg px-3 py-1.5 text-xs">رسوم الأشهر القادمة</button>}<button type="button" disabled={busy} onClick={() => void makeUnpaid(record)} className="rounded-lg border border-red-200 px-3 py-1.5 text-xs text-red-600 dark:border-red-800 dark:text-red-300">إلغاء السداد</button></> : <><button type="button" onClick={() => setEditingRecord(record)} className="water-btn-outline rounded-lg px-3 py-1.5 text-xs">تعديل الرسوم</button>{record.fee_minor > 0 && <button type="button" onClick={() => setPayingRecord(record)} className="water-btn rounded-lg px-3 py-1.5 text-xs font-bold text-white">سداد</button>}</>}
+            {isAuditor ? (record.is_paid && <button type="button" disabled={busy} onClick={() => void showReceipt(record)} className="water-btn-outline rounded-xl px-3 py-1.5 text-xs">الإيصال</button>) : <>
+            {record.is_paid ? <><button type="button" disabled={busy} onClick={() => void showReceipt(record)} className="water-btn-outline rounded-xl px-3 py-1.5 text-xs">الإيصال</button>{record.student_id !== null && <button type="button" disabled={busy} onClick={() => setEditingRecord(record)} className="water-btn-outline rounded-xl px-3 py-1.5 text-xs">رسوم الأشهر القادمة</button>}<button type="button" disabled={busy} onClick={() => void makeUnpaid(record)} className="rounded-xl border border-red-200 px-3 py-1.5 text-xs text-red-600 dark:border-red-800 dark:text-red-300">إلغاء السداد</button></> : <><button type="button" onClick={() => setEditingRecord(record)} className="water-btn-outline rounded-xl px-3 py-1.5 text-xs">تعديل الرسوم</button>{record.fee_minor > 0 && <button type="button" onClick={() => setPayingRecord(record)} className="water-btn rounded-xl px-3 py-1.5 text-xs font-bold text-white">سداد</button>}</>}
             </>}
-            {!isAuditor && record.student_id !== null && <Link href={`/students/${record.student_id}`} className="rounded-lg px-2 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300">ملف الطالب</Link>}
+            {!isAuditor && record.student_id !== null && <Link href={`/students/${record.student_id}`} className="rounded-xl px-2 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300">ملف الطالب</Link>}
           </div>
         </article>)}
       </div>}
@@ -627,7 +628,7 @@ export default function SubscriptionsPage() {
     {activeSection === 'expenses' && <section className="space-y-4 pt-3">
       <div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-xl font-bold text-deep-900">المصروفات</h2><p className="text-sm text-deep-500">المصروفات الفعلية للدورة المختارة</p></div><div className="flex gap-2"><button type="button" onClick={() => void exportExpenseExcel()} disabled={busy} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-50">Excel المصروفات</button>{!isAuditor && <button type="button" onClick={() => setEditingExpense(null)} disabled={expenseCategories.every(category => !category.enabled)} className="water-btn rounded-xl px-4 py-2 text-sm font-bold text-white disabled:opacity-50">إضافة مصروف</button>}</div></div>
       <div className="glass-card grid gap-3 rounded-2xl p-4 md:grid-cols-3"><label className="text-xs font-medium text-deep-600">التصنيف<select value={expenseCategoryFilter} onChange={event => setExpenseCategoryFilter(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-3 py-2.5 text-sm"><option value="">كل التصنيفات</option>{expenseCategories.map(category => <option key={category.id} value={category.id}>{category.label}</option>)}</select></label><label className="text-xs font-medium text-deep-600">طريقة الدفع<select value={expenseMethodFilter} onChange={event => setExpenseMethodFilter(event.target.value)} className="surface-field mt-1 w-full rounded-xl px-3 py-2.5 text-sm"><option value="">كل الطرق</option>{SUBSCRIPTION_PAYMENT_METHODS.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label><label className="text-xs font-medium text-deep-600">بحث<input value={expenseSearch} onChange={event => setExpenseSearch(event.target.value)} placeholder="اسم المصروف أو الملاحظة" className="surface-field mt-1 w-full rounded-xl px-3 py-2.5 text-sm" /></label></div>
-      <div className="glass-card overflow-hidden rounded-2xl"><div className="flex items-center justify-between border-b border-water-200 p-4"><span className="font-bold text-deep-800">سجل المصروفات</span><span className="text-sm font-bold text-red-600">{formatSubscriptionMoney(expenses.reduce((sum, item) => sum + item.amount_minor, 0), currency)}</span></div>{expenses.length === 0 ? <div className="p-10 text-center text-sm text-deep-500">لا توجد مصروفات مطابقة.</div> : <div className="divide-y divide-water-200/60">{expenses.map(expense => <article key={expense.id} className="grid gap-3 p-4 md:grid-cols-[1.4fr_1fr_1fr_auto] md:items-center"><div><h3 className="font-bold text-deep-900">{expense.name}</h3><p className="mt-1 text-xs text-deep-500">{expense.category_label}{expense.note ? ` · ${expense.note}` : ''}</p></div><div><p className="text-xs text-deep-500">المبلغ</p><p className="font-bold text-red-600">{formatSubscriptionMoney(expense.amount_minor, currency)}</p></div><div><p className="text-xs text-deep-500">الدفع</p><p className="text-sm text-deep-700">{expense.expense_date} · {paymentMethodLabel(expense.payment_method)}</p></div>{!isAuditor && <div className="flex gap-2 md:justify-end"><button type="button" onClick={() => setEditingExpense(expense)} className="water-btn-outline rounded-lg px-3 py-1.5 text-xs">تعديل</button><button type="button" disabled={busy} onClick={() => void removeExpense(expense)} className="rounded-lg border border-red-200 px-3 py-1.5 text-xs text-red-600 dark:border-red-800">حذف</button></div>}</article>)}</div>}</div>
+      <div className="glass-card overflow-hidden rounded-2xl"><div className="flex items-center justify-between border-b border-water-200 p-4"><span className="font-bold text-deep-800">سجل المصروفات</span><span className="text-sm font-bold text-red-600">{formatSubscriptionMoney(expenses.reduce((sum, item) => sum + item.amount_minor, 0), currency)}</span></div>{expenses.length === 0 ? <div className="p-10 text-center text-sm text-deep-500">لا توجد مصروفات مطابقة.</div> : <div className="divide-y divide-water-200/60">{expenses.map(expense => <article key={expense.id} className="grid gap-3 p-4 md:grid-cols-[1.4fr_1fr_1fr_auto] md:items-center"><div><h3 className="font-bold text-deep-900">{expense.name}</h3><p className="mt-1 text-xs text-deep-500">{expense.category_label}{expense.note ? ` · ${expense.note}` : ''}</p></div><div><p className="text-xs text-deep-500">المبلغ</p><p className="font-bold text-red-600">{formatSubscriptionMoney(expense.amount_minor, currency)}</p></div><div><p className="text-xs text-deep-500">الدفع</p><p className="text-sm text-deep-700">{expense.expense_date} · {paymentMethodLabel(expense.payment_method)}</p></div>{!isAuditor && <div className="flex gap-2 md:justify-end"><button type="button" onClick={() => setEditingExpense(expense)} className="water-btn-outline rounded-xl px-3 py-1.5 text-xs">تعديل</button><button type="button" disabled={busy} onClick={() => void removeExpense(expense)} className="rounded-xl border border-red-200 px-3 py-1.5 text-xs text-red-600 dark:border-red-800">حذف</button></div>}</article>)}</div>}</div>
     </section>}
 
     {payingRecord && <Modal title={`سداد اشتراك — ${payingRecord.student_name}`} onClose={() => setPayingRecord(null)}><PaymentForm count={1} totalMinor={payingRecord.fee_minor} currency={currency} defaultDate={selectedEntryDate} busy={busy} onCancel={() => setPayingRecord(null)} onSubmit={data => submitPayment([payingRecord.id], data)} /></Modal>}
@@ -645,11 +646,11 @@ export default function SubscriptionsPage() {
         <label className="flex items-center gap-2 rounded-xl border border-water-200 p-3 text-sm font-medium text-deep-700"><input type="checkbox" checked={settingsEnabled} onChange={event => setSettingsEnabled(event.target.checked)} /> الاشتراكات مفعلة</label>
       </section>
       <section className="border-t border-water-200 pt-5">
-        <div className="flex items-center justify-between gap-3"><div><h3 className="font-bold text-deep-900">تصنيفات المصروفات</h3><p className="mt-1 text-xs text-deep-500">عطّل التصنيف للاحتفاظ بالسجلات السابقة.</p></div><button type="button" onClick={() => setExpenseCategories(current => [...current, { id: `custom_${globalThis.crypto?.randomUUID?.().replaceAll('-', '') || Date.now()}`, label: 'تصنيف جديد', enabled: true }])} className="water-btn-outline shrink-0 rounded-lg px-3 py-2 text-xs font-semibold">إضافة</button></div>
+        <div className="flex items-center justify-between gap-3"><div><h3 className="font-bold text-deep-900">تصنيفات المصروفات</h3><p className="mt-1 text-xs text-deep-500">عطّل التصنيف للاحتفاظ بالسجلات السابقة.</p></div><button type="button" onClick={() => setExpenseCategories(current => [...current, { id: `custom_${globalThis.crypto?.randomUUID?.().replaceAll('-', '') || Date.now()}`, label: 'تصنيف جديد', enabled: true }])} className="water-btn-outline shrink-0 rounded-xl px-3 py-2 text-xs font-semibold">إضافة</button></div>
         <div className="mt-3 grid gap-2">{expenseCategories.map((category, index) => <div key={category.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-water-200 p-2">
-          <input required value={category.label} onChange={event => setExpenseCategories(current => current.map(item => item.id === category.id ? { ...item, label: event.target.value } : item))} className="surface-field min-w-36 flex-1 rounded-lg px-3 py-2 text-sm" aria-label={`اسم التصنيف ${index + 1}`} />
-          <button type="button" disabled={index === 0} onClick={() => setExpenseCategories(current => { const next = [...current]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; return next })} className="rounded-lg border border-water-200 px-2 py-1 disabled:opacity-30" aria-label="تحريك لأعلى">↑</button>
-          <button type="button" disabled={index === expenseCategories.length - 1} onClick={() => setExpenseCategories(current => { const next = [...current]; [next[index], next[index + 1]] = [next[index + 1], next[index]]; return next })} className="rounded-lg border border-water-200 px-2 py-1 disabled:opacity-30" aria-label="تحريك لأسفل">↓</button>
+          <input required value={category.label} onChange={event => setExpenseCategories(current => current.map(item => item.id === category.id ? { ...item, label: event.target.value } : item))} className="surface-field min-w-36 flex-1 rounded-xl px-3 py-2 text-sm" aria-label={`اسم التصنيف ${index + 1}`} />
+          <button type="button" disabled={index === 0} onClick={() => setExpenseCategories(current => { const next = [...current]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; return next })} className="rounded-xl border border-water-200 px-2 py-1 disabled:opacity-30" aria-label="تحريك لأعلى">↑</button>
+          <button type="button" disabled={index === expenseCategories.length - 1} onClick={() => setExpenseCategories(current => { const next = [...current]; [next[index], next[index + 1]] = [next[index + 1], next[index]]; return next })} className="rounded-xl border border-water-200 px-2 py-1 disabled:opacity-30" aria-label="تحريك لأسفل">↓</button>
           <label className="flex items-center gap-1 text-xs text-deep-600"><input type="checkbox" checked={category.enabled} onChange={event => setExpenseCategories(current => current.map(item => item.id === category.id ? { ...item, enabled: event.target.checked } : item))} /> مفعّل</label>
         </div>)}</div>
       </section>

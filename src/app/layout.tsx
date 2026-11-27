@@ -2,213 +2,97 @@
 
 import './globals.css'
 import { Cairo } from 'next/font/google'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
 import type { User } from '@/lib/types'
+import { CurrentUserContext } from '@/lib/current-user'
+import { toast } from '@/lib/ui-feedback'
 import FeedbackButton from '@/components/FeedbackButton'
+import FeedbackHost from '@/components/FeedbackHost'
 import PwaRegistration from '@/components/PwaRegistration'
-import RegistrationNotifications from '@/components/RegistrationNotifications'
+import TahfizSwitcher from '@/components/TahfizSwitcher'
+import Icon from '@/components/Icon'
+import { BrandMark, DesktopNavLinks, MobileBottomNav, SESSION_SECTION_TABS, SectionTabs, ThemeToggle } from '@/components/AppNavigation'
 import TahfizInitialSettingsFields, { DEFAULT_INITIAL_TAHFIZ_SETTINGS, type TahfizInitialSettings } from '@/components/TahfizInitialSettingsFields'
 
 const cairoFont = Cairo({ subsets: ['arabic'], display: 'swap', variable: '--font-cairo' })
 
-type NavIconName = 'home' | 'sessions' | 'attendance' | 'finance' | 'manage' | 'settings' | 'trips' | 'competitions'
+/** Applies the saved theme before first paint so dark mode never flashes light. */
+const THEME_INIT_SCRIPT = `try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark')}}catch(e){}`
 
-function NavIcon({ name }: { name: NavIconName }) {
-  const paths: Record<NavIconName, React.ReactNode> = {
-    home: <><path d="M3 11.5 12 4l9 7.5" /><path d="M5.5 10v10h13V10M9.5 20v-6h5v6" /></>,
-    sessions: <><rect x="4" y="5.5" width="16" height="14" rx="2" /><path d="M8 3v5M16 3v5M4 10h16M8 14h3M8 17h7" /></>,
-    trips: <><path d="M4 16h16M5 16V7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v9M5 11h14M9 5v6" /><circle cx="7" cy="18" r="2" /><circle cx="17" cy="18" r="2" /></>,
-    competitions: <><path d="M8 4h8v5a4 4 0 0 1-8 0V4ZM8 6H5v1a3 3 0 0 0 3 3M16 6h3v1a3 3 0 0 1-3 3M12 13v4M8.5 20h7M9.5 17h5v3h-5z" /></>,
-    attendance: <><path d="M9 5H6a2 2 0 0 0-2 2v12h13v-3" /><path d="M9 3h6v4H9zM9 12l2.2 2.2L20 6" /></>,
-    finance: <><rect x="3" y="6" width="18" height="14" rx="2" /><path d="M16 10h5v6h-5a3 3 0 0 1 0-6ZM7 6V4h10v2" /><circle cx="16.5" cy="13" r=".7" fill="currentColor" stroke="none" /></>,
-    manage: <><circle cx="9" cy="8" r="3" /><path d="M3.5 20v-2a5.5 5.5 0 0 1 11 0v2M17 8h4M19 6v4M17 15h4" /></>,
-    settings: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21H9.6v-.09A1.7 1.7 0 0 0 8.5 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.6-1H3v-4h.09A1.7 1.7 0 0 0 4.6 8.5a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.51V3h4v.09A1.7 1.7 0 0 0 15.5 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.1.4.32.75.6 1 .3.25.68.39 1.09.4H21v4h-.09A1.7 1.7 0 0 0 19.4 15Z" /></>,
-  }
+const PAGE_TITLES: [prefix: string, title: string][] = [
+  ['/dashboard', 'الرئيسية'],
+  ['/sessions/', 'تسجيل الحضور'],
+  ['/sessions', 'الحلقات'],
+  ['/attendance', 'سجل الحضور'],
+  ['/reports', 'التقارير'],
+  ['/competitions', 'المسابقات'],
+  ['/trips', 'الرحلات'],
+  ['/finance', 'القسم المالي'],
+  ['/subscriptions', 'الاشتراكات'],
+  ['/manage', 'الإدارة'],
+  ['/settings', 'الإعدادات'],
+  ['/audit-log', 'سجل التدقيق'],
+  ['/students/', 'ملف الطالب'],
+  ['/registration', 'التسجيل'],
+  ['/plan', 'خطة الحفظ'],
+  ['/platform', 'إدارة المنصة'],
+  ['/login', 'تسجيل الدخول'],
+  ['/signup', 'إنشاء حساب'],
+  ['/invite/', 'دعوة'],
+  ['/register/', 'تسجيل طالب'],
+  ['/pending', 'حالة طلب التحفيظ'],
+]
 
+function pageTitle(pathname: string) {
+  const match = PAGE_TITLES.find(([prefix]) => pathname === prefix || (prefix.endsWith('/') ? pathname.startsWith(prefix) : pathname.startsWith(`${prefix}/`)))
+  return match ? `${match[1]} — زمزم` : 'زمزم'
+}
+
+function SharedHead({ title, children }: { title: string; children?: React.ReactNode }) {
   return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      {paths[name]}
-    </svg>
+    <head>
+      <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      <title>{title}</title>
+      <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+      <link rel="manifest" href="/manifest.webmanifest" />
+      <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+      <meta name="theme-color" content="#0891b2" />
+      <meta name="mobile-web-app-capable" content="yes" />
+      <meta name="apple-mobile-web-app-capable" content="yes" />
+      <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+      <meta name="apple-mobile-web-app-title" content="زمزم" />
+      <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+      {children}
+    </head>
   )
 }
 
-function ThemeToggle() {
-  const [dark, setDark] = useState(false)
-
-  useEffect(() => {
-    const stored = localStorage.getItem('theme')
-    if (stored === 'dark' || (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-      document.documentElement.classList.add('dark')
-      setDark(true)
-    }
-  }, [])
-
-  const toggle = useCallback(() => {
-    const next = !dark
-    setDark(next)
-    document.documentElement.classList.toggle('dark', next)
-    localStorage.setItem('theme', next ? 'dark' : 'light')
-  }, [dark])
-
+/** Placeholder shown only while the signed-in user is first loaded. */
+function AppSkeleton() {
   return (
-    <button
-      onClick={toggle}
-      className="nav-icon-btn"
-      title={dark ? 'الوضع النهاري' : 'الوضع الليلي'}
-      aria-label={dark ? 'تفعيل الوضع النهاري' : 'تفعيل الوضع الليلي'}
-    >
-      {dark ? (
-        <svg className="w-5 h-5 text-yellow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-        </svg>
-      ) : (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-        </svg>
-      )}
-    </button>
-  )
-}
-
-function TahfizSwitcher({
-  user,
-  onSwitch,
-  onCreate,
-  switchingId,
-}: {
-  user: User
-  onSwitch: (tahfizId: number) => void
-  onCreate: () => void
-  switchingId: number | null
-}) {
-  const [open, setOpen] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const memberships = user.memberships || []
-  const current = memberships.find(membership => membership.tahfiz_id === user.tahfiz_id)
-
-  useEffect(() => {
-    if (!open) return
-    const closeOnOutsideClick = (event: MouseEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) setOpen(false)
-    }
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('mousedown', closeOnOutsideClick)
-    document.addEventListener('keydown', closeOnEscape)
-    return () => {
-      document.removeEventListener('mousedown', closeOnOutsideClick)
-      document.removeEventListener('keydown', closeOnEscape)
-    }
-  }, [open])
-
-  if (!current) return null
-
-  return (
-    <div ref={containerRef} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen(value => !value)}
-        aria-expanded={open}
-        aria-haspopup="menu"
-        className={`group flex min-w-0 items-center gap-2 rounded-xl border px-2 py-1.5 text-right transition sm:px-2.5 ${
-          open
-            ? 'border-cyan-400 bg-cyan-50 shadow-md shadow-cyan-900/10 dark:border-cyan-600 dark:bg-cyan-950/70'
-            : 'border-water-200/80 bg-white/55 hover:border-cyan-300 hover:bg-white/80 dark:border-slate-700 dark:bg-slate-900/45 dark:hover:border-cyan-700'
-        }`}
-      >
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-cyan-500 to-teal-600 text-sm text-white shadow-sm">
-          {current.tahfiz_name.trim().charAt(0)}
-        </span>
-        <span className="min-w-0">
-          <span className="hidden text-[10px] font-semibold leading-none text-deep-400 sm:block">التحفيظ الحالي</span>
-          <span className="block max-w-24 truncate text-xs font-bold text-deep-800 sm:mt-1 sm:max-w-40 sm:text-sm">{current.tahfiz_name}</span>
-        </span>
-        <svg className={`h-4 w-4 shrink-0 text-deep-400 transition-transform ${open ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-          <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z" clipRule="evenodd" />
-        </svg>
-      </button>
-
-      {open && (
-        <div role="menu" className="absolute end-0 top-full z-[70] mt-2 w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-water-200 bg-white/95 p-2 shadow-2xl shadow-slate-900/20 backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/95">
-          <div className="px-3 pb-2 pt-1">
-            <p className="text-sm font-bold text-deep-900">التبديل بين التحفيظات</p>
-            <p className="mt-0.5 text-[11px] text-deep-500">ستتغير البيانات والحلقات حسب التحفيظ المختار</p>
-          </div>
-          <div className="space-y-1" role="none">
-            {memberships.map(membership => {
-              const isCurrent = membership.tahfiz_id === user.tahfiz_id
-              const isAvailable = membership.tahfiz_status === 'active'
-              return (
-                <button
-                  key={membership.id}
-                  type="button"
-                  role="menuitem"
-                  disabled={!isAvailable || switchingId !== null}
-                  onClick={() => {
-                    setOpen(false)
-                    onSwitch(membership.tahfiz_id)
-                  }}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-right transition disabled:cursor-not-allowed disabled:opacity-45 ${
-                    isCurrent
-                      ? 'bg-cyan-50 ring-1 ring-inset ring-cyan-200 dark:bg-cyan-950/50 dark:ring-cyan-800'
-                      : 'hover:bg-water-50 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl text-sm font-bold ${
-                    isCurrent ? 'bg-cyan-600 text-white' : 'bg-water-100 text-blue-700 dark:bg-slate-800 dark:text-blue-300'
-                  }`}>
-                    {membership.tahfiz_name.trim().charAt(0)}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-bold text-deep-900">{membership.tahfiz_name}</span>
-                    <span className="mt-1 flex items-center gap-1.5">
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                        membership.role === 'admin'
-                          ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-200'
-                          : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200'
-                      }`}>
-                        {membership.role === 'admin' ? 'مدير' : 'شيخ'}
-                      </span>
-                      {!isAvailable && <span className="text-[10px] text-red-500">غير نشط</span>}
-                    </span>
-                  </span>
-                  {switchingId === membership.tahfiz_id ? (
-                    <span className="h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-cyan-200 border-t-cyan-600" aria-label="جاري التبديل" />
-                  ) : isCurrent && (
-                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-cyan-600 text-xs font-bold text-white" aria-label="التحفيظ الحالي">✓</span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              setOpen(false)
-              onCreate()
-            }}
-            className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-cyan-300 px-3 py-2.5 text-sm font-bold text-blue-700 hover:bg-cyan-50 dark:border-cyan-700 dark:text-blue-300 dark:hover:bg-cyan-950/40"
-          >
-            <span aria-hidden="true">＋</span> إنشاء تحفيظ جديد
-          </button>
-        </div>
-      )}
+    <div role="status" aria-label="جاري التحميل">
+      <div className="nav-glass sticky top-0 z-40 h-[3.75rem]" />
+      <div className="mx-auto max-w-6xl p-3 sm:p-4 md:p-6"><div className="page-loading" /></div>
     </div>
   )
 }
 
+function clearSessionStorage() {
+  localStorage.removeItem('token')
+  localStorage.removeItem('user')
+  localStorage.removeItem('active_tahfiz_id')
+  localStorage.removeItem('active_tahfiz_name')
+  localStorage.removeItem('support_tahfiz_id')
+  localStorage.removeItem('support_tahfiz_name')
+}
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
   const [supportName, setSupportName] = useState('')
   const [switchingTahfizId, setSwitchingTahfizId] = useState<number | null>(null)
-  const [switchError, setSwitchError] = useState('')
-  const [workspaceNotice, setWorkspaceNotice] = useState('')
   const [showCreateTahfiz, setShowCreateTahfiz] = useState(false)
   const [newTahfizName, setNewTahfizName] = useState('')
   const [newTahfizPhone, setNewTahfizPhone] = useState('')
@@ -218,6 +102,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const [createTahfizError, setCreateTahfizError] = useState('')
   const router = useRouter()
   const pathname = usePathname()
+  const lastValidatedPath = useRef<string | null>(null)
 
   const isLoginPage = pathname === '/login'
   const isSignupPage = pathname === '/signup'
@@ -228,20 +113,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const isPublicAuthPage = isLoginPage || isSignupPage || isInvitePage || isPlanPage || pathname.startsWith('/register/') || isLeaderboardPage
   const isLandingPage = pathname === '/'
   const isDedicatedPlatform = pathname === '/platform'
-  const isActive = (href: string) => pathname === href || (href !== '/dashboard' && pathname.startsWith(`${href}/`))
-  const navLinkClass = (href: string) => `nav-link ${isActive(href) ? 'nav-link-active' : ''}`
+  const isSessionDetail = pathname.startsWith('/sessions/')
+  const needsUser = !isPublicAuthPage && !isLandingPage
+  const title = pageTitle(pathname)
+  const homeHref = isDedicatedPlatform ? '/platform' : user?.role === 'auditor' ? '/finance' : '/dashboard'
+
   const logout = async () => {
     try {
       await api.logout()
     } catch {
       // Clear local presentation state even if the session already expired.
     }
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    localStorage.removeItem('active_tahfiz_id')
-    localStorage.removeItem('active_tahfiz_name')
-    localStorage.removeItem('support_tahfiz_id')
-    localStorage.removeItem('support_tahfiz_name')
+    clearSessionStorage()
+    setUser(null)
+    lastValidatedPath.current = null
     router.push('/login')
   }
 
@@ -249,7 +134,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     const membership = user?.memberships?.find(item => item.tahfiz_id === tahfizId)
     if (!membership || membership.tahfiz_status !== 'active' || tahfizId === user?.tahfiz_id) return
     setSwitchingTahfizId(tahfizId)
-    setSwitchError('')
     try {
       await api.setDefaultTahfiz(tahfizId)
       localStorage.setItem('active_tahfiz_id', String(tahfizId))
@@ -262,7 +146,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         window.location.reload()
       }
     } catch (error: any) {
-      setSwitchError(error.message || 'تعذر تبديل التحفيظ')
+      toast(error.message || 'تعذر تبديل التحفيظ', { tone: 'error' })
       setSwitchingTahfizId(null)
     }
   }
@@ -286,7 +170,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       setNewTahfizPhone('')
       setNewTahfizStep(1)
       setNewTahfizSettings({ ...DEFAULT_INITIAL_TAHFIZ_SETTINGS })
-      setWorkspaceNotice('تم إرسال طلب التحفيظ الجديد للمراجعة. سيظهر للتبديل بعد اعتماده.')
+      toast('تم إرسال طلب التحفيظ الجديد للمراجعة. سيظهر للتبديل بعد اعتماده.', { tone: 'success', duration: 8000 })
     } catch (error: any) {
       setCreateTahfizError(error.message || 'تعذر إنشاء التحفيظ')
     } finally {
@@ -294,243 +178,163 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     }
   }
 
-  const mobileNavItems: { href: string; label: string; icon: NavIconName; adminOnly?: boolean }[] = [
-    { href: '/dashboard', label: 'الرئيسية', icon: 'home' },
-    { href: '/sessions', label: 'الحلقات', icon: 'sessions' },
-    { href: '/competitions', label: 'المسابقات', icon: 'competitions' },
-    { href: '/trips', label: 'الرحلات', icon: 'trips', adminOnly: true },
-    { href: '/finance', label: 'القسم المالي', icon: 'finance', adminOnly: true },
-    { href: '/manage', label: 'الإدارة', icon: 'manage', adminOnly: true },
-    { href: '/settings', label: 'الإعدادات', icon: 'settings', adminOnly: true },
-  ]
+  const openCreateTahfiz = () => {
+    setCreateTahfizError('')
+    setNewTahfizStep(1)
+    setShowCreateTahfiz(true)
+  }
 
+  // Load the user once for the signed-in area, then revalidate quietly on each
+  // navigation so an expired session still returns to the login page without
+  // blanking the navigation and page while the request runs.
   useEffect(() => {
     setSupportName(localStorage.getItem('support_tahfiz_name') || '')
-    if (isPublicAuthPage || isLandingPage) {
-      setLoading(false)
-      return
-    }
-    setLoading(true)
+    if (!needsUser || lastValidatedPath.current === pathname) return
+    lastValidatedPath.current = pathname
+    let alive = true
     api.getMe()
       .then((u) => {
+        if (!alive) return
         setUser(u)
         localStorage.setItem('user', JSON.stringify(u))
         if (u.role !== 'super_admin' && u.tahfiz_id) {
           localStorage.setItem('active_tahfiz_id', String(u.tahfiz_id))
           if (u.tahfiz?.name) localStorage.setItem('active_tahfiz_name', u.tahfiz.name)
         }
-        if (u.role === 'super_admin') {
-          if (!localStorage.getItem('support_tahfiz_id') && pathname !== '/platform') router.replace('/platform')
-        } else if (u.tahfiz?.status !== 'active' && pathname !== '/pending') {
-          router.replace('/pending')
-        } else if (u.tahfiz?.status === 'active' && isPendingPage) {
-          router.replace(u.role === 'auditor' ? '/finance' : '/dashboard')
-        } else if (u.role === 'auditor' && pathname !== '/finance') {
-          router.replace('/finance')
-        }
       })
       .catch(() => {
+        if (!alive) return
         setUser(null)
+        lastValidatedPath.current = null
         localStorage.removeItem('token')
         localStorage.removeItem('user')
         const nextPath = pathname.startsWith('/invite/') ? `?next=${encodeURIComponent(pathname)}` : ''
         router.push(`/login${nextPath}`)
       })
-      .finally(() => setLoading(false))
-  }, [pathname, router, isPublicAuthPage, isLandingPage, isLoginPage, isPendingPage])
+    return () => { alive = false }
+  }, [pathname, router, needsUser])
 
-  if (isPublicAuthPage) {
+  // Role and tahfiz-status routing, applied on every navigation from the cached user.
+  useEffect(() => {
+    if (!user || !needsUser) return
+    if (user.role === 'super_admin') {
+      if (!localStorage.getItem('support_tahfiz_id') && pathname !== '/platform') router.replace('/platform')
+    } else if (user.tahfiz?.status !== 'active' && pathname !== '/pending') {
+      router.replace('/pending')
+    } else if (user.tahfiz?.status === 'active' && isPendingPage) {
+      router.replace(user.role === 'auditor' ? '/finance' : '/dashboard')
+    } else if (user.role === 'auditor' && pathname !== '/finance') {
+      router.replace('/finance')
+    }
+  }, [user, pathname, router, needsUser, isPendingPage])
+
+  if (isPublicAuthPage || isLandingPage || isPendingPage) {
     return (
       <html lang="ar" dir="rtl" suppressHydrationWarning>
-        <head>
-          <title>زمزم</title>
-          <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-          <link rel="manifest" href="/manifest.webmanifest" />
-          <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-          <meta name="theme-color" content="#0891b2" />
-          <meta name="mobile-web-app-capable" content="yes" />
-          <meta name="apple-mobile-web-app-capable" content="yes" />
-          <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-          <meta name="apple-mobile-web-app-title" content="زمزم" />
-          <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <SharedHead title={isLandingPage ? 'زمزم — رفيق رحلتكم مع القرآن' : title}>
+          {isLandingPage && <meta name="description" content="مساحة عربية لإدارة حلقات تحفيظ القرآن. نظّم الحلقات والطلاب، سجّل الحضور، وتابع خطط الحفظ والمراجعة والتقارير مع زمزم." />}
           {/* Leaderboards list children's names: shareable by link, never indexed. */}
           {isLeaderboardPage && <meta name="robots" content="noindex, nofollow" />}
-        </head>
-        <body className={`${cairoFont.variable} font-cairo`}><PwaRegistration />{children}</body>
-      </html>
-    )
-  }
-
-  if (isPendingPage) {
-    return (
-      <html lang="ar" dir="rtl" suppressHydrationWarning>
-        <head><title>حالة طلب التحفيظ — زمزم</title><meta name="viewport" content="width=device-width, initial-scale=1" /></head>
-        <body className={`${cairoFont.variable} font-cairo`}><PwaRegistration />{children}</body>
-      </html>
-    )
-  }
-
-  if (isLandingPage) {
-    return (
-      <html lang="ar" dir="rtl" suppressHydrationWarning>
-        <head>
-          <title>زمزم — رفيق رحلتكم مع القرآن</title>
-          <meta name="description" content="مساحة عربية لإدارة حلقات تحفيظ القرآن. نظّم الحلقات والطلاب، سجّل الحضور، وتابع خطط الحفظ والمراجعة والتقارير مع زمزم." />
-          <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-          <link rel="manifest" href="/manifest.webmanifest" />
-          <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-          <meta name="theme-color" content="#0891b2" />
-          <meta name="mobile-web-app-capable" content="yes" />
-          <meta name="apple-mobile-web-app-capable" content="yes" />
-          <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-          <meta name="apple-mobile-web-app-title" content="زمزم" />
-          <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        </head>
+        </SharedHead>
         <body className={`${cairoFont.variable} font-cairo`}>
           <PwaRegistration />
+          <FeedbackHost />
           {children}
         </body>
       </html>
     )
   }
 
+  const showSectionTabs = user?.role !== 'auditor' && SESSION_SECTION_TABS.some(item => item.href === pathname)
+
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
-      <head>
-        <title>زمزم</title>
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-        <link rel="manifest" href="/manifest.webmanifest" />
-        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-        <meta name="theme-color" content="#0891b2" />
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="زمزم" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-      </head>
+      <SharedHead title={title} />
       <body className={`${cairoFont.variable} font-cairo`}>
         <PwaRegistration />
-        {!loading && user && (
-          <>
-          <header className="mobile-topbar nav-glass md:hidden sticky top-0 z-40">
-            <Link href={isDedicatedPlatform ? '/platform' : user.role === 'auditor' ? '/finance' : '/dashboard'} className="nav-brand" aria-label="الصفحة الرئيسية">
-              <span className="nav-brand-mark">💧</span> زمزم
-            </Link>
-            <div className="flex items-center gap-2">
-              {user.role !== 'auditor' && <TahfizSwitcher user={user} onSwitch={switchTahfiz} onCreate={() => { setCreateTahfizError(''); setNewTahfizStep(1); setShowCreateTahfiz(true) }} switchingId={switchingTahfizId} />}
-              <ThemeToggle />
-              <button onClick={logout} className="nav-icon-btn" title="تسجيل الخروج" aria-label="تسجيل الخروج">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 17l5-5-5-5M15 12H3M14 4h5a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5" />
-                </svg>
-              </button>
-            </div>
-          </header>
-          <nav className="nav-glass hidden md:block px-6 py-3 sticky top-0 z-40" aria-label="التنقل الرئيسي">
-            <div className="max-w-6xl mx-auto flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-2 md:gap-3 flex-wrap">
-              <Link href={isDedicatedPlatform ? '/platform' : user.role === 'auditor' ? '/finance' : '/dashboard'} className="nav-brand">
-                <span className="nav-brand-mark">💧</span> زمزم
+        <FeedbackHost />
+        {!user ? <AppSkeleton /> : (
+          <CurrentUserContext.Provider value={user}>
+            <header className="mobile-topbar nav-glass md:hidden sticky top-0 z-40">
+              <Link href={homeHref} className="nav-brand" aria-label="الصفحة الرئيسية">
+                <BrandMark /> زمزم
               </Link>
-              {user?.role === 'super_admin' && isDedicatedPlatform ? (
-                <span className="nav-link nav-link-active">إدارة المنصة</span>
-              ) : (
-                <>
-                  {user?.role !== 'auditor' && <Link href="/sessions" className={navLinkClass('/sessions')} aria-current={isActive('/sessions') ? 'page' : undefined}>الحلقات</Link>}
-                  {user?.role !== 'auditor' && <Link href="/competitions" className={navLinkClass('/competitions')} aria-current={isActive('/competitions') ? 'page' : undefined}>المسابقات</Link>}
-                  {(user?.role === 'admin' || user?.role === 'super_admin') && <Link href="/trips" className={navLinkClass('/trips')} aria-current={isActive('/trips') ? 'page' : undefined}>الرحلات</Link>}
-                  {(user?.role === 'admin' || user?.role === 'super_admin' || user?.role === 'auditor') && <Link href="/finance" className={navLinkClass('/finance')} aria-current={isActive('/finance') ? 'page' : undefined}>القسم المالي</Link>}
-                  {(user?.role === 'admin' || user?.role === 'super_admin') && <Link href="/manage" className={navLinkClass('/manage')} aria-current={isActive('/manage') ? 'page' : undefined}>الإدارة<RegistrationNotifications tenantId={user.tahfiz_id} /></Link>}
-                  {(user?.role === 'admin' || user?.role === 'super_admin') && <Link href="/settings" className={navLinkClass('/settings')} aria-current={isActive('/settings') ? 'page' : undefined}>إعدادات التحفيظ</Link>}
-                  {user?.role === 'super_admin' && <Link href="/platform" className={navLinkClass('/platform')} aria-current={isActive('/platform') ? 'page' : undefined}>المنصة</Link>}
-                </>
-              )}
-            </div>
-            <div className="flex items-center gap-2 md:gap-3">
-              {user.role !== 'auditor' && <TahfizSwitcher user={user} onSwitch={switchTahfiz} onCreate={() => { setCreateTahfizError(''); setNewTahfizStep(1); setShowCreateTahfiz(true) }} switchingId={switchingTahfizId} />}
-              <ThemeToggle />
-              <span className="nav-username">{user.username}</span>
-              <button
-                onClick={logout}
-                className="nav-action"
-              >
-                تسجيل الخروج
-              </button>
-            </div>
-            </div>
-          </nav>
-          {!isDedicatedPlatform && <nav className="mobile-bottom-nav md:hidden" aria-label="التنقل الرئيسي">
-            {mobileNavItems.filter((item) => user.role === 'auditor' ? item.href === '/finance' : !item.adminOnly || user.role === 'admin' || user.role === 'super_admin').map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`mobile-nav-item ${isActive(item.href) ? 'mobile-nav-item-active' : ''}`}
-                aria-current={isActive(item.href) ? 'page' : undefined}
-              >
-                <NavIcon name={item.icon} />
-                <span>{item.label}{item.href === '/manage' && <RegistrationNotifications tenantId={user.tahfiz_id} />}</span>
-              </Link>
-            ))}
-          </nav>}
-          {!isDedicatedPlatform && user.tahfiz && (
-            <div className="border-b border-cyan-200/70 bg-cyan-50/85 px-4 py-1.5 text-center text-xs font-semibold text-blue-900 dark:border-cyan-900 dark:bg-cyan-950/70 dark:text-blue-100">
-              تعمل الآن داخل: <span className="font-bold">{user.tahfiz.name}</span>
-              {switchingTahfizId && <span className="mr-2">— جاري التبديل…</span>}
-            </div>
-          )}
-          </>
-        )}
-        {switchError && (
-          <div role="alert" className="bg-red-50 px-4 py-2 text-center text-sm font-semibold text-red-700 dark:bg-red-950/70 dark:text-red-200">
-            {switchError}
-          </div>
-        )}
-        {workspaceNotice && (
-          <div role="status" className="bg-cyan-50 px-4 py-2 text-center text-sm font-semibold text-blue-800 dark:bg-cyan-950/70 dark:text-blue-100">
-            {workspaceNotice}
-          </div>
-        )}
-        {showCreateTahfiz && (
-          <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/35 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="create-tahfiz-title" onClick={() => !creatingTahfiz && setShowCreateTahfiz(false)}>
-            <form onSubmit={createTahfiz} className={`glass-strong max-h-[90vh] w-full overflow-y-auto rounded-2xl p-6 ${newTahfizStep === 2 ? 'max-w-2xl' : 'max-w-md'}`} onClick={(event) => event.stopPropagation()}>
-              <h2 id="create-tahfiz-title" className="text-xl font-bold text-deep-900">إنشاء تحفيظ جديد</h2>
-              <p className="mt-2 text-sm text-deep-500">{newTahfizStep === 1 ? 'أدخل البيانات الأساسية. سيُربط التحفيظ بحسابك بصلاحية مدير.' : 'اضبط الحالات وأسماء الحلقات قبل إرسال الطلب.'}</p>
-              <div className="mt-4 flex gap-2" aria-label={`الخطوة ${newTahfizStep} من 2`}><span className="h-1.5 flex-1 rounded-full bg-cyan-600" /><span className={`h-1.5 flex-1 rounded-full ${newTahfizStep === 2 ? 'bg-cyan-600' : 'bg-slate-200 dark:bg-slate-700'}`} /></div>
-              {newTahfizStep === 1 && <>
-              <label className="mt-4 grid gap-1 text-sm font-semibold text-deep-700">
-                اسم التحفيظ
-                <input autoFocus required minLength={2} maxLength={100} value={newTahfizName} onChange={(event) => setNewTahfizName(event.target.value)} className="surface-field rounded-xl px-3 py-2.5" />
-              </label>
-              <label className="mt-3 grid gap-1 text-sm font-semibold text-deep-700">
-                رقم التواصل <span className="text-xs font-normal text-deep-400">(اختياري)</span>
-                <input type="tel" maxLength={20} value={newTahfizPhone} onChange={(event) => setNewTahfizPhone(event.target.value)} className="surface-field rounded-xl px-3 py-2.5" />
-              </label>
-              </>}
-              {newTahfizStep === 2 && <div className="mt-4"><TahfizInitialSettingsFields value={newTahfizSettings} onChange={setNewTahfizSettings} /></div>}
-              {createTahfizError && <p role="alert" className="mt-3 text-sm font-semibold text-red-600">{createTahfizError}</p>}
-              <div className="mt-5 flex gap-3">
-                <button type="button" disabled={creatingTahfiz} onClick={() => newTahfizStep === 2 ? setNewTahfizStep(1) : setShowCreateTahfiz(false)} className="water-btn-outline flex-1 rounded-xl px-4 py-2 disabled:opacity-50">{newTahfizStep === 2 ? 'السابق' : 'إلغاء'}</button>
-                <button type="submit" disabled={creatingTahfiz || newTahfizName.trim().length < 2} className="water-btn flex-1 rounded-xl px-4 py-2 font-bold text-white disabled:opacity-50">{creatingTahfiz ? 'جاري الإنشاء…' : newTahfizStep === 1 ? 'التالي' : 'إرسال للمراجعة'}</button>
+              <div className="flex items-center gap-2">
+                {user.role !== 'auditor' && <TahfizSwitcher user={user} onSwitch={switchTahfiz} onCreate={openCreateTahfiz} switchingId={switchingTahfizId} />}
+                <ThemeToggle />
+                {user.role === 'auditor' || isDedicatedPlatform ? (
+                  <button type="button" onClick={logout} className="nav-icon-btn" title="تسجيل الخروج" aria-label="تسجيل الخروج">
+                    <Icon name="logout" />
+                  </button>
+                ) : null}
               </div>
-            </form>
-          </div>
+            </header>
+            <nav className="nav-glass hidden md:block px-6 py-3 sticky top-0 z-40" aria-label="التنقل الرئيسي">
+              <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
+                <div className="flex items-center gap-1 lg:gap-2 flex-wrap">
+                  <Link href={homeHref} className="nav-brand">
+                    <BrandMark /> زمزم
+                  </Link>
+                  {user.role === 'super_admin' && isDedicatedPlatform ? (
+                    <span className="nav-link nav-link-active">إدارة المنصة</span>
+                  ) : (
+                    <DesktopNavLinks user={user} pathname={pathname} />
+                  )}
+                </div>
+                <div className="flex items-center gap-2 md:gap-3">
+                  {user.role !== 'auditor' && <TahfizSwitcher user={user} onSwitch={switchTahfiz} onCreate={openCreateTahfiz} switchingId={switchingTahfizId} />}
+                  <ThemeToggle />
+                  <span className="nav-username hidden lg:inline">{user.username}</span>
+                  <button type="button" onClick={logout} className="nav-icon-btn" title="تسجيل الخروج" aria-label="تسجيل الخروج">
+                    <Icon name="logout" />
+                  </button>
+                </div>
+              </div>
+            </nav>
+            {!isDedicatedPlatform && <MobileBottomNav user={user} pathname={pathname} onLogout={logout} />}
+            {switchingTahfizId && (
+              <div role="status" className="border-b border-cyan-200/70 bg-cyan-50/85 px-4 py-1.5 text-center text-xs font-semibold text-blue-900 dark:border-cyan-900 dark:bg-cyan-950/70 dark:text-blue-100">
+                جاري التبديل إلى {user.memberships?.find(item => item.tahfiz_id === switchingTahfizId)?.tahfiz_name || 'التحفيظ'}…
+              </div>
+            )}
+            {user.role === 'super_admin' && supportName && !isDedicatedPlatform && (
+              <div className="bg-amber-100 text-amber-900 text-center text-sm py-2 px-4">
+                وضع الدعم: {supportName}
+                <button type="button" onClick={() => { localStorage.removeItem('support_tahfiz_id'); localStorage.removeItem('support_tahfiz_name'); setSupportName(''); router.push('/platform') }} className="font-bold underline mr-3">إنهاء الدعم</button>
+              </div>
+            )}
+            {showCreateTahfiz && (
+              <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/35 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="create-tahfiz-title" onClick={() => !creatingTahfiz && setShowCreateTahfiz(false)}>
+                <form onSubmit={createTahfiz} className={`glass-strong max-h-[90vh] w-full overflow-y-auto rounded-2xl p-6 ${newTahfizStep === 2 ? 'max-w-2xl' : 'max-w-md'}`} onClick={(event) => event.stopPropagation()}>
+                  <h2 id="create-tahfiz-title" className="text-xl font-bold text-deep-900">إنشاء تحفيظ جديد</h2>
+                  <p className="mt-2 text-sm text-deep-500">{newTahfizStep === 1 ? 'أدخل البيانات الأساسية. سيُربط التحفيظ بحسابك بصلاحية مدير.' : 'اضبط الحالات وأسماء الحلقات قبل إرسال الطلب.'}</p>
+                  <div className="mt-4 flex gap-2" aria-label={`الخطوة ${newTahfizStep} من 2`}><span className="h-1.5 flex-1 rounded-full bg-cyan-600" /><span className={`h-1.5 flex-1 rounded-full ${newTahfizStep === 2 ? 'bg-cyan-600' : 'bg-slate-200 dark:bg-slate-700'}`} /></div>
+                  {newTahfizStep === 1 && <>
+                  <label className="mt-4 grid gap-1 text-sm font-semibold text-deep-700">
+                    اسم التحفيظ
+                    <input autoFocus required minLength={2} maxLength={100} value={newTahfizName} onChange={(event) => setNewTahfizName(event.target.value)} className="surface-field rounded-xl px-3 py-2.5" />
+                  </label>
+                  <label className="mt-3 grid gap-1 text-sm font-semibold text-deep-700">
+                    رقم التواصل <span className="text-xs font-normal text-deep-400">(اختياري)</span>
+                    <input type="tel" maxLength={20} value={newTahfizPhone} onChange={(event) => setNewTahfizPhone(event.target.value)} className="surface-field rounded-xl px-3 py-2.5" />
+                  </label>
+                  </>}
+                  {newTahfizStep === 2 && <div className="mt-4"><TahfizInitialSettingsFields value={newTahfizSettings} onChange={setNewTahfizSettings} /></div>}
+                  {createTahfizError && <p role="alert" className="mt-3 text-sm font-semibold text-red-600">{createTahfizError}</p>}
+                  <div className="mt-5 flex gap-3">
+                    <button type="button" disabled={creatingTahfiz} onClick={() => newTahfizStep === 2 ? setNewTahfizStep(1) : setShowCreateTahfiz(false)} className="water-btn-outline flex-1 rounded-xl px-4 py-2 disabled:opacity-50">{newTahfizStep === 2 ? 'السابق' : 'إلغاء'}</button>
+                    <button type="submit" disabled={creatingTahfiz || newTahfizName.trim().length < 2} className="water-btn flex-1 rounded-xl px-4 py-2 font-bold text-white disabled:opacity-50">{creatingTahfiz ? 'جاري الإنشاء…' : newTahfizStep === 1 ? 'التالي' : 'إرسال للمراجعة'}</button>
+                  </div>
+                </form>
+              </div>
+            )}
+            <main className="app-main max-w-6xl mx-auto p-3 sm:p-4 md:p-6 relative z-10">
+              {showSectionTabs && <SectionTabs items={SESSION_SECTION_TABS} pathname={pathname} />}
+              {children}
+            </main>
+            {user.role !== 'super_admin' && user.role !== 'auditor' && !isSessionDetail && <FeedbackButton />}
+          </CurrentUserContext.Provider>
         )}
-        {!loading && user?.role === 'super_admin' && supportName && !isDedicatedPlatform && (
-          <div className="bg-amber-100 text-amber-900 text-center text-sm py-2 px-4">
-            وضع الدعم: {supportName}
-            <button onClick={() => { localStorage.removeItem('support_tahfiz_id'); localStorage.removeItem('support_tahfiz_name'); setSupportName(''); router.push('/platform') }} className="font-bold underline mr-3">إنهاء الدعم</button>
-          </div>
-        )}
-        <main className="app-main max-w-6xl mx-auto p-3 sm:p-4 md:p-6 relative z-10">
-          {loading ? (
-            <div className="flex justify-center items-center h-64">
-              <div className="animate-droplet rounded-full h-8 w-8 bg-water-400" />
-            </div>
-          ) : (
-            children
-          )}
-        </main>
-        {!loading && user && user.role !== 'super_admin' && user.role !== 'auditor' && <FeedbackButton />}
       </body>
     </html>
   )

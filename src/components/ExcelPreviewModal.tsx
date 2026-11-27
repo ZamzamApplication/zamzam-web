@@ -253,7 +253,7 @@ export default function ExcelPreviewModal({
                 type="button"
                 key={`${sheet.name}-${index}`}
                 onClick={() => setActiveIndex(index)}
-                className={`px-4 py-2 rounded-lg text-sm whitespace-nowrap ${activeIndex === index ? 'water-btn text-white' : 'water-btn-outline'}`}
+                className={`px-4 py-2 rounded-xl text-sm whitespace-nowrap ${activeIndex === index ? 'water-btn text-white' : 'water-btn-outline'}`}
               >
                 {sheet.name}
               </button>
@@ -317,8 +317,8 @@ export default function ExcelPreviewModal({
         {error && <div className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</div>}
         <div className="flex justify-end gap-3 mt-4">
           <div className="flex gap-2">
-            <button type="button" onClick={onClose} className="water-btn-outline rounded-lg px-4 py-2 text-sm">إلغاء</button>
-            <button type="button" onClick={exportWorkbook} disabled={exporting} className="water-btn text-white rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-50">
+            <button type="button" onClick={onClose} className="water-btn-outline rounded-xl px-4 py-2 text-sm">إلغاء</button>
+            <button type="button" onClick={exportWorkbook} disabled={exporting} className="water-btn text-white rounded-xl px-5 py-2 text-sm font-semibold disabled:opacity-50">
               {exporting ? 'جاري الإنشاء...' : 'تنزيل Excel'}
             </button>
           </div>

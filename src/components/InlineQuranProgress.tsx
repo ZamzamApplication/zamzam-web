@@ -65,9 +65,9 @@ export function createRequiredProgressDraft(studentId: number, sheikhId: number 
 function AyahSelect({ value, surah, onChange, label, disabled }: { value: number; surah: number; onChange: (value: number) => void; label: string; disabled: boolean }) {
   const count = surah > 0 ? surahInfo(surah).ayahs : 0
   return (
-    <label className="text-[11px] text-deep-500">
+    <label className="text-xs text-deep-500">
       {label}
-      <select value={count > 0 ? Math.min(Math.max(value, 1), count) : 0} onChange={(event) => onChange(Number(event.target.value))} disabled={disabled || count === 0} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm disabled:opacity-60">
+      <select value={count > 0 ? Math.min(Math.max(value, 1), count) : 0} onChange={(event) => onChange(Number(event.target.value))} disabled={disabled || count === 0} className="surface-field mt-1 w-full rounded-xl px-2 py-2 text-sm disabled:opacity-60">
         {count === 0 && <option value={0}>اختر السورة أولاً</option>}
         {Array.from({ length: count }, (_, index) => index + 1).map((ayah) => <option key={ayah} value={ayah}>{ayah}</option>)}
       </select>
@@ -116,9 +116,9 @@ export default function InlineQuranProgress({
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="text-sm font-bold text-deep-800">متابعة القرآن</p>
-          <p className="text-[11px] text-deep-500">راجع الورد المقترح تلقائياً ثم أضف التقييم.</p>
+          <p className="text-xs text-deep-500">راجع الورد المقترح تلقائياً ثم أضف التقييم.</p>
         </div>
-        <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${dirtyDrafts.length === 0 ? 'bg-slate-100 text-slate-600' : dirtyComplete ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{dirtyDrafts.length === 0 ? 'اختياري' : dirtyComplete ? '✓ جاهز للحفظ' : 'أكمل السجل المحدد'}</span>
+        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${dirtyDrafts.length === 0 ? 'bg-slate-100 text-slate-600' : dirtyComplete ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{dirtyDrafts.length === 0 ? 'اختياري' : dirtyComplete ? '✓ جاهز للحفظ' : 'أكمل السجل المحدد'}</span>
       </div>
 
       <div className="grid gap-2 lg:grid-cols-3">
@@ -134,58 +134,58 @@ export default function InlineQuranProgress({
             <div key={key} className="rounded-xl border border-cyan-300 bg-white/90 p-2.5 dark:border-cyan-700 dark:bg-slate-800/80">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-bold text-deep-700">{label}</span>
-                <span className={`rounded-lg px-2 py-1 text-[10px] ${isDirty ? 'bg-amber-50 text-amber-700' : isSaved ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{isDirty ? 'غير محفوظ' : isSaved ? '✓ محفوظ' : 'ابدأ عند الحاجة'}</span>
+                <span className={`rounded-xl px-2 py-1 text-xs ${isDirty ? 'bg-amber-50 text-amber-700' : isSaved ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{isDirty ? 'غير محفوظ' : isSaved ? '✓ محفوظ' : 'ابدأ عند الحاجة'}</span>
               </div>
               <div className="mt-2 grid grid-cols-2 gap-2">
-                <label className="col-span-2 text-[11px] text-deep-500">اتجاه الورد
-                  <select value={draft.direction || 'forward'} onChange={(event) => onChange({ ...draft, direction: event.target.value as 'forward' | 'backward', ...(draft.range_type === 'page' ? { to_page: draft.from_page } : { to_surah: fromSurah, to_ayah: draft.from_ayah }) })} disabled={disabled} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm">
+                <label className="col-span-2 text-xs text-deep-500">اتجاه الورد
+                  <select value={draft.direction || 'forward'} onChange={(event) => onChange({ ...draft, direction: event.target.value as 'forward' | 'backward', ...(draft.range_type === 'page' ? { to_page: draft.from_page } : { to_surah: fromSurah, to_ayah: draft.from_ayah }) })} disabled={disabled} className="surface-field mt-1 w-full rounded-xl px-2 py-2 text-sm">
                     <option value="forward">ترتيب المصحف</option><option value="backward">{draft.range_type === 'page' ? 'عكس ترتيب الصفحات' : 'عكس ترتيب السور'}</option>
                   </select>
                 </label>
-                {draft.direction === 'backward' && <p className="col-span-2 text-[11px] text-deep-500">{draft.range_type === 'page' ? 'تتناقص أرقام الصفحات مع تقدم الورد.' : 'السور بترتيب عكسي، والآيات داخل كل سورة بالترتيب الطبيعي.'}</p>}
+                {draft.direction === 'backward' && <p className="col-span-2 text-xs text-deep-500">{draft.range_type === 'page' ? 'تتناقص أرقام الصفحات مع تقدم الورد.' : 'السور بترتيب عكسي، والآيات داخل كل سورة بالترتيب الطبيعي.'}</p>}
                 {draft.range_type === 'page' ? (
                   <>
-                    <label className="text-[11px] text-deep-500">من صفحة
-                      <input type="number" min={1} max={604} value={draft.from_page || 1} onChange={(event) => onChange({ ...draft, from_page: Number(event.target.value) })} disabled={disabled} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm" />
+                    <label className="text-xs text-deep-500">من صفحة
+                      <input type="number" min={1} max={604} value={draft.from_page || 1} onChange={(event) => onChange({ ...draft, from_page: Number(event.target.value) })} disabled={disabled} className="surface-field mt-1 w-full rounded-xl px-2 py-2 text-sm" />
                     </label>
-                    <label className="text-[11px] text-deep-500">إلى صفحة
-                      <input type="number" min={draft.direction === 'backward' ? 1 : draft.from_page || 1} max={draft.direction === 'backward' ? draft.from_page || 604 : 604} value={draft.to_page || draft.from_page || 1} onChange={(event) => onChange({ ...draft, to_page: Number(event.target.value) })} disabled={disabled} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm" />
+                    <label className="text-xs text-deep-500">إلى صفحة
+                      <input type="number" min={draft.direction === 'backward' ? 1 : draft.from_page || 1} max={draft.direction === 'backward' ? draft.from_page || 604 : 604} value={draft.to_page || draft.from_page || 1} onChange={(event) => onChange({ ...draft, to_page: Number(event.target.value) })} disabled={disabled} className="surface-field mt-1 w-full rounded-xl px-2 py-2 text-sm" />
                     </label>
                   </>
                 ) : (
                   <>
-                  <label className="text-[11px] text-deep-500">من سورة
-                    <select value={fromSurah} onChange={(event) => { const nextSurah = Number(event.target.value); const nextToSurah = draft.direction === 'backward' ? Math.min(nextSurah, toSurah || nextSurah) : Math.max(nextSurah, toSurah || nextSurah); onChange({ ...draft, from_surah: nextSurah, to_surah: nextToSurah, from_ayah: 1, to_ayah: 1 }) }} disabled={disabled} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm">
+                  <label className="text-xs text-deep-500">من سورة
+                    <select value={fromSurah} onChange={(event) => { const nextSurah = Number(event.target.value); const nextToSurah = draft.direction === 'backward' ? Math.min(nextSurah, toSurah || nextSurah) : Math.max(nextSurah, toSurah || nextSurah); onChange({ ...draft, from_surah: nextSurah, to_surah: nextToSurah, from_ayah: 1, to_ayah: 1 }) }} disabled={disabled} className="surface-field mt-1 w-full rounded-xl px-2 py-2 text-sm">
                       <option value={0} disabled hidden>اختر السورة</option>
                       {SURAHS.map((item) => <option key={item.number} value={item.number}>{item.number}. {item.name} — {item.ayahs} آية</option>)}
                     </select>
                   </label>
                   <AyahSelect label="من آية" value={draft.from_ayah || 1} surah={fromSurah} disabled={disabled} onChange={(value) => onChange({ ...draft, from_ayah: value, to_ayah: toSurah === fromSurah ? Math.max(value, Math.min(draft.to_ayah || value, toSurahMaxAyah)) : draft.to_ayah })} />
-                  <label className="text-[11px] text-deep-500">إلى سورة
-                    <select value={toSurah} onChange={(event) => { const nextSurah = Number(event.target.value); onChange({ ...draft, to_surah: nextSurah, to_ayah: nextSurah === fromSurah ? Math.max(draft.from_ayah || 1, 1) : 1 }) }} disabled={disabled || fromSurah === 0} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm disabled:opacity-60">
+                  <label className="text-xs text-deep-500">إلى سورة
+                    <select value={toSurah} onChange={(event) => { const nextSurah = Number(event.target.value); onChange({ ...draft, to_surah: nextSurah, to_ayah: nextSurah === fromSurah ? Math.max(draft.from_ayah || 1, 1) : 1 }) }} disabled={disabled || fromSurah === 0} className="surface-field mt-1 w-full rounded-xl px-2 py-2 text-sm disabled:opacity-60">
                       {fromSurah === 0 && <option value={0} disabled hidden>اختر سورة البداية</option>}
                       {SURAHS.filter((item) => draft.direction === 'backward' ? item.number <= fromSurah : item.number >= fromSurah).map((item) => <option key={item.number} value={item.number}>{item.number}. {item.name} — {item.ayahs} آية</option>)}
                     </select>
                   </label>
                   <AyahSelect label="إلى آية" value={draft.to_ayah || 1} surah={toSurah} disabled={disabled} onChange={(value) => onChange({ ...draft, to_ayah: toSurah === fromSurah ? Math.max(draft.from_ayah || 1, value) : value })} />
-                  <button type="button" onClick={() => onChange({ ...draft, from_ayah: 1, to_ayah: toSurahMaxAyah })} disabled={disabled || fromSurah === 0 || toSurah === 0} className="col-span-2 rounded-lg border border-water-200 bg-water-50 px-2 py-1.5 text-[10px] font-semibold text-blue-700 disabled:opacity-50">السور المحددة كاملة</button>
+                  <button type="button" onClick={() => onChange({ ...draft, from_ayah: 1, to_ayah: toSurahMaxAyah })} disabled={disabled || fromSurah === 0 || toSurah === 0} className="col-span-2 rounded-xl border border-water-200 bg-water-50 px-2 py-1.5 text-xs font-semibold text-blue-700 disabled:opacity-50">السور المحددة كاملة</button>
                   </>
                 )}
                   <div className="col-span-2">
-                    <p className="mb-1 text-[11px] font-semibold text-deep-600">التقييم</p>
+                    <p className="mb-1 text-xs font-semibold text-deep-600">التقييم</p>
                     <div className="flex flex-wrap gap-1">
-                      {draft.quality_score > 0 && <button type="button" onClick={() => onChange({ ...draft, quality_score: 0 })} disabled={disabled} className="rounded-lg border border-red-200 px-2 py-1 text-[10px] font-semibold text-red-600 dark:border-red-900 dark:text-red-400">حذف التقييم</button>}
-                      {qualityOptions.map((option) => <button key={option.value} type="button" onClick={() => onChange({ ...draft, quality_score: option.value })} disabled={disabled} className={`rounded-lg border px-2 py-1 text-[10px] font-semibold ${draft.quality_score === option.value ? 'border-cyan-500 bg-cyan-600 text-white' : 'border-water-200 bg-white text-deep-600 dark:bg-slate-900'}`}>{option.label}</button>)}
+                      {draft.quality_score > 0 && <button type="button" onClick={() => onChange({ ...draft, quality_score: 0 })} disabled={disabled} className="rounded-xl border border-red-200 px-2 py-1 text-xs font-semibold text-red-600 dark:border-red-900 dark:text-red-400">حذف التقييم</button>}
+                      {qualityOptions.map((option) => <button key={option.value} type="button" onClick={() => onChange({ ...draft, quality_score: option.value })} disabled={disabled} className={`rounded-xl border px-2 py-1 text-xs font-semibold ${draft.quality_score === option.value ? 'border-cyan-500 bg-cyan-600 text-white' : 'border-water-200 bg-white text-deep-600 dark:bg-slate-900'}`}>{option.label}</button>)}
                     </div>
                   </div>
                   <details className="col-span-2">
-                    <summary className="cursor-pointer text-[11px] font-semibold text-blue-700">تفاصيل إضافية (اختياري)</summary>
+                    <summary className="cursor-pointer text-xs font-semibold text-blue-700">تفاصيل إضافية (اختياري)</summary>
                     <div className="mt-2 grid grid-cols-[90px_1fr] gap-2">
-                      <label className="text-[11px] text-deep-500">الأخطاء
-                        <input type="number" min={0} value={draft.mistakes || 0} onChange={(event) => onChange({ ...draft, mistakes: Math.max(0, Number(event.target.value)) })} disabled={disabled} className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-sm" />
+                      <label className="text-xs text-deep-500">الأخطاء
+                        <input type="number" min={0} value={draft.mistakes || 0} onChange={(event) => onChange({ ...draft, mistakes: Math.max(0, Number(event.target.value)) })} disabled={disabled} className="surface-field mt-1 w-full rounded-xl px-2 py-2 text-sm" />
                       </label>
-                      <label className="text-[11px] text-deep-500">ملاحظات
-                        <input value={draft.notes || ''} onChange={(event) => onChange({ ...draft, notes: event.target.value || null })} disabled={disabled} placeholder="ملاحظات المتابعة" className="surface-field mt-1 w-full rounded-lg px-2 py-2 text-xs" />
+                      <label className="text-xs text-deep-500">ملاحظات
+                        <input value={draft.notes || ''} onChange={(event) => onChange({ ...draft, notes: event.target.value || null })} disabled={disabled} placeholder="ملاحظات المتابعة" className="surface-field mt-1 w-full rounded-xl px-2 py-2 text-xs" />
                       </label>
                     </div>
                   </details>
@@ -197,7 +197,7 @@ export default function InlineQuranProgress({
 
       {visibleDrafts.length > 0 && (
         <div className="mt-3 rounded-xl border border-water-200 bg-white/75 p-3 dark:bg-slate-800/60">
-          <button type="button" onClick={onSaveNext} disabled={disabled || saving || dirtyDrafts.length === 0 || !dirtyComplete} className="water-btn w-full rounded-lg px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">{saving ? 'جاري الحفظ...' : dirtyDrafts.length === 0 ? 'ابدأ بتعديل المقدار' : dirtyComplete ? 'حفظ والطالب التالي' : 'أكمل السجل المحدد'}</button>
+          <button type="button" onClick={onSaveNext} disabled={disabled || saving || dirtyDrafts.length === 0 || !dirtyComplete} className="water-btn w-full rounded-xl px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">{saving ? 'جاري الحفظ...' : dirtyDrafts.length === 0 ? 'ابدأ بتعديل المقدار' : dirtyComplete ? 'حفظ والطالب التالي' : 'أكمل السجل المحدد'}</button>
         </div>
       )}
     </div>

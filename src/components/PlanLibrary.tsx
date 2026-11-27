@@ -19,8 +19,8 @@ export default function PlanLibrary({ plans, busy, selectedId, onOpen, onStatus,
     <div className="flex flex-wrap items-center justify-between gap-3">
       <h2 className="text-lg font-bold text-deep-900">خططي المحفوظة</h2>
       <div className="flex flex-wrap gap-2">
-        <select aria-label="عرض الخطط" value={filter} onChange={event => setFilter(event.target.value)} className="surface-field rounded-lg px-3 py-2 text-sm"><option value="all">كل الخطط</option><option value="active">الجارية</option><option value="completed">المكتملة</option><option value="archived">الأرشيف</option></select>
-        <button type="button" disabled={busy} onClick={onNew} className="water-btn-outline rounded-lg px-3 py-2 text-sm font-bold">+ خطة جديدة</button>
+        <select aria-label="عرض الخطط" value={filter} onChange={event => setFilter(event.target.value)} className="surface-field rounded-xl px-3 py-2 text-sm"><option value="all">كل الخطط</option><option value="active">الجارية</option><option value="completed">المكتملة</option><option value="archived">الأرشيف</option></select>
+        <button type="button" disabled={busy} onClick={onNew} className="water-btn-outline rounded-xl px-3 py-2 text-sm font-bold">+ خطة جديدة</button>
       </div>
     </div>
     {!visible.length && <p className="mt-4 text-sm text-deep-500">لا توجد خطط هنا. أنشئ خطة ثم احفظها باسم تختاره.</p>}
@@ -28,10 +28,10 @@ export default function PlanLibrary({ plans, busy, selectedId, onOpen, onStatus,
       <h3 className="break-words font-bold text-deep-900">{plan.name}</h3>
       <p className="mt-1 text-xs text-deep-500">{plan.archived ? 'مؤرشفة' : plan.completed ? 'مكتملة ✓' : 'جارية'} · {plan.share_mode === 'private' ? 'خاصة' : plan.share_mode === 'readonly' ? 'رابط للقراءة فقط' : 'رابط للقراءة وتسجيل الإنجاز'} · <bdi dir="ltr">{plan.completed_dates.length} / {plan.study_dates.length}</bdi> يوم</p>
       <div className="mt-3 flex flex-wrap gap-2">
-        <button type="button" disabled={busy} onClick={() => onOpen(plan)} className="water-btn-outline rounded-lg px-3 py-2 text-xs font-bold">فتح وتعديل</button>
-        <button type="button" disabled={busy} onClick={() => onStatus(plan, { completed: !plan.completed })} className="water-btn-outline rounded-lg px-3 py-2 text-xs font-semibold">{plan.completed ? 'إعادة فتح' : 'تحديد كمكتملة'}</button>
-        <button type="button" disabled={busy} onClick={() => onStatus(plan, { archived: !plan.archived })} className="water-btn-outline rounded-lg px-3 py-2 text-xs font-semibold">{plan.archived ? 'استعادة' : 'أرشفة'}</button>
-        <button type="button" disabled={busy} onClick={() => onDelete(plan)} className="rounded-lg px-3 py-2 text-xs font-semibold text-red-700 dark:text-red-300">حذف</button>
+        <button type="button" disabled={busy} onClick={() => onOpen(plan)} className="water-btn-outline rounded-xl px-3 py-2 text-xs font-bold">فتح وتعديل</button>
+        <button type="button" disabled={busy} onClick={() => onStatus(plan, { completed: !plan.completed })} className="water-btn-outline rounded-xl px-3 py-2 text-xs font-semibold">{plan.completed ? 'إعادة فتح' : 'تحديد كمكتملة'}</button>
+        <button type="button" disabled={busy} onClick={() => onStatus(plan, { archived: !plan.archived })} className="water-btn-outline rounded-xl px-3 py-2 text-xs font-semibold">{plan.archived ? 'استعادة' : 'أرشفة'}</button>
+        <button type="button" disabled={busy} onClick={() => onDelete(plan)} className="rounded-xl px-3 py-2 text-xs font-semibold text-red-700 dark:text-red-300">حذف</button>
       </div>
     </article>)}</div>
   </section>

@@ -12,6 +12,8 @@ import { PROGRESS_CATEGORY_OPTIONS, canAddProgressCategory, isCustomProgressCate
 import AsyncState from '@/components/AsyncState'
 import ExcelTemplateSettings from '@/components/ExcelTemplateSettings'
 import { QUALITY_OPTIONS, type QualityOption } from '@/lib/quran'
+import { confirmAction } from '@/lib/ui-feedback'
+import Icon, { type IconName } from '@/components/Icon'
 
 const WEEKDAY_NAMES = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
 const STATUS_COLOR_OPTIONS = [
@@ -24,12 +26,12 @@ const STATUS_COLOR_OPTIONS = [
 ] as const
 
 const SETTINGS_CATEGORIES = [
-  { key: 'general', icon: '🏠', title: 'بيانات التحفيظ', description: 'الاسم، التواصل، الفترات والإنذارات' },
-  { key: 'attendance', icon: '✓', title: 'الحضور والحلقات', description: 'الصلاحيات، الحلقات، التصنيفات وحالات الحضور' },
-  { key: 'progress', icon: '📖', title: 'متابعة القرآن', description: 'تفعيل متابعة الحفظ والمراجعة' },
-  { key: 'excel', icon: '📊', title: 'قوالب Excel', description: 'الأعمدة والعناوين وتنسيق ملفات التصدير' },
-  { key: 'invitations', icon: '👥', title: 'دعوات الانضمام', description: 'إضافة المديرين والشيوخ ومتابعة الدعوات' },
-  { key: 'integrations', icon: '🔗', title: 'التكاملات', description: 'إعداد خدمات WhatSend وواتساب' },
+  { key: 'general', icon: 'home', title: 'بيانات التحفيظ', description: 'الاسم، التواصل، الفترات والإنذارات' },
+  { key: 'attendance', icon: 'attendance', title: 'الحضور والحلقات', description: 'الصلاحيات، الحلقات، التصنيفات وحالات الحضور' },
+  { key: 'progress', icon: 'book', title: 'متابعة القرآن', description: 'تفعيل متابعة الحفظ والمراجعة' },
+  { key: 'excel', icon: 'table', title: 'قوالب Excel', description: 'الأعمدة والعناوين وتنسيق ملفات التصدير' },
+  { key: 'invitations', icon: 'users', title: 'دعوات الانضمام', description: 'إضافة المديرين والشيوخ ومتابعة الدعوات' },
+  { key: 'integrations', icon: 'link', title: 'التكاملات', description: 'إعداد خدمات WhatSend وواتساب' },
 ] as const
 
 export default function TahfizSettingsPage() {
@@ -180,7 +182,7 @@ export default function TahfizSettingsPage() {
   }
 
   const deleteStudentCategory = async (category: StudentCategory) => {
-    if (!window.confirm(`حذف تصنيف «${category.name}»؟ لن تتغير الحلقات السابقة.`)) return
+    if (!await confirmAction(`حذف تصنيف «${category.name}»؟ لن تتغير الحلقات السابقة.`)) return
     setCategoryBusy(true)
     try {
       await api.deleteStudentCategory(category.id)
@@ -247,7 +249,7 @@ export default function TahfizSettingsPage() {
   }
 
   const revokeInvitation = async (id: number) => {
-    if (!window.confirm('هل تريد إلغاء هذه الدعوة؟ لن يعمل رابطها بعد ذلك.')) return
+    if (!await confirmAction('هل تريد إلغاء هذه الدعوة؟ لن يعمل رابطها بعد ذلك.')) return
     setInvitationBusy(true)
     try {
       await api.revokeInvitation(id)
@@ -416,12 +418,12 @@ export default function TahfizSettingsPage() {
     return <div className="space-y-5">
       <header className="flex flex-wrap items-start justify-between gap-3 px-1">
         <div><h1 className="text-2xl font-bold text-deep-900">إعدادات التحفيظ</h1><p className="mt-1 text-sm text-deep-500">اختر القسم الذي تريد تعديله.</p></div>
-        <Link href="/audit-log" className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">📋 سجل التدقيق</Link>
+        <Link href="/audit-log" className="water-btn-outline inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold"><Icon name="audit" className="h-4 w-4" /> سجل التدقيق</Link>
       </header>
       {error && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/25 dark:text-red-200">{error}</div>}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {SETTINGS_CATEGORIES.map(category => <Link key={category.key} href={`/settings?section=${category.key}`} className="glass-card group rounded-2xl p-5 transition hover:-translate-y-0.5 hover:border-cyan-300 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-500">
-          <span className="grid h-11 w-11 place-items-center rounded-xl bg-water-100 text-xl">{category.icon}</span>
+          <span aria-hidden="true" className="grid h-11 w-11 place-items-center rounded-xl bg-water-100 text-cyan-700 dark:bg-slate-800 dark:text-cyan-300"><Icon name={category.icon} className="h-6 w-6" /></span>
           <h2 className="mt-4 font-bold text-deep-900 group-hover:text-blue-700 dark:group-hover:text-blue-300">{category.title}</h2>
           <p className="mt-1 text-sm leading-6 text-deep-500">{category.description}</p>
           <span className="mt-4 inline-block text-sm font-semibold text-blue-700 dark:text-blue-300">فتح الإعدادات ‹</span>
@@ -433,15 +435,18 @@ export default function TahfizSettingsPage() {
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-start justify-between gap-3 px-1">
-        <div><Link href="/settings" onClick={event => { if (dirty && section !== 'invitations' && !window.confirm('لديك تغييرات غير محفوظة. هل تريد الخروج؟')) event.preventDefault() }} className="text-sm font-semibold text-blue-700 dark:text-blue-300">كل الإعدادات ‹</Link><h1 className="mt-1 text-2xl font-bold text-deep-900">{SETTINGS_CATEGORIES.find(item => item.key === section)?.title}</h1><p className="mt-1 text-sm text-deep-500">{SETTINGS_CATEGORIES.find(item => item.key === section)?.description}</p></div>
+        <div><Link href="/settings" onClick={event => { if (dirty && section !== 'invitations') { event.preventDefault(); void confirmAction({ title: 'تغييرات غير محفوظة', message: 'لديك تغييرات غير محفوظة. هل تريد الخروج دون حفظها؟', confirmLabel: 'الخروج دون حفظ' }).then(ok => { if (ok) router.push('/settings') }) } }} className="text-sm font-semibold text-blue-700 dark:text-blue-300">كل الإعدادات ‹</Link><h1 className="mt-1 text-2xl font-bold text-deep-900">{SETTINGS_CATEGORIES.find(item => item.key === section)?.title}</h1><p className="mt-1 text-sm text-deep-500">{SETTINGS_CATEGORIES.find(item => item.key === section)?.description}</p></div>
       </header>
 
       <nav aria-label="أقسام الإعدادات" className="-mx-1 overflow-x-auto px-1 pb-1">
         <div className="flex min-w-max gap-2">
           {SETTINGS_CATEGORIES.map(item => <Link key={item.key} href={`/settings?section=${item.key}`} onClick={event => {
-            if (item.key !== section && dirty && section !== 'invitations' && !window.confirm('لديك تغييرات غير محفوظة. هل تريد الانتقال دون حفظها؟')) event.preventDefault()
+            if (item.key !== section && dirty && section !== 'invitations') {
+              event.preventDefault()
+              void confirmAction({ title: 'تغييرات غير محفوظة', message: 'لديك تغييرات غير محفوظة. هل تريد الانتقال دون حفظها؟', confirmLabel: 'الانتقال دون حفظ' }).then(ok => { if (ok) router.push(`/settings?section=${item.key}`) })
+            }
           }} aria-current={item.key === section ? 'page' : undefined} className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition ${item.key === section ? 'border-cyan-500 bg-cyan-600 text-white shadow-sm' : 'border-water-200 bg-white/55 text-deep-600 hover:border-cyan-300 dark:bg-slate-800/65'}`}>
-            <span aria-hidden="true">{item.icon}</span>{item.title}
+            <Icon name={item.icon} className="h-4 w-4" />{item.title}
           </Link>)}
         </div>
       </nav>
@@ -492,11 +497,11 @@ export default function TahfizSettingsPage() {
         </>}
 
         {section === 'attendance' && <div className="space-y-3">
-          <SettingsAccordion icon="🔐" title="الصلاحيات وطريقة التسجيل" description="وصول الشيوخ والخيارات التي تظهر أثناء أخذ الحضور." defaultOpen>
+          <SettingsAccordion icon="lock" title="الصلاحيات وطريقة التسجيل" description="وصول الشيوخ والخيارات التي تظهر أثناء أخذ الحضور." defaultOpen>
           <FeatureToggle
             enabled={restrictSheikhStudentAccess}
-            onChange={(enabled) => {
-              if (!enabled && !window.confirm('عند إيقاف هذا الخيار سيتمكن جميع الشيوخ من عرض وتعديل بيانات جميع طلاب التحفيظ. هل تريد المتابعة؟')) return
+            onChange={async (enabled) => {
+              if (!enabled && !(await confirmAction({ title: 'إلغاء تقييد الشيوخ', message: 'عند إيقاف هذا الخيار سيتمكن جميع الشيوخ من عرض وتعديل بيانات جميع طلاب التحفيظ.', confirmLabel: 'إيقاف التقييد' }))) return
               setRestrictSheikhStudentAccess(enabled)
             }}
             title="تقييد الشيوخ بطلابهم"
@@ -533,7 +538,7 @@ export default function TahfizSettingsPage() {
           </div>
           </SettingsAccordion>
 
-          <SettingsAccordion icon="🗓️" title="الحلقات وتصنيفات الطلاب" description="أسماء الحلقات المتعددة والمجموعات المستخدمة لاختيار الطلاب.">
+          <SettingsAccordion icon="sessions" title="الحلقات وتصنيفات الطلاب" description="أسماء الحلقات المتعددة والمجموعات المستخدمة لاختيار الطلاب.">
           {multipleSessionsEnabled && <div className="mt-5 rounded-xl border border-water-200/70 bg-white/35 p-4 dark:bg-slate-800/35">
             <h3 className="text-sm font-bold text-deep-800">أسماء الحلقات</h3>
             <p className="mt-1 text-xs text-deep-500">تظهر هذه الأسماء في القائمة عند إنشاء حلقة جديدة، ويظهر تاريخ الحلقة بجانب الاسم تلقائياً.</p>
@@ -577,14 +582,14 @@ export default function TahfizSettingsPage() {
           </div>
           </SettingsAccordion>
 
-          <SettingsAccordion icon="🎨" title="حالات الحضور" description="الأسماء والترتيب والألوان، والحالات الأساسية للحضور والغياب." defaultOpen>
+          <SettingsAccordion icon="palette" title="حالات الحضور" description="الأسماء والترتيب والألوان، والحالات الأساسية للحضور والغياب." defaultOpen>
           <div>
             <h3 className="sr-only">خيارات حالة الحضور</h3>
             <div className="mt-2 grid gap-2">
               {attendanceStatuses.map((status, index) => (
                 <div key={status} className="grid gap-3 rounded-2xl border border-water-200/80 bg-white/75 p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900/60 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                   <div className="flex min-w-0 items-center gap-3">
-                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-cyan-50 text-xs font-bold text-blue-700 dark:bg-cyan-950 dark:text-blue-300">{index + 1}</span>
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-xl bg-cyan-50 text-xs font-bold text-blue-700 dark:bg-cyan-950 dark:text-blue-300">{index + 1}</span>
                   {editingAttendanceStatus === status ? (
                     <div className="min-w-32 flex-1">
                       <input
@@ -605,9 +610,9 @@ export default function TahfizSettingsPage() {
                         }}
                         maxLength={50}
                         aria-label={`تعديل اسم حالة ${status}`}
-                        className="surface-field w-full rounded-lg px-3 py-1.5 text-sm"
+                        className="surface-field w-full rounded-xl px-3 py-1.5 text-sm"
                       />
-                      {attendanceStatusNameError && <p className="mt-1 text-[11px] text-red-600 dark:text-red-300">{attendanceStatusNameError}</p>}
+                      {attendanceStatusNameError && <p className="mt-1 text-xs text-red-600 dark:text-red-300">{attendanceStatusNameError}</p>}
                     </div>
                   ) : (
                     <span className="min-w-0 flex-1 truncate text-sm font-semibold text-deep-800">{status}</span>
@@ -615,7 +620,7 @@ export default function TahfizSettingsPage() {
                   </div>
                   <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                   <div className="flex items-center gap-1.5 rounded-xl border border-water-200/70 bg-white/70 px-2 py-1.5 dark:border-slate-700 dark:bg-slate-800" aria-label={`لون ${status}`}>
-                    <span className="ml-1 text-[10px] font-semibold text-deep-500">اللون</span>
+                    <span className="ml-1 text-xs font-semibold text-deep-500">اللون</span>
                     {STATUS_COLOR_OPTIONS.map(option => (
                       <button
                         key={option.key}
@@ -630,17 +635,17 @@ export default function TahfizSettingsPage() {
                   </div>
                   {editingAttendanceStatus === status ? (
                     <>
-                      <button type="button" onClick={renameAttendanceStatus} className="rounded-lg bg-cyan-600 px-2.5 py-1.5 text-xs font-semibold text-white">حفظ</button>
-                      <button type="button" onClick={() => { setEditingAttendanceStatus(null); setAttendanceStatusNameError('') }} className="rounded-lg px-2 py-1.5 text-xs text-deep-500">إلغاء</button>
+                      <button type="button" onClick={renameAttendanceStatus} className="rounded-xl bg-cyan-600 px-2.5 py-1.5 text-xs font-semibold text-white">حفظ</button>
+                      <button type="button" onClick={() => { setEditingAttendanceStatus(null); setAttendanceStatusNameError('') }} className="rounded-xl px-2 py-1.5 text-xs text-deep-500">إلغاء</button>
                     </>
                   ) : (
-                    <button type="button" onClick={() => startEditingAttendanceStatus(status)} className="rounded-lg px-2 py-1.5 text-xs font-semibold text-blue-700 hover:bg-cyan-50 dark:text-blue-300 dark:hover:bg-cyan-950/60">تعديل</button>
+                    <button type="button" onClick={() => startEditingAttendanceStatus(status)} className="rounded-xl px-2 py-1.5 text-xs font-semibold text-blue-700 hover:bg-cyan-50 dark:text-blue-300 dark:hover:bg-cyan-950/60">تعديل</button>
                   )}
-                  <div className="inline-flex overflow-hidden rounded-lg border border-water-200 dark:border-slate-700">
+                  <div className="inline-flex overflow-hidden rounded-xl border border-water-200 dark:border-slate-700">
                     <button type="button" disabled={index === 0} onClick={() => moveAttendanceStatus(index, -1)} aria-label={`تحريك ${status} لأعلى`} className="bg-white/70 px-2.5 py-1.5 text-xs hover:bg-water-50 disabled:opacity-30 dark:bg-slate-800 dark:hover:bg-slate-700">↑</button>
                     <button type="button" disabled={index === attendanceStatuses.length - 1} onClick={() => moveAttendanceStatus(index, 1)} aria-label={`تحريك ${status} لأسفل`} className="border-r border-water-200 bg-white/70 px-2.5 py-1.5 text-xs hover:bg-water-50 disabled:opacity-30 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700">↓</button>
                   </div>
-                  <button type="button" disabled={attendanceStatuses.length === 1} onClick={() => removeAttendanceStatus(status)} className="rounded-lg px-2 py-1.5 text-xs font-semibold text-red-500 hover:bg-red-50 disabled:opacity-40 dark:hover:bg-red-950/40">حذف</button>
+                  <button type="button" disabled={attendanceStatuses.length === 1} onClick={() => removeAttendanceStatus(status)} className="rounded-xl px-2 py-1.5 text-xs font-semibold text-red-500 hover:bg-red-50 disabled:opacity-40 dark:hover:bg-red-950/40">حذف</button>
                   </div>
                 </div>
               ))}
@@ -686,7 +691,7 @@ export default function TahfizSettingsPage() {
           </div>
           </SettingsAccordion>
 
-          <SettingsAccordion icon="🔔" title="تنبيهات تكرار الحالات" description="اختر الحالة التي يزيد معها العداد ومتى يظهر التنبيه.">
+          <SettingsAccordion icon="bell" title="تنبيهات تكرار الحالات" description="اختر الحالة التي يزيد معها العداد ومتى يظهر التنبيه.">
               <FeatureToggle
                 enabled={streakAlertEnabled}
                 onChange={setStreakAlertEnabled}
@@ -722,7 +727,7 @@ export default function TahfizSettingsPage() {
                     })}
                   </div>
                 </fieldset>
-                <p className="text-[11px] leading-5 text-deep-500 md:col-span-2">حالة «{streakStatus}» تزيد العداد، والحالات المحددة تصفّره، وبقية الحالات لا تغيّره.</p>
+                <p className="text-xs leading-5 text-deep-500 md:col-span-2">حالة «{streakStatus}» تزيد العداد، والحالات المحددة تصفّره، وبقية الحالات لا تغيّره.</p>
               </div>}
           </SettingsAccordion>
         </div>}
@@ -803,14 +808,14 @@ export default function TahfizSettingsPage() {
               <div key={invitation.id} className="grid gap-3 rounded-xl border border-water-200 bg-white/45 px-4 py-3 dark:border-slate-700 dark:bg-slate-900/45 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-deep-800">{invitation.role === 'admin' ? 'مدير' : `شيخ${invitation.sheikh_name ? ` — ${invitation.sheikh_name}` : ''}`}</p>
-                  <p className="mt-1 text-[11px] leading-5 text-deep-500">أنشأها {invitation.creator_username || '—'} <span aria-hidden="true">·</span> تنتهي {new Date(invitation.expires_at).toLocaleString('ar-EG')}</p>
+                  <p className="mt-1 text-xs leading-5 text-deep-500">أنشأها {invitation.creator_username || '—'} <span aria-hidden="true">·</span> تنتهي {new Date(invitation.expires_at).toLocaleString('ar-EG')}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                  <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${invitation.status === 'active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/45 dark:text-emerald-200' : invitation.status === 'used' ? 'bg-cyan-100 text-blue-700 dark:bg-cyan-900/45 dark:text-blue-200' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-200'}`}>
+                  <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${invitation.status === 'active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/45 dark:text-emerald-200' : invitation.status === 'used' ? 'bg-cyan-100 text-blue-700 dark:bg-cyan-900/45 dark:text-blue-200' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-200'}`}>
                     {invitation.status === 'active' ? 'نشطة' : invitation.status === 'used' ? 'مقبولة' : invitation.status === 'expired' ? 'منتهية' : 'ملغاة'}
                   </span>
-                  {invitation.status !== 'used' && <button type="button" onClick={() => resendInvitation(invitation.id)} disabled={invitationBusy} className="rounded-lg px-2 py-1.5 text-xs font-semibold text-blue-700 hover:bg-cyan-50 disabled:opacity-50 dark:text-blue-300 dark:hover:bg-cyan-950/50">إعادة إرسال</button>}
-                  {invitation.status === 'active' && <button type="button" onClick={() => revokeInvitation(invitation.id)} disabled={invitationBusy} className="rounded-lg px-2 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50 dark:text-red-300 dark:hover:bg-red-950/40">إلغاء</button>}
+                  {invitation.status !== 'used' && <button type="button" onClick={() => resendInvitation(invitation.id)} disabled={invitationBusy} className="rounded-xl px-2 py-1.5 text-xs font-semibold text-blue-700 hover:bg-cyan-50 disabled:opacity-50 dark:text-blue-300 dark:hover:bg-cyan-950/50">إعادة إرسال</button>}
+                  {invitation.status === 'active' && <button type="button" onClick={() => revokeInvitation(invitation.id)} disabled={invitationBusy} className="rounded-xl px-2 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50 dark:text-red-300 dark:hover:bg-red-950/40">إلغاء</button>}
                 </div>
               </div>
             ))}
@@ -838,7 +843,7 @@ export default function TahfizSettingsPage() {
 }
 
 function SettingsAccordion({ icon, title, description, defaultOpen = false, children }: {
-  icon: string
+  icon: IconName
   title: string
   description: string
   defaultOpen?: boolean
@@ -848,12 +853,12 @@ function SettingsAccordion({ icon, title, description, defaultOpen = false, chil
   return (
     <details open={open} onToggle={event => setOpen(event.currentTarget.open)} className="group glass-card overflow-hidden rounded-2xl">
       <summary className="flex cursor-pointer list-none items-center gap-3 p-4 outline-none transition hover:bg-water-50/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-500 dark:hover:bg-slate-800/70 [&::-webkit-details-marker]:hidden sm:p-5">
-        <span aria-hidden="true" className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-water-100 text-lg dark:bg-slate-800">{icon}</span>
+        <span aria-hidden="true" className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-water-100 text-cyan-700 dark:bg-slate-800 dark:text-cyan-300"><Icon name={icon} /></span>
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-bold text-deep-900 sm:text-base">{title}</span>
           <span className="mt-0.5 block text-xs leading-5 text-deep-500">{description}</span>
         </span>
-        <span aria-hidden="true" className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-water-200 text-deep-500 transition group-open:rotate-180 dark:border-slate-700">⌄</span>
+        <span aria-hidden="true" className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-water-200 text-deep-500 transition group-open:rotate-180 dark:border-slate-700">⌄</span>
       </summary>
       <div className="border-t border-water-200/60 p-4 dark:border-slate-700/70 sm:p-5">{children}</div>
     </details>

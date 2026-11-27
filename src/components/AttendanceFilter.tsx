@@ -116,7 +116,7 @@ export default function AttendanceFilter({ sessions, initialGroups, onApply, onC
   }
 
   return (
-    <div className="glass-strong rounded-lg p-4 space-y-3 border border-water-300/60">
+    <div className="glass-strong rounded-xl p-4 space-y-3 border border-water-300/60">
       <div className="flex items-center justify-between mb-1">
         <h3 className="text-sm font-bold text-deep-800">بناء التصفية</h3>
         <button onClick={onCancel} className="text-deep-400 hover:text-deep-600 transition text-lg leading-none">&times;</button>
@@ -129,7 +129,7 @@ export default function AttendanceFilter({ sessions, initialGroups, onApply, onC
               <div className="flex bg-white/85 dark:bg-slate-800/70 rounded-md p-0.5 border border-water-200/70">
                 <button
                   onClick={() => updateGroupConnector(gi, 'and')}
-                  className={`px-2 py-0.5 text-[11px] rounded transition font-medium ${
+                  className={`px-2 py-0.5 text-xs rounded transition font-medium ${
                     group.connector === 'and' ? 'bg-water-400/30 text-deep-800' : 'text-deep-500 hover:text-deep-700'
                   }`}
                 >
@@ -137,7 +137,7 @@ export default function AttendanceFilter({ sessions, initialGroups, onApply, onC
                 </button>
                 <button
                   onClick={() => updateGroupConnector(gi, 'or')}
-                  className={`px-2 py-0.5 text-[11px] rounded transition font-medium ${
+                  className={`px-2 py-0.5 text-xs rounded transition font-medium ${
                     group.connector === 'or' ? 'bg-water-400/30 text-deep-800' : 'text-deep-500 hover:text-deep-700'
                   }`}
                 >
@@ -155,7 +155,7 @@ export default function AttendanceFilter({ sessions, initialGroups, onApply, onC
                   <div className="flex bg-white/85 dark:bg-slate-800/70 rounded-md p-0.5 border border-water-200/70 shrink-0">
                     <button
                       onClick={() => updateRule(gi, ri, 'connector', 'and')}
-                      className={`px-2 py-0.5 text-[11px] rounded transition font-medium ${
+                      className={`px-2 py-0.5 text-xs rounded transition font-medium ${
                         rule.connector === 'and' ? 'bg-water-400/30 text-deep-800' : 'text-deep-500 hover:text-deep-700'
                       }`}
                     >
@@ -163,7 +163,7 @@ export default function AttendanceFilter({ sessions, initialGroups, onApply, onC
                     </button>
                     <button
                       onClick={() => updateRule(gi, ri, 'connector', 'or')}
-                      className={`px-2 py-0.5 text-[11px] rounded transition font-medium ${
+                      className={`px-2 py-0.5 text-xs rounded transition font-medium ${
                         rule.connector === 'or' ? 'bg-water-400/30 text-deep-800' : 'text-deep-500 hover:text-deep-700'
                       }`}
                     >
@@ -174,7 +174,7 @@ export default function AttendanceFilter({ sessions, initialGroups, onApply, onC
                 <div className="flex bg-white/85 dark:bg-slate-800/70 rounded-md p-0.5 border border-water-200/70 shrink-0">
                   <button
                     onClick={() => updateRuleTarget(gi, ri, 'session')}
-                    className={`px-2 py-0.5 text-[11px] rounded transition font-medium ${
+                    className={`px-2 py-0.5 text-xs rounded transition font-medium ${
                       (rule.target || 'session') === 'session' ? 'bg-water-400/30 text-deep-800' : 'text-deep-500 hover:text-deep-700'
                     }`}
                   >
@@ -182,7 +182,7 @@ export default function AttendanceFilter({ sessions, initialGroups, onApply, onC
                   </button>
                   <button
                     onClick={() => updateRuleTarget(gi, ri, 'weekday')}
-                    className={`px-2 py-0.5 text-[11px] rounded transition font-medium ${
+                    className={`px-2 py-0.5 text-xs rounded transition font-medium ${
                       rule.target === 'weekday' ? 'bg-water-400/30 text-deep-800' : 'text-deep-500 hover:text-deep-700'
                     }`}
                   >
@@ -192,7 +192,7 @@ export default function AttendanceFilter({ sessions, initialGroups, onApply, onC
                 <select
                   value={(rule.target || 'session') === 'weekday' ? (rule.weekday ?? 0) : rule.sessionId}
                   onChange={(e) => updateRule(gi, ri, (rule.target || 'session') === 'weekday' ? 'weekday' : 'sessionId', Number(e.target.value))}
-                  className="surface-field flex-1 min-w-[130px] px-2.5 py-1.5 rounded-lg text-xs"
+                  className="surface-field flex-1 min-w-[130px] px-2.5 py-1.5 rounded-xl text-xs"
                 >
                   {(rule.target || 'session') === 'weekday'
                     ? WEEKDAY_NAMES.map((name, i) => <option key={i} value={i}>{name}</option>)
@@ -201,20 +201,20 @@ export default function AttendanceFilter({ sessions, initialGroups, onApply, onC
                 <select
                   value={rule.operator}
                   onChange={(e) => updateRule(gi, ri, 'operator', e.target.value)}
-                  className="surface-field w-20 shrink-0 px-2 py-1.5 rounded-lg text-xs"
+                  className="surface-field w-20 shrink-0 px-2 py-1.5 rounded-xl text-xs"
                 >
                   {OPERATORS.map((op) => <option key={op.value} value={op.value}>{op.label}</option>)}
                 </select>
                 <select
                   value={rule.status}
                   onChange={(e) => updateRule(gi, ri, 'status', e.target.value)}
-                  className="surface-field w-[72px] shrink-0 px-2 py-1.5 rounded-lg text-xs"
+                  className="surface-field w-[72px] shrink-0 px-2 py-1.5 rounded-xl text-xs"
                 >
                   {statusOptions.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
                 <button
                   onClick={() => removeRule(gi, ri)}
-                  className="w-7 h-7 shrink-0 flex items-center justify-center rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50/50 dark:hover:bg-red-900/30 transition text-sm"
+                  className="w-7 h-7 shrink-0 flex items-center justify-center rounded-xl text-red-400 hover:text-red-600 hover:bg-red-50/50 dark:hover:bg-red-900/30 transition text-sm"
                 >
                   ✕
                 </button>
@@ -223,7 +223,7 @@ export default function AttendanceFilter({ sessions, initialGroups, onApply, onC
 
             <button
               onClick={() => addRule(gi)}
-              className="w-full py-1 text-xs text-deep-500 hover:text-deep-700 border border-dashed border-water-300/50 rounded-lg hover:bg-water-100/20 transition"
+              className="w-full py-1 text-xs text-deep-500 hover:text-deep-700 border border-dashed border-water-300/50 rounded-xl hover:bg-water-100/20 transition"
             >
               + إضافة قاعدة
             </button>
@@ -234,13 +234,13 @@ export default function AttendanceFilter({ sessions, initialGroups, onApply, onC
       <div className="flex gap-2 pt-1">
         <button
           onClick={addGroup}
-          className="flex-1 py-1.5 water-btn-outline rounded-lg text-xs font-medium"
+          className="flex-1 py-1.5 water-btn-outline rounded-xl text-xs font-medium"
         >
           + إضافة مجموعة
         </button>
         <button
           onClick={() => onApply(groups)}
-          className="flex-1 py-1.5 water-btn text-white rounded-lg text-xs font-medium"
+          className="flex-1 py-1.5 water-btn text-white rounded-xl text-xs font-medium"
         >
           تطبيق
         </button>

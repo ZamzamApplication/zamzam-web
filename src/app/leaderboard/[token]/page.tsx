@@ -66,7 +66,7 @@ export default function LeaderboardPage() {
 
           {board.leaderboard.some(row => row.completed) && <p className="mt-4 text-center text-xs text-deep-500">⭐ = أتم المسابقة بالوصول إلى {arabicNumber(board.completion_threshold ?? 0)} نقطة</p>}
           {board.hidden_count > 0 && <p className="mt-6 text-center text-sm text-deep-500">و{arabicNumber(board.hidden_count)} متسابقين آخرين يواصلون — بالتوفيق للجميع 🤍</p>}
-          <p className="mt-8 text-center text-[11px] text-deep-400">يتحدث تلقائياً كل دقيقة · زمزم</p>
+          <p className="mt-8 text-center text-xs text-deep-400">يتحدث تلقائياً كل دقيقة · زمزم</p>
         </>}
     </div>
   </main>

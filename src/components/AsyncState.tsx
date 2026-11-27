@@ -17,7 +17,7 @@ export default function AsyncState({
       <h2 className="font-bold text-deep-800">{title}</h2>
       <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-deep-500">{message}</p>
       {onRetry && (
-        <button type="button" onClick={onRetry} className="water-btn mt-5 rounded-lg px-5 py-2 text-sm font-semibold text-white">
+        <button type="button" onClick={onRetry} className="water-btn mt-5 rounded-xl px-5 py-2 text-sm font-semibold text-white">
           إعادة المحاولة
         </button>
       )}

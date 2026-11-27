@@ -11,6 +11,7 @@ import RegistrationFields from '@/components/RegistrationFields'
 import RegistrationStudentFields from '@/components/RegistrationStudentFields'
 import { STUDENT_FORM_FIELDS, DEFAULT_STUDENT_FIELDS, approvalStudentData, studentFieldSummary, type StudentFormField, type RegistrationStudentData } from '@/lib/student-registration'
 import StudentCustomFieldsEditor from '@/components/StudentCustomFieldsEditor'
+import { confirmAction } from '@/lib/ui-feedback'
 
 export default function RegistrationManagement() {
   const approvalRef = useRef<HTMLElement>(null)
@@ -220,14 +221,14 @@ export default function RegistrationManagement() {
             استقبال الطلبات
           </label>
           <div className="flex gap-3">
-            <button disabled={busy} className="water-btn rounded-lg px-4 py-2">
+            <button disabled={busy} className="water-btn rounded-xl px-4 py-2">
               حفظ النموذج
             </button>
             {editing && (
               <button
                 type="button"
                 onClick={resetForm}
-                className="water-btn-outline rounded-lg px-4 py-2"
+                className="water-btn-outline rounded-xl px-4 py-2"
               >
                 إلغاء التعديل
               </button>
@@ -352,16 +353,16 @@ export default function RegistrationManagement() {
                 <div className="flex gap-3">
                   <button
                     disabled={busy}
-                    className="water-btn rounded-lg px-4 py-2"
+                    className="water-btn rounded-xl px-4 py-2"
                     onClick={() => openApproval(row)}
                   >
                     قبول واستكمال البيانات
                   </button>
                   <button
                     disabled={busy}
-                    className="water-btn-outline rounded-lg px-4 py-2"
-                    onClick={() => {
-                      if (confirm(`رفض طلب ${row.name}؟`))
+                    className="water-btn-outline rounded-xl px-4 py-2"
+                    onClick={async () => {
+                      if (await confirmAction({ title: 'رفض الطلب', message: `رفض طلب ${row.name}؟`, confirmLabel: 'رفض' }))
                         void run(async () => {
                           await request(`${base}/requests/${row.id}/reject`, {
                             method: 'POST',
@@ -485,14 +486,14 @@ export default function RegistrationManagement() {
               <div className="flex gap-3">
                 <button
                   disabled={busy}
-                  className="water-btn rounded-lg px-4 py-2"
+                  className="water-btn rounded-xl px-4 py-2"
                 >
                   {busy ? 'جارٍ الحفظ…' : 'تأكيد القبول وإضافة الطالب'}
                 </button>
                 <button
                   disabled={busy}
                   type="button"
-                  className="water-btn-outline rounded-lg px-4 py-2"
+                  className="water-btn-outline rounded-xl px-4 py-2"
                   onClick={() => setSelected(null)}
                 >
                   إلغاء

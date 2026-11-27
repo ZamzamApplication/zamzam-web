@@ -145,12 +145,12 @@ export default function CreateSessionModal({ onClose, onCreated, onScheduled }: 
                 {studentsBySheikh.map(([sheikh, rows]) => {
                   const allSelected = rows.every(student => selectedStudents.has(student.id))
                   return <section key={sheikh}>
-                  <label className="mb-1 flex w-fit cursor-pointer items-center gap-2 rounded-lg px-2 py-1 text-xs font-bold text-deep-500 hover:bg-water-100/40">
+                  <label className="mb-1 flex w-fit cursor-pointer items-center gap-2 rounded-xl px-2 py-1 text-xs font-bold text-deep-500 hover:bg-water-100/40">
                     <input type="checkbox" checked={allSelected} onChange={() => toggleSheikh(rows.map(student => student.id))} className="rounded" />
                     <span>{sheikh}</span>
                   </label>
                   <div className="grid gap-1 sm:grid-cols-2">
-                    {rows.map(student => <label key={student.id} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-water-100/40">
+                    {rows.map(student => <label key={student.id} className="flex cursor-pointer items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-water-100/40">
                       <input type="checkbox" checked={selectedStudents.has(student.id)} onChange={() => toggleStudent(student.id)} className="rounded" />
                       <span className="min-w-0 truncate text-sm text-deep-800">{student.name}</span>
                     </label>)}

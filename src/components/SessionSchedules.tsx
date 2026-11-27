@@ -4,6 +4,7 @@ import { api } from '@/lib/api'
 import { WEEKDAYS, browserTimezone, localToday, schedulePayload, weekdaysLabel } from '@/lib/session-schedules'
 import type { SessionSchedule } from '@/lib/session-schedules'
 import type { StudentCategory, StudentInfo } from '@/lib/types'
+import { confirmAction } from '@/lib/ui-feedback'
 
 export function ScheduleForm({ schedule, onSaved }: { schedule?: SessionSchedule; onSaved: () => void }) {
   const [weekdays, setWeekdays] = useState<number[]>(schedule?.weekdays || [])
@@ -105,7 +106,7 @@ export default function SessionSchedules({ onChanged }: { onChanged: () => void 
           {row.is_active ? 'مفعّلة' : 'متوقفة'}
         </label>
         <button disabled={busy} className="min-h-11 px-3 text-sm text-blue-700 dark:text-blue-300" onClick={() => setEditing(row)}>تعديل</button>
-        <button disabled={busy} className="min-h-11 px-3 text-sm text-red-500" onClick={() => { if (window.confirm('حذف هذه الحلقة المتكررة؟ الحلقات التي أُنشئت سابقاً ستبقى.')) void change(() => api.deleteSessionSchedule(row.id)) }}>حذف</button>
+        <button disabled={busy} className="min-h-11 px-3 text-sm text-red-500" onClick={async () => { if (await confirmAction({ title: 'حذف الحلقة المتكررة', message: 'الحلقات التي أُنشئت سابقاً ستبقى.', confirmLabel: 'حذف' })) void change(() => api.deleteSessionSchedule(row.id)) }}>حذف</button>
       </div>
     </div>)}
     {error && <p role="alert" className="mt-2 text-sm text-red-600">{error}</p>}

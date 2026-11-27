@@ -23,7 +23,7 @@ export default function MonthSwitcher({
         type="button"
         onClick={() => onChange(shiftMonth(value, -1))}
         disabled={disabled}
-        className="water-btn-outline rounded-lg px-3 py-2 text-sm font-medium disabled:opacity-50"
+        className="water-btn-outline rounded-xl px-3 py-2 text-sm font-medium disabled:opacity-50"
       >
         الشهر السابق
       </button>
@@ -34,7 +34,7 @@ export default function MonthSwitcher({
           onChange={(event) => event.target.value && onChange(event.target.value)}
           disabled={disabled}
           aria-label="اختر الشهر"
-          className="surface-field mt-1 rounded-lg px-3 py-1.5 text-xs"
+          className="surface-field mt-1 rounded-xl px-3 py-1.5 text-xs"
         >
           {months.map((month) => (
             <option key={month} value={month}>
@@ -47,7 +47,7 @@ export default function MonthSwitcher({
         type="button"
         onClick={() => onChange(shiftMonth(value, 1))}
         disabled={disabled}
-        className="water-btn-outline rounded-lg px-3 py-2 text-sm font-medium disabled:opacity-50"
+        className="water-btn-outline rounded-xl px-3 py-2 text-sm font-medium disabled:opacity-50"
       >
         الشهر التالي
       </button>

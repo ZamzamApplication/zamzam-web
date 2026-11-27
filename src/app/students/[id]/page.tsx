@@ -115,7 +115,7 @@ export default function StudentProfilePage() {
             } finally {
               setCustomFieldsSaving(false)
             }
-          }} className="water-btn rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{customFieldsSaving ? 'جاري الحفظ...' : 'حفظ الحقول المخصصة'}</button>
+          }} className="water-btn rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{customFieldsSaving ? 'جاري الحفظ...' : 'حفظ الحقول المخصصة'}</button>
           {customFieldsNotice && <span className="text-xs text-deep-600">{customFieldsNotice}</span>}
         </div>
       </section>
@@ -153,7 +153,7 @@ export default function StudentProfilePage() {
           <h3 className="mt-5 text-sm font-bold text-deep-800">أيام العذر الأسبوعية</h3>
           <div className="mt-2 flex flex-wrap gap-2">
             {profile.excused_weekdays.length
-              ? profile.excused_weekdays.map(day => <span key={day.weekday} title={day.note || ''} className="rounded-lg bg-sky-50 px-3 py-1.5 text-xs text-sky-700 dark:bg-sky-900/30 dark:text-sky-200">{WEEKDAYS[day.weekday]}</span>)
+              ? profile.excused_weekdays.map(day => <span key={day.weekday} title={day.note || ''} className="rounded-xl bg-sky-50 px-3 py-1.5 text-xs text-sky-700 dark:bg-sky-900/30 dark:text-sky-200">{WEEKDAYS[day.weekday]}</span>)
               : <span className="text-xs text-deep-500">لا توجد أيام عذر ثابتة.</span>}
           </div>
           <h3 className="mt-5 text-sm font-bold text-deep-800">الإنذارات ({profile.warnings.length})</h3>
@@ -174,5 +174,5 @@ function Detail({ label, value, dir }: { label: string; value?: string | null; d
 }
 
 function MiniStat({ label, value }: { label: string; value: number }) {
-  return <div className="rounded-xl bg-water-50/60 p-3 dark:bg-slate-800/50"><strong className="block text-lg text-deep-900">{value}</strong><span className="text-[10px] text-deep-500">{label}</span></div>
+  return <div className="rounded-xl bg-water-50/60 p-3 dark:bg-slate-800/50"><strong className="block text-lg text-deep-900">{value}</strong><span className="text-xs text-deep-500">{label}</span></div>
 }

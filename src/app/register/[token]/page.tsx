@@ -93,11 +93,11 @@ export default function RegisterStudent() {
           />
           <div className="flex items-center gap-3 self-start rounded-2xl bg-white/10 px-3 py-2 backdrop-blur-sm">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-xl text-blue-700 shadow-lg shadow-cyan-950/15">
-              💧
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ width: '1.25em', height: '1.25em' }}><path d="M12 3.5c3.5 4.3 6 7.6 6 10.5a6 6 0 0 1-12 0c0-2.9 2.5-6.2 6-10.5Z" /></svg>
             </span>
             <span>
               <strong className="block text-lg leading-none">زمزم</strong>
-              <small className="mt-1 block text-[10px] text-blue-100">
+              <small className="mt-1 block text-xs text-blue-100">
                 إدارة التحفيظ ببساطة
               </small>
             </span>
@@ -125,7 +125,7 @@ export default function RegisterStudent() {
                   </span>
                   <span>
                     <strong className="block text-sm">{label}</strong>
-                    <small className="mt-0.5 block text-[11px] leading-5 text-blue-50/75">
+                    <small className="mt-0.5 block text-xs leading-5 text-blue-50/75">
                       {detail}
                     </small>
                   </span>
@@ -147,7 +147,7 @@ export default function RegisterStudent() {
                 className="inline-flex items-center gap-2 text-deep-800"
               >
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-600 to-teal-500 text-xl text-white shadow-md">
-                  💧
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ width: '1.25em', height: '1.25em' }}><path d="M12 3.5c3.5 4.3 6 7.6 6 10.5a6 6 0 0 1-12 0c0-2.9 2.5-6.2 6-10.5Z" /></svg>
                 </span>
                 <span className="text-lg font-bold">زمزم</span>
               </Link>

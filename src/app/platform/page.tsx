@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import PlatformFeedbackPanel from '@/components/PlatformFeedbackPanel'
+import { confirmAction } from '@/lib/ui-feedback'
 
 type TahfizStatus = 'pending' | 'active' | 'rejected' | 'suspended'
 type PlatformAction = 'reject' | 'suspend'
@@ -135,7 +136,7 @@ export default function PlatformPage() {
   }
 
   async function revokeMembership(membership: PlatformMembership) {
-    if (!selectedUser || !window.confirm(`إلغاء وصول ${selectedUser.username} إلى ${membership.tahfiz_name}؟`)) return
+    if (!selectedUser || !await confirmAction(`إلغاء وصول ${selectedUser.username} إلى ${membership.tahfiz_name}؟`)) return
     setAccessBusy(true)
     setError('')
     try {
@@ -382,8 +383,8 @@ export default function PlatformPage() {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-lg font-bold text-deep-900">{item.name}</h2>
-                      <span className={`rounded-lg px-2.5 py-1 text-xs font-bold ${status.className}`}>{status.label}</span>
-                      <span className="rounded-lg bg-water-100/60 px-2 py-1 text-xs text-deep-500">#{item.id}</span>
+                      <span className={`rounded-xl px-2.5 py-1 text-xs font-bold ${status.className}`}>{status.label}</span>
+                      <span className="rounded-xl bg-water-100/60 px-2 py-1 text-xs text-deep-500">#{item.id}</span>
                     </div>
                     <div className="mt-3 grid gap-1.5 text-sm text-deep-500 sm:grid-cols-2">
                       <p>المستخدم: <span className="font-semibold text-deep-700">{item.owner_username || 'غير محدد'}</span></p>

@@ -47,11 +47,11 @@ function OptionPicker({ column, selected, onChange }: { column: TableColumn; sel
   const summary = selected.length === 0 ? 'اختر...' : selected.length <= 2 ? selected.join('، ') : `${selected.length} مختارة`
   return (
     <details className="relative">
-      <summary className="surface-field cursor-pointer list-none rounded-lg px-2 py-1 text-xs min-w-[96px] max-w-[180px] truncate">{summary}</summary>
+      <summary className="surface-field cursor-pointer list-none rounded-xl px-2 py-1 text-xs min-w-[96px] max-w-[180px] truncate">{summary}</summary>
       <div className="glass-card absolute right-0 z-30 mt-1 max-h-64 w-56 overflow-y-auto rounded-xl p-2 shadow-lg">
         {options.length === 0 && <p className="px-2 py-1 text-xs text-deep-500">لا توجد خيارات</p>}
         {options.map(option => (
-          <label key={option} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-deep-800 hover:bg-water-100/40">
+          <label key={option} className="flex cursor-pointer items-center gap-2 rounded-xl px-2 py-1.5 text-xs text-deep-800 hover:bg-water-100/40">
             <input
               type="checkbox"
               checked={selected.includes(option)}
@@ -85,7 +85,7 @@ function FilterRuleEditor({ rule, columns, onChange, onRemove }: {
           const next = columns.find(c => c.key === event.target.value)!
           onChange({ ...rule, column: next.key, operator: defaultOperator(next), value: '', values: [] })
         }}
-        className="surface-field rounded-lg px-2 py-1 text-xs font-semibold"
+        className="surface-field rounded-xl px-2 py-1 text-xs font-semibold"
       >
         {columns.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
       </select>
@@ -93,7 +93,7 @@ function FilterRuleEditor({ rule, columns, onChange, onRemove }: {
         aria-label="نوع المقارنة"
         value={rule.operator}
         onChange={event => onChange({ ...rule, operator: event.target.value as FilterRule['operator'] })}
-        className="surface-field rounded-lg px-2 py-1 text-xs"
+        className="surface-field rounded-xl px-2 py-1 text-xs"
       >
         {operators.map(op => <option key={op} value={op}>{OPERATOR_LABELS[op]}</option>)}
       </select>
@@ -106,7 +106,7 @@ function FilterRuleEditor({ rule, columns, onChange, onRemove }: {
           value={rule.value}
           onChange={event => onChange({ ...rule, value: event.target.value })}
           placeholder="القيمة..."
-          className="surface-field w-32 rounded-lg px-2 py-1 text-xs"
+          className="surface-field w-32 rounded-xl px-2 py-1 text-xs"
         />
       ))}
       <button type="button" onClick={onRemove} aria-label="حذف التصفية" className="px-1.5 text-base leading-none text-deep-400 hover:text-red-500">×</button>
@@ -122,10 +122,10 @@ function SortRuleEditor({ sort, columns, onChange, onRemove }: {
 }) {
   return (
     <div className="flex items-center gap-1.5 rounded-xl border border-violet-300/60 bg-violet-50/50 px-2 py-1.5 dark:border-violet-800 dark:bg-violet-950/20">
-      <select aria-label="عمود الترتيب" value={sort.column} onChange={event => onChange({ ...sort, column: event.target.value })} className="surface-field rounded-lg px-2 py-1 text-xs font-semibold">
+      <select aria-label="عمود الترتيب" value={sort.column} onChange={event => onChange({ ...sort, column: event.target.value })} className="surface-field rounded-xl px-2 py-1 text-xs font-semibold">
         {columns.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
       </select>
-      <select aria-label="اتجاه الترتيب" value={sort.direction} onChange={event => onChange({ ...sort, direction: event.target.value as SortRule['direction'] })} className="surface-field rounded-lg px-2 py-1 text-xs">
+      <select aria-label="اتجاه الترتيب" value={sort.direction} onChange={event => onChange({ ...sort, direction: event.target.value as SortRule['direction'] })} className="surface-field rounded-xl px-2 py-1 text-xs">
         <option value="asc">تصاعدي ↑</option>
         <option value="desc">تنازلي ↓</option>
       </select>
@@ -140,7 +140,7 @@ function Cell({ column, student, onZoomPic }: { column: TableColumn; student: St
     return (
       <span className="flex items-center gap-2">
         {pic ? (
-          <img src={pic} alt="" className="h-7 w-7 shrink-0 rounded-full border border-water-300 object-cover hover:opacity-80" onClick={(event) => { event.stopPropagation(); onZoomPic?.(pic) }} />
+          <button type="button" onClick={(event) => { event.stopPropagation(); onZoomPic?.(pic) }} aria-label="تكبير الصورة" className="shrink-0 rounded-full"><img src={pic} alt="" className="h-7 w-7 shrink-0 rounded-full border border-water-300 object-cover hover:opacity-80" /></button>
         ) : (
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-water-300 bg-water-200/50 text-xs text-deep-400">{student.name.charAt(0)}</span>
         )}
@@ -155,7 +155,7 @@ function Cell({ column, student, onZoomPic }: { column: TableColumn; student: St
     const values = column.value(student) as string[]
     return (
       <span className="flex flex-wrap gap-1">
-        {values.map(value => <span key={value} className="rounded-md bg-water-200/50 px-1.5 py-0.5 text-[11px] text-deep-700">{value}</span>)}
+        {values.map(value => <span key={value} className="rounded-md bg-water-200/50 px-1.5 py-0.5 text-xs text-deep-700">{value}</span>)}
       </span>
     )
   }
@@ -249,7 +249,7 @@ export default function StudentsTableView({ students, onViewStudent, onEditStude
   const activeFilterCount = view.filters.length
 
   const renderRow = (student: StudentInfo, keyPrefix = '') => (
-    <tr key={`${keyPrefix}${student.id}`} onClick={() => onViewStudent(student)} className="group cursor-pointer border-t border-water-200/30 hover:bg-water-100/30">
+    <tr key={`${keyPrefix}${student.id}`} onClick={() => onViewStudent(student)} tabIndex={0} aria-label={`فتح ملف ${student.name}`} onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); onViewStudent(student) } }} className="group cursor-pointer border-t border-water-200/30 hover:bg-water-100/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-500">
       {visibleColumns.map((column, index) => (
         <td
           key={column.key}
@@ -294,7 +294,7 @@ export default function StudentsTableView({ students, onViewStudent, onEditStude
           <summary className="water-btn-outline cursor-pointer list-none rounded-xl px-3 py-2 text-sm">▦ الأعمدة</summary>
           <div className="glass-card absolute left-0 z-30 mt-1 max-h-80 w-60 overflow-y-auto rounded-xl p-2 shadow-lg">
             {columns.map(column => (
-              <label key={column.key} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-deep-800 hover:bg-water-100/40">
+              <label key={column.key} className="flex cursor-pointer items-center gap-2 rounded-xl px-2 py-1.5 text-sm text-deep-800 hover:bg-water-100/40">
                 <input type="checkbox" disabled={column.key === 'name'} checked={isColumnVisible(column, view.toggledColumns)} onChange={() => toggleColumn(column.key)} />
                 {column.label}
               </label>

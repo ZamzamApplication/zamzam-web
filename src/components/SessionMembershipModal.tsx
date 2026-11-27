@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { api } from '@/lib/api'
 import type { StudentCategory, StudentInfo } from '@/lib/types'
 import { toggleCategorySelection, toggleStudentGroupSelection } from '@/lib/student-categories'
+import { confirmAction } from '@/lib/ui-feedback'
 
 export default function SessionMembershipModal({ sessionId, expectedVersion, initialStudentIds, onClose, onSaved }: {
   sessionId: number
@@ -48,7 +49,7 @@ export default function SessionMembershipModal({ sessionId, expectedVersion, ini
   const save = async () => {
     if (selected.size === 0) return
     const removed = initialStudentIds.filter(id => !selected.has(id)).length
-    if (removed > 0 && !window.confirm(`سيتم حذف ${removed} طالب من هذه الحلقة وسجل حضوره فيها. هل تريد المتابعة؟`)) return
+    if (removed > 0 && !await confirmAction(`سيتم حذف ${removed} طالب من هذه الحلقة وسجل حضوره فيها. هل تريد المتابعة؟`)) return
     setSaving(true)
     setError('')
     try {
@@ -75,11 +76,11 @@ export default function SessionMembershipModal({ sessionId, expectedVersion, ini
           {groups.map(([sheikh, rows]) => {
             const allSelected = rows.every(student => selected.has(student.id))
             return <section key={sheikh}>
-              <label className="mb-1 flex w-fit cursor-pointer items-center gap-2 rounded-lg px-2 py-1 text-xs font-bold text-deep-500 hover:bg-water-100/40">
+              <label className="mb-1 flex w-fit cursor-pointer items-center gap-2 rounded-xl px-2 py-1 text-xs font-bold text-deep-500 hover:bg-water-100/40">
                 <input type="checkbox" checked={allSelected} onChange={() => setSelected(current => toggleStudentGroupSelection(current, rows.map(student => student.id)))} className="rounded" />
                 <span>{sheikh}</span>
               </label>
-              <div className="grid gap-1 sm:grid-cols-2">{rows.map(student => <label key={student.id} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-water-100/40"><input type="checkbox" checked={selected.has(student.id)} onChange={() => setSelected(current => { const next = new Set(current); if (next.has(student.id)) next.delete(student.id); else next.add(student.id); return next })} className="rounded"/><span className="truncate text-sm text-deep-800">{student.name}</span></label>)}</div>
+              <div className="grid gap-1 sm:grid-cols-2">{rows.map(student => <label key={student.id} className="flex cursor-pointer items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-water-100/40"><input type="checkbox" checked={selected.has(student.id)} onChange={() => setSelected(current => { const next = new Set(current); if (next.has(student.id)) next.delete(student.id); else next.add(student.id); return next })} className="rounded"/><span className="truncate text-sm text-deep-800">{student.name}</span></label>)}</div>
             </section>
           })}
         </div>}

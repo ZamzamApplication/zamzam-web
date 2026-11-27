@@ -89,7 +89,7 @@ export default function AuditLogPageView() {
       {result.items.map(item => <article key={item.id} className="glass-card rounded-2xl p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-bold text-deep-900">{auditActionLabel(item.action)}</h2><p className="mt-1 text-xs text-deep-500">نفذها <span className="font-semibold text-deep-700">{item.actor_username}</span></p></div><time dateTime={item.created_at} className="text-xs text-deep-500">{new Date(item.created_at).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}</time></div>
         <p className="mt-3 rounded-xl bg-water-50/60 px-3 py-2 text-sm leading-6 text-deep-700 dark:bg-slate-800/45">{formatAuditDetails(item.details)}</p>
-        <p dir="ltr" className="mt-2 text-left text-[10px] text-deep-400">{item.action} · #{item.id}</p>
+        <p dir="ltr" className="mt-2 text-left text-xs text-deep-400">{item.action} · #{item.id}</p>
       </article>)}
     </div>}
 

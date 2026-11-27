@@ -45,7 +45,7 @@ export default function CompetitionsPage() {
       </div>
     </section>
     <div className="flex items-center justify-between gap-3">
-      <div className="flex rounded-xl border border-water-200 bg-white/50 p-1 dark:bg-slate-900/50">{[{ value: false, label: 'الحالية' }, { value: true, label: 'المنتهية' }].map(tab => <button type="button" key={tab.label} onClick={() => setArchive(tab.value)} aria-pressed={archive === tab.value} className={`min-h-10 rounded-lg px-4 text-sm font-bold transition ${archive === tab.value ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-700 dark:text-cyan-300' : 'text-deep-500'}`}>{tab.label}</button>)}</div>
+      <div className="flex rounded-xl border border-water-200 bg-white/50 p-1 dark:bg-slate-900/50">{[{ value: false, label: 'الحالية' }, { value: true, label: 'المنتهية' }].map(tab => <button type="button" key={tab.label} onClick={() => setArchive(tab.value)} aria-pressed={archive === tab.value} className={`min-h-10 rounded-xl px-4 text-sm font-bold transition ${archive === tab.value ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-700 dark:text-cyan-300' : 'text-deep-500'}`}>{tab.label}</button>)}</div>
       <span className="text-xs text-deep-500">{visible.length} مسابقة</span>
     </div>
     {loading ? <div className="page-loading" aria-label="جاري تحميل المسابقات" />
@@ -57,7 +57,7 @@ export default function CompetitionsPage() {
         {!archive && isAdmin && <button onClick={() => setCreating(true)} className="water-btn mt-6 min-h-11 rounded-xl px-6 py-2 text-sm font-bold text-white">إنشاء أول مسابقة</button>}
       </div>
       : <div className="grid gap-4 md:grid-cols-2">{visible.map(item => <Link key={item.id} href={`/competitions/${item.id}`} className="glass-card group rounded-3xl p-6 transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-amber-500">
-        <div className="flex items-start justify-between gap-3"><span className={`rounded-lg px-3 py-1.5 text-xs font-bold ${STATUS_STYLES[item.status]}`}>{STATUS_LABELS[item.status]}</span>{item.public_enabled && <span className="text-xs text-deep-500">🔗 رابط عام مفعّل</span>}</div>
+        <div className="flex items-start justify-between gap-3"><span className={`rounded-xl px-3 py-1.5 text-xs font-bold ${STATUS_STYLES[item.status]}`}>{STATUS_LABELS[item.status]}</span>{item.public_enabled && <span className="text-xs text-deep-500">🔗 رابط عام مفعّل</span>}</div>
         <h2 className="mt-5 text-xl font-bold text-deep-900">{item.title}</h2>
         <p className="mt-2 text-sm text-deep-500">{shortDate(item.start_date)} ← {shortDate(item.end_date)}</p>
         <div className="mt-6 flex items-center justify-between gap-3 border-t border-water-200/60 pt-4"><span className="text-xs text-deep-500">{arabicNumber(item.participant_count || 0)} متسابق</span><span className="text-sm font-bold text-blue-700 transition group-hover:-translate-x-1 dark:text-cyan-300">فتح المسابقة ←</span></div>

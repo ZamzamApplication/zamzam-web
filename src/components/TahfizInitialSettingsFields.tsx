@@ -95,7 +95,7 @@ export default function TahfizInitialSettingsFields({ value, onChange }: {
           const checked = value.progressCategories.includes(option.key)
           return <label key={option.key} className={`cursor-pointer rounded-xl border p-3 ${checked ? 'border-cyan-500 bg-cyan-50 dark:bg-cyan-950/30' : 'border-water-200 bg-white/50 dark:bg-slate-800/50'}`}>
             <span className="flex items-center gap-2 text-xs font-bold text-deep-800"><input type="checkbox" checked={checked} disabled={option.key === 'new_memorization'} onChange={() => onChange({ ...value, progressCategories: checked ? value.progressCategories.filter(item => item !== option.key) : [...value.progressCategories, option.key] })} />{option.label}</span>
-            <span className="mt-1 block text-[11px] leading-5 text-deep-500">{option.description}</span>
+            <span className="mt-1 block text-xs leading-5 text-deep-500">{option.description}</span>
           </label>
         })}
       </div>}

@@ -72,8 +72,8 @@ export default function SignupPage() {
           <div aria-hidden="true" className="absolute -bottom-20 -right-16 -z-10 h-72 w-72 rounded-full bg-white/5" />
           <div className="flex h-full flex-col">
             <Link href="/" className="inline-flex w-fit items-center gap-3 rounded-2xl bg-white/10 px-3 py-2 backdrop-blur-sm hover:bg-white/15">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-xl text-blue-700 shadow-lg shadow-cyan-950/15">💧</span>
-              <span><strong className="block text-lg leading-none">زمزم</strong><small className="mt-1 block text-[10px] text-blue-100">إدارة التحفيظ ببساطة</small></span>
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-xl text-blue-700 shadow-lg shadow-cyan-950/15"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ width: '1.25em', height: '1.25em' }}><path d="M12 3.5c3.5 4.3 6 7.6 6 10.5a6 6 0 0 1-12 0c0-2.9 2.5-6.2 6-10.5Z" /></svg></span>
+              <span><strong className="block text-lg leading-none">زمزم</strong><small className="mt-1 block text-xs text-blue-100">إدارة التحفيظ ببساطة</small></span>
             </Link>
 
             <div className="my-10 lg:my-auto">
@@ -88,7 +88,7 @@ export default function SignupPage() {
                 ].map(([icon, label, detail]) => (
                   <div key={label} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/10 p-3 backdrop-blur-sm">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15 text-lg font-bold">{icon}</span>
-                    <span><strong className="block text-sm">{label}</strong><small className="mt-0.5 block text-[11px] leading-5 text-blue-50/75">{detail}</small></span>
+                    <span><strong className="block text-sm">{label}</strong><small className="mt-0.5 block text-xs leading-5 text-blue-50/75">{detail}</small></span>
                   </div>
                 ))}
               </div>
@@ -101,7 +101,7 @@ export default function SignupPage() {
         <section className="flex items-center p-6 sm:p-10 lg:p-12">
           <div className={`mx-auto w-full ${isSetupStep ? 'max-w-3xl' : 'max-w-md'}`}>
             <Link href="/" className="mb-8 inline-flex items-center gap-2 text-deep-800 lg:hidden">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-600 to-teal-500 text-xl text-white shadow-md">💧</span>
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-600 to-teal-500 text-xl text-white shadow-md"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ width: '1.25em', height: '1.25em' }}><path d="M12 3.5c3.5 4.3 6 7.6 6 10.5a6 6 0 0 1-12 0c0-2.9 2.5-6.2 6-10.5Z" /></svg></span>
               <span className="text-lg font-bold">زمزم</span>
             </Link>
             {!inviteToken && (

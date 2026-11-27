@@ -52,7 +52,7 @@ export default function RegistrationStudentFields({ fields, requiredFields = [],
                   </div>
                 )
               })}
-              {parents.length < 20 && <button type="button" className="water-btn-outline rounded-lg px-3 py-2 text-sm" onClick={() => update('parent_phones', [...parents, { phone_number: '', parent_type: 'أب', name: '' }])}>إضافة ولي أمر</button>}
+              {parents.length < 20 && <button type="button" className="water-btn-outline rounded-xl px-3 py-2 text-sm" onClick={() => update('parent_phones', [...parents, { phone_number: '', parent_type: 'أب', name: '' }])}>إضافة ولي أمر</button>}
             </fieldset>
           )
         }

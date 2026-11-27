@@ -113,7 +113,7 @@ export default function CompetitionWorkspace({ competitionId }: { competitionId:
     <section className="glass-card rounded-3xl p-5 sm:p-7">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <span className="rounded-lg bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">{STATUS_LABELS[competition.status]}</span>
+          <span className="rounded-xl bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">{STATUS_LABELS[competition.status]}</span>
           <h1 className="mt-3 text-2xl font-extrabold text-deep-900 sm:text-3xl">{competition.title}</h1>
           <p className="mt-2 text-sm text-deep-500">{shortDate(competition.start_date)} ← {shortDate(competition.end_date)} · {arabicNumber(participants.length)} متسابق · {arabicNumber(competition.points_per_check)} نقطة لكل يوم{competition.completion_threshold ? ` · ⭐ عند ${arabicNumber(competition.completion_threshold)} نقطة` : ''}</p>
           {competition.description && <p className="mt-3 max-w-2xl whitespace-pre-wrap text-sm leading-7 text-deep-600">{competition.description}</p>}
@@ -143,14 +143,14 @@ export default function CompetitionWorkspace({ competitionId }: { competitionId:
       </div>}
     </section>}
 
-    <div className="flex rounded-xl border border-water-200 bg-white/50 p-1 dark:bg-slate-900/50" role="tablist">{tabs.map(item => <button key={item.key} type="button" role="tab" aria-selected={tab === item.key} onClick={() => setTab(item.key)} className={`min-h-11 flex-1 rounded-lg px-3 text-sm font-bold transition ${tab === item.key ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-700 dark:text-cyan-300' : 'text-deep-500'}`}>{item.label}</button>)}</div>
+    <div className="flex rounded-xl border border-water-200 bg-white/50 p-1 dark:bg-slate-900/50" role="tablist">{tabs.map(item => <button key={item.key} type="button" role="tab" aria-selected={tab === item.key} onClick={() => setTab(item.key)} className={`min-h-11 flex-1 rounded-xl px-3 text-sm font-bold transition ${tab === item.key ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-700 dark:text-cyan-300' : 'text-deep-500'}`}>{item.label}</button>)}</div>
 
     {participants.length === 0 ? <div className="glass-card rounded-3xl px-6 py-12 text-center"><h2 className="font-bold text-deep-800">لا يوجد متسابقون بعد</h2><p className="mt-2 text-sm text-deep-500">{isAdmin ? 'أضف حلقة كاملة أو تصنيفاً بضغطة واحدة.' : 'سيضيف المدير المتسابقين قريباً.'}</p>{isAdmin && <button onClick={() => setDialog('add')} className="water-btn mt-5 min-h-11 rounded-xl px-6 text-sm font-bold text-white">إضافة المتسابقين</button>}</div>
       : tab === 'day' ? <section className="glass-card rounded-3xl p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <button type="button" aria-label="اليوم السابق" disabled={day <= competition.start_date} onClick={() => setDay(addDays(day, -1))} className="water-btn-outline grid h-11 w-11 place-items-center rounded-xl text-lg disabled:opacity-30">→</button>
-            <label className="text-center"><span className="block text-xs text-deep-500">{day === today ? 'اليوم' : getArabicDay(day)}</span><input type="date" value={day} min={competition.start_date} max={latestAllowed} onChange={e => e.target.value && setDay(clampDay(e.target.value, competition.start_date, latestAllowed))} className="surface-field mt-1 min-h-10 rounded-lg px-2 text-sm font-bold" aria-label="تاريخ التسجيل" /></label>
+            <label className="text-center"><span className="block text-xs text-deep-500">{day === today ? 'اليوم' : getArabicDay(day)}</span><input type="date" value={day} min={competition.start_date} max={latestAllowed} onChange={e => e.target.value && setDay(clampDay(e.target.value, competition.start_date, latestAllowed))} className="surface-field mt-1 min-h-10 rounded-xl px-2 text-sm font-bold" aria-label="تاريخ التسجيل" /></label>
             <button type="button" aria-label="اليوم التالي" disabled={day >= latestAllowed} onClick={() => setDay(addDays(day, 1))} className="water-btn-outline grid h-11 w-11 place-items-center rounded-xl text-lg disabled:opacity-30">←</button>
           </div>
           <p className="text-sm font-bold text-deep-700" aria-live="polite">{arabicNumber(doneCount)} / {arabicNumber(participants.length)} أنجزوا</p>
@@ -164,7 +164,7 @@ export default function CompetitionWorkspace({ competitionId }: { competitionId:
           const key = entryKey(p.id, day), checked = done.has(key), saving = pending.has(key), enabled = canRecord && p.can_record
           return <li key={p.id}><button type="button" aria-pressed={checked} disabled={!enabled || saving} onClick={() => record([p.id], day, !checked)} className={`flex min-h-14 w-full items-center gap-3 rounded-2xl border px-4 py-3 text-right transition ${checked ? 'border-emerald-300 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-950/40' : 'border-water-200 bg-white/50 hover:border-amber-300 dark:bg-slate-900/40'} ${!enabled ? 'cursor-default opacity-60' : ''}`}>
             <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm font-bold ${checked ? 'bg-emerald-500 text-white' : 'border-2 border-water-300 text-transparent'}`} aria-hidden="true">✓</span>
-            <span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold text-deep-900">{p.name}</span>{!p.can_record && <span className="block text-[11px] text-deep-500">ليس من طلابك</span>}</span>
+            <span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold text-deep-900">{p.name}</span>{!p.can_record && <span className="block text-xs text-deep-500">ليس من طلابك</span>}</span>
             {saving && <span className="h-4 w-4 animate-spin rounded-full border-2 border-water-200 border-t-water-600" aria-label="جاري الحفظ" />}
           </button></li>
         })}</ul>
@@ -187,12 +187,12 @@ function GridView({ detail, done, pending, canRecord, today, onToggle }: { detai
   return <section className="glass-card rounded-3xl p-3 sm:p-5">
     <ScrollableTable>
       <table className="min-w-full border-separate border-spacing-0 text-sm" aria-label="جدول أيام المسابقة">
-        <thead><tr><th scope="col" className="sticky right-0 z-10 bg-white/95 px-3 py-2 text-right text-xs font-bold text-deep-600 dark:bg-slate-900/95">المتسابق</th><th scope="col" className="px-2 py-2 text-xs font-bold text-deep-600">النقاط</th>{days.map(d => <th key={d} scope="col" className={`whitespace-nowrap px-1 py-2 text-[11px] font-semibold ${d === today ? 'text-amber-600' : 'text-deep-500'}`}>{shortDate(d)}</th>)}</tr></thead>
+        <thead><tr><th scope="col" className="sticky right-0 z-10 bg-white/95 px-3 py-2 text-right text-xs font-bold text-deep-600 dark:bg-slate-900/95">المتسابق</th><th scope="col" className="px-2 py-2 text-xs font-bold text-deep-600">النقاط</th>{days.map(d => <th key={d} scope="col" className={`whitespace-nowrap px-1 py-2 text-xs font-semibold ${d === today ? 'text-amber-600' : 'text-deep-500'}`}>{shortDate(d)}</th>)}</tr></thead>
         <tbody>{participants.map(p => <tr key={p.id} className="border-t border-water-100">
           <th scope="row" className="sticky right-0 z-10 max-w-[10rem] truncate bg-white/95 px-3 py-1.5 text-right font-bold text-deep-800 dark:bg-slate-900/95">{p.name}</th>
           <td className="px-2 text-center font-bold text-deep-700">{arabicNumber(points.get(p.id) ?? 0)}</td>
           {days.map(d => { const key = entryKey(p.id, d), checked = done.has(key), enabled = canRecord && p.can_record && !pending.has(key)
-            return <td key={d} className="p-0.5 text-center"><button type="button" aria-label={`${p.name} — ${d}: ${checked ? 'أنجز' : 'لم يُسجل'}`} aria-pressed={checked} disabled={!enabled} onClick={() => onToggle(p.id, d, !checked)} className={`h-9 w-9 rounded-lg text-sm font-bold transition ${checked ? 'bg-emerald-500 text-white' : 'bg-water-50 text-transparent hover:bg-amber-100 dark:bg-slate-800 dark:hover:bg-slate-700'} ${!enabled ? 'cursor-default' : ''}`}>✓</button></td> })}
+            return <td key={d} className="p-0.5 text-center"><button type="button" aria-label={`${p.name} — ${d}: ${checked ? 'أنجز' : 'لم يُسجل'}`} aria-pressed={checked} disabled={!enabled} onClick={() => onToggle(p.id, d, !checked)} className={`h-9 w-9 rounded-xl text-sm font-bold transition ${checked ? 'bg-emerald-500 text-white' : 'bg-water-50 text-transparent hover:bg-amber-100 dark:bg-slate-800 dark:hover:bg-slate-700'} ${!enabled ? 'cursor-default' : ''}`}>✓</button></td> })}
         </tr>)}</tbody>
       </table>
     </ScrollableTable>
@@ -221,12 +221,12 @@ function StandingsView({ standings, threshold, isAdmin, onRemove }: { standings:
         <thead><tr className="text-xs text-deep-500"><th scope="col" className="px-2 py-2 text-right">المركز</th><th scope="col" className="px-2 py-2 text-right">المتسابق</th><th scope="col" className="px-2 py-2">النقاط</th><th scope="col" className="px-2 py-2">الأيام</th><th scope="col" className="px-2 py-2">أطول سلسلة</th>{threshold && <th scope="col" className="px-2 py-2">الإتمام</th>}{isAdmin && <th scope="col" className="px-2 py-2"><span className="sr-only">إجراءات</span></th>}</tr></thead>
         <tbody>{standings.map(row => <tr key={row.participant_id} className="border-t border-water-100">
           <td className="px-2 py-2"><span className="flex items-center gap-1.5 font-bold text-deep-700">{row.trophy ? <TrophyCup trophy={row.trophy} labelled className="h-6 w-6" /> : <span className="inline-block w-6" />}{arabicNumber(row.rank)}</span></td>
-          <th scope="row" className="px-2 py-2 text-right font-bold text-deep-900">{row.name}{row.student_id === null && <span className="mr-2 text-[11px] font-normal text-deep-500">(طالب محذوف)</span>}</th>
+          <th scope="row" className="px-2 py-2 text-right font-bold text-deep-900">{row.name}{row.student_id === null && <span className="mr-2 text-xs font-normal text-deep-500">(طالب محذوف)</span>}</th>
           <td className="px-2 py-2 text-center font-extrabold text-deep-900">{arabicNumber(row.points)}</td>
           <td className="px-2 py-2 text-center text-deep-600">{arabicNumber(row.days)}</td>
           <td className="px-2 py-2 text-center text-deep-600">{arabicNumber(row.best_streak)}</td>
           {threshold && <td className="px-2 py-2 text-center">{row.completed ? <span title="أتم المسابقة">⭐</span> : <span className="text-xs text-deep-400">{arabicNumber(Math.max(0, threshold - row.points))} متبقية</span>}</td>}
-          {isAdmin && <td className="px-2 py-2 text-left"><button type="button" onClick={() => onRemove(row.participant_id, row.name)} className="min-h-9 rounded-lg px-2 text-xs font-bold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40" aria-label={`إزالة ${row.name}`}>إزالة</button></td>}
+          {isAdmin && <td className="px-2 py-2 text-left"><button type="button" onClick={() => onRemove(row.participant_id, row.name)} className="min-h-9 rounded-xl px-2 text-xs font-bold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40" aria-label={`إزالة ${row.name}`}>إزالة</button></td>}
         </tr>)}</tbody>
       </table>
     </ScrollableTable>

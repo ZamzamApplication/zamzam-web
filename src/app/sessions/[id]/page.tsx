@@ -2,8 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { api } from '@/lib/api'
-import { getArabicDay, mediaUrl } from '@/lib/format'
+import { formatDateWithWeekday, mediaUrl } from '@/lib/format'
+import { useCurrentUser } from '@/lib/current-user'
+import { confirmAction, toast } from '@/lib/ui-feedback'
+import Icon from '@/components/Icon'
 import type { AttendanceThresholdAlert, ProgressCategory, QuranProgressInput, Session, SessionAttendance, SheikhGroup } from '@/lib/types'
 import { QUALITY_OPTIONS, type QualityOption } from '@/lib/quran'
 import InlineQuranProgress, { isSurahAyahRangeComplete, type ProgressDraftMap, progressDraftKey, progressEntryToInput } from '@/components/InlineQuranProgress'
@@ -93,12 +97,13 @@ function StudentRow({
     <div id={`student-row-${student.id}`} className={`py-3 px-3 md:grid ${sheikhSelectionEnabled ? 'md:grid-cols-[36px_1fr_minmax(144px,170px)_minmax(145px,180px)_1fr]' : 'md:grid-cols-[36px_1fr_minmax(144px,170px)_1fr]'} md:gap-2 md:items-center md:py-2.5 md:px-4 hover:bg-water-100/30 rounded-xl transition`}>
       <div className="flex items-center gap-3 md:contents">
         {student.profile_pic ? (
-          <img
-            src={mediaUrl(student.profile_pic)!}
-            alt=""
-            className="w-10 h-10 md:w-8 md:h-8 rounded-full object-cover border border-water-300 shrink-0 cursor-pointer hover:opacity-80 transition"
-            onClick={() => onZoomPic(mediaUrl(student.profile_pic)!)}
-          />
+          <button type="button" onClick={() => onZoomPic(mediaUrl(student.profile_pic)!)} aria-label={`تكبير صورة ${student.name}`} className="shrink-0 rounded-full">
+            <img
+              src={mediaUrl(student.profile_pic)!}
+              alt=""
+              className="w-10 h-10 md:w-8 md:h-8 rounded-full object-cover border border-water-300 hover:opacity-80 transition"
+            />
+          </button>
         ) : (
           <div className="w-10 h-10 md:w-8 md:h-8 rounded-full bg-water-200/50 flex items-center justify-center text-deep-400 text-sm md:text-xs border border-water-300 shrink-0">
             {student.name.charAt(0)}
@@ -112,7 +117,7 @@ function StudentRow({
       </div>
       <div className="grid grid-cols-1 gap-2 mt-3 md:contents">
         <label className="block md:contents">
-          <span className="block md:hidden text-[11px] text-deep-500 mb-1">الحالة</span>
+          <span className="block md:hidden text-xs text-deep-500 mb-1">الحالة</span>
           <AttendanceStatusControl
             value={student.status}
             statuses={attendanceStatuses}
@@ -123,7 +128,7 @@ function StudentRow({
           />
         </label>
         {sheikhSelectionEnabled && <label className="block md:contents">
-          <span className="block md:hidden text-[11px] text-deep-500 mb-1">الشيخ</span>
+          <span className="block md:hidden text-xs text-deep-500 mb-1">الشيخ</span>
       <select
         value={student.sheikh_id ?? ''}
         onChange={(e) => onSheikhChange(Number(e.target.value))}
@@ -136,7 +141,7 @@ function StudentRow({
       </select>
         </label>}
         <label className="block md:contents">
-          <span className="block md:hidden text-[11px] text-deep-500 mb-1">ملاحظات</span>
+          <span className="block md:hidden text-xs text-deep-500 mb-1">ملاحظات</span>
       <input
         value={notes}
         onChange={(e) => handleNotesChange(e.target.value)}
@@ -227,11 +232,16 @@ function SheikhAccordion({
   return (
     <div className="attendance-sheikh-card glass-card relative z-0 overflow-visible rounded-2xl">
       <button
+        type="button"
         onClick={onToggle}
-        className={`flex w-full items-center justify-between rounded-t-2xl bg-water-100/30 px-5 py-4 transition hover:bg-water-200/30 ${expanded ? '' : 'rounded-b-2xl'}`}
+        aria-expanded={expanded}
+        className={`flex w-full items-center justify-between gap-3 rounded-t-2xl bg-water-100/30 px-5 py-4 transition hover:bg-water-200/30 ${expanded ? '' : 'rounded-b-2xl'}`}
       >
-        <span className="text-lg font-bold text-deep-800">{group.sheikh.name}</span>
-        <span className="text-deep-500 text-sm">
+        <span className="flex min-w-0 items-center gap-2">
+          <Icon name="chevron-down" className={`h-4 w-4 shrink-0 text-deep-400 transition-transform ${expanded ? '' : 'rotate-90'}`} />
+          <span className="truncate text-lg font-bold text-deep-800">{group.sheikh.name}</span>
+        </span>
+        <span className="shrink-0 text-sm text-deep-500" aria-label={`${countStudentsExceptAbsent(group.students, absentStatus)} من ${group.students.length} غير غائبين`}>
           {countStudentsExceptAbsent(group.students, absentStatus)}/{group.students.length}
         </span>
       </button>
@@ -282,7 +292,8 @@ function SheikhAccordion({
 
 function ImagePreviewModal({ src, onClose }: { src: string; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="صورة الطالب" onClick={onClose}>
+      <button type="button" onClick={onClose} autoFocus aria-label="إغلاق" className="absolute left-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-white/90 text-slate-800 shadow"><Icon name="close" /></button>
       <img src={src} alt="صورة الطالب" className="max-w-[90vw] max-h-[90vh] rounded-2xl shadow-2xl" onClick={(e) => e.stopPropagation()} />
     </div>
   )
@@ -291,6 +302,11 @@ function ImagePreviewModal({ src, onClose }: { src: string; onClose: () => void 
 export default function SessionAttendancePage() {
   const params = useParams()
   const router = useRouter()
+  const contextUser = useCurrentUser()
+  const contextUserRef = useRef(contextUser)
+  contextUserRef.current = contextUser
+  const [reloadKey, setReloadKey] = useState(0)
+  const [confirming, setConfirming] = useState(false)
   const [data, setData] = useState<SessionAttendance | null>(null)
   const [allSessions, setAllSessions] = useState<Session[]>([])
   const [savingIds, setSavingIds] = useState<Set<number>>(new Set())
@@ -330,19 +346,18 @@ export default function SessionAttendancePage() {
   const [progressSaving, setProgressSaving] = useState(false)
   const [reopening, setReopening] = useState(false)
   const [studentSearch, setStudentSearch] = useState('')
-  const [thresholdAlerts, setThresholdAlerts] = useState<AttendanceThresholdAlert[]>([])
   const [showMembership, setShowMembership] = useState(false)
+  const navigateAfterSaveRef = useRef<(href: string) => Promise<void>>(async () => {})
 
   const showThresholdAlerts = useCallback((alerts: AttendanceThresholdAlert[]) => {
-    if (!alerts.length) return
-    setThresholdAlerts(current => [
-      ...current,
-      ...alerts.filter(alert => !current.some(item => item.student_id === alert.student_id && item.streak === alert.streak)),
-    ])
     alerts.forEach(alert => {
-      window.setTimeout(() => {
-        setThresholdAlerts(current => current.filter(item => !(item.student_id === alert.student_id && item.streak === alert.streak)))
-      }, 8000)
+      toast(`تجاوز حد «${alert.status}» المتتالي: ${alert.streak} مرات (الحد ${alert.limit}).`, {
+        title: alert.student_name,
+        tone: 'warning',
+        duration: 10000,
+        actionLabel: 'فتح ملف الطالب',
+        onAction: () => void navigateAfterSaveRef.current(`/students/${alert.student_id}`),
+      })
     })
   }, [])
 
@@ -363,12 +378,13 @@ export default function SessionAttendancePage() {
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
+    // Reloads after an in-page change keep the current view instead of a placeholder.
+    if (dataRef.current?.session_id !== Number(params.id)) setLoading(true)
     setLoadError('')
     Promise.all([
       api.getSessionAttendance(Number(params.id)),
       api.getAllSessions(),
-      api.getMe(),
+      contextUserRef.current ? Promise.resolve(contextUserRef.current) : api.getMe(),
       api.getSessionProgress(Number(params.id)),
     ]).then(([sessionData, sessions, currentUser, progress]) => {
       if (cancelled) return
@@ -413,7 +429,7 @@ export default function SessionAttendancePage() {
     return () => {
       cancelled = true
     }
-  }, [params.id])
+  }, [params.id, reloadKey])
 
   const circleSessions = useMemo(() => {
     if (!data) return []
@@ -528,10 +544,19 @@ export default function SessionAttendancePage() {
       && progressDrafts[key]?.quality_score > 0
       && progressRangeChanged(persistedProgressDrafts[key], progressDrafts[key])
     ))
-    if (editedSavedRanges.length > 0 && !window.confirm(`سيتم تعديل مقدار محفوظ في ${editedSavedRanges.length} سجل/سجلات، وسيُحفظ التغيير في سجل التدقيق. هل تريد المتابعة؟`)) {
+    if (editedSavedRanges.length > 0 && !(await confirmAction({
+      title: 'تعديل مقدار محفوظ',
+      message: `سيتم تعديل مقدار محفوظ في ${editedSavedRanges.length} سجل/سجلات، وسيُحفظ التغيير في سجل التدقيق.`,
+      confirmLabel: 'حفظ التعديل',
+      tone: 'default',
+    }))) {
       return false
     }
-    if (deletions.length > 0 && !window.confirm(`سيتم حذف ${deletions.length} سجل/سجلات متابعة محفوظة مع التقييم والمقدار. هل تريد المتابعة؟`)) return false
+    if (deletions.length > 0 && !(await confirmAction({
+      title: 'حذف سجلات المتابعة',
+      message: `سيتم حذف ${deletions.length} سجل/سجلات متابعة محفوظة مع التقييم والمقدار.`,
+      confirmLabel: 'حذف',
+    }))) return false
     setProgressSaving(true)
     setSaveState('saving')
     setSaveError('')
@@ -669,7 +694,7 @@ export default function SessionAttendancePage() {
         version: result.version,
       }
       if (nextEnabled) {
-        globalThis.location.reload()
+        setReloadKey(key => key + 1)
         return
       }
       setProgressEnabled(false)
@@ -689,31 +714,76 @@ export default function SessionAttendancePage() {
     }
   }
 
+  // A save already in flight makes flushUpdates bail out; wait for it first.
+  const waitForFlush = async () => {
+    for (let waited = 0; flushInFlight.current && waited < 10000; waited += 100) {
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+  }
+
   const navigateAfterSave = async (href: string) => {
     if (flushTimer.current) clearTimeout(flushTimer.current)
+    await waitForFlush()
     const attendanceSaved = await flushUpdates()
     const progressSaved = attendanceSaved ? await saveProgressDrafts() : false
     if (attendanceSaved && progressSaved && pendingUpdates.current.size === 0) router.push(href)
   }
+  navigateAfterSaveRef.current = navigateAfterSave
 
   const handleSaveAll = async () => {
     if (flushTimer.current) clearTimeout(flushTimer.current)
+    await waitForFlush()
     const attendanceSaved = await flushUpdates()
     if (attendanceSaved) await saveProgressDrafts()
   }
 
+  const handleMarkAllPresent = async () => {
+    if (!data || data.is_confirmed) return
+    const targets = data.sheikh_groups.flatMap((group) => group.students).filter((student) => student.status !== presentStatus)
+    if (targets.length === 0) return
+    const breakdown = Array.from(new Set(targets.map((student) => student.status)))
+      .map((status) => `${status}: ${targets.filter((student) => student.status === status).length}`)
+      .join(' · ')
+    const confirmed = await confirmAction({
+      title: `تسجيل الجميع «${presentStatus}»`,
+      message: `سيتم تحويل ${targets.length} طالب إلى «${presentStatus}» (${breakdown}).\nيمكنك بعدها تعديل أي طالب على حدة.`,
+      confirmLabel: 'تطبيق',
+      tone: 'default',
+    })
+    if (!confirmed) return
+    targets.forEach((student) => handleUpdateStatus(student.id, presentStatus))
+  }
+
   const handleConfirm = async () => {
-    if (!data) return
+    if (!data || confirming) return
+    const students = data.sheikh_groups.flatMap((group) => group.students)
+    const breakdown = Array.from(new Set([...attendanceStatuses, ...students.map((student) => student.status)]))
+      .map((status) => ({ status, count: students.filter((student) => student.status === status).length }))
+      .filter((item) => item.count > 0)
+      .map((item) => `${item.status}: ${item.count}`)
+      .join(' · ')
+    const confirmed = await confirmAction({
+      title: 'تأكيد الحلقة',
+      message: `${breakdown || 'لا يوجد طلاب'}\n\nبعد التأكيد لن يمكن تعديل الحضور إلا بإعادة فتح الحلقة.`,
+      confirmLabel: 'تأكيد الحلقة',
+      tone: 'default',
+    })
+    if (!confirmed) return
+    setConfirming(true)
     try {
       if (flushTimer.current) clearTimeout(flushTimer.current)
+      await waitForFlush()
       const attendanceSaved = await flushUpdates()
       const progressSaved = attendanceSaved ? await saveProgressDrafts() : false
       if (!attendanceSaved || !progressSaved || pendingUpdates.current.size > 0) return
       const result = await api.confirmSession(data.session_id, dataRef.current?.version ?? data.version)
       setData((current) => current ? { ...current, is_confirmed: true, status: 'confirmed', version: result.version } : current)
+      toast('تم تأكيد الحلقة', { tone: 'success' })
     } catch (err: any) {
       setSaveError(err.message || 'تعذر تأكيد الحلقة')
       setSaveState('error')
+    } finally {
+      setConfirming(false)
     }
   }
 
@@ -739,19 +809,43 @@ export default function SessionAttendancePage() {
       event.returnValue = ''
     }
     window.addEventListener('beforeunload', warnBeforeLeave)
-    return () => {
-      window.removeEventListener('beforeunload', warnBeforeLeave)
-      if (flushTimer.current) clearTimeout(flushTimer.current)
-    }
+    return () => window.removeEventListener('beforeunload', warnBeforeLeave)
   }, [dirtyProgressKeys, progressSaving])
 
-  if (loading) return <div className="page-loading" aria-label="جاري التحميل" />
+  // Leaving through any in-app link (top or bottom nav, breadcrumbs) saves first,
+  // so a status or note changed moments before is never dropped.
+  const hasUnsavedRef = useRef(false)
+  hasUnsavedRef.current = pendingUpdates.current.size > 0 || dirtyProgressKeys.size > 0
+  useEffect(() => {
+    const interceptLinks = (event: MouseEvent) => {
+      if (!hasUnsavedRef.current || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+      const anchor = (event.target as HTMLElement | null)?.closest('a[href]') as HTMLAnchorElement | null
+      if (!anchor || anchor.target === '_blank') return
+      const url = new URL(anchor.href, window.location.href)
+      if (url.origin !== window.location.origin || url.pathname === window.location.pathname) return
+      event.preventDefault()
+      event.stopPropagation()
+      void navigateAfterSaveRef.current(`${url.pathname}${url.search}`)
+    }
+    document.addEventListener('click', interceptLinks, true)
+    return () => document.removeEventListener('click', interceptLinks, true)
+  }, [])
+
+  // On unmount, send any attendance change still waiting for its debounce.
+  const flushUpdatesRef = useRef(flushUpdates)
+  flushUpdatesRef.current = flushUpdates
+  useEffect(() => () => {
+    if (flushTimer.current) clearTimeout(flushTimer.current)
+    if (pendingUpdates.current.size > 0) void flushUpdatesRef.current()
+  }, [])
+
+  if (loading) return <div className="page-loading" role="status" aria-label="جاري التحميل" />
 
   if (loadError) {
     return (
       <div className="glass-card rounded-2xl p-8 text-center">
         <p role="alert" className="text-red-600">{loadError}</p>
-        <button type="button" onClick={() => window.location.reload()} className="water-btn-outline mt-4 rounded-xl px-4 py-2 text-sm">إعادة المحاولة</button>
+        <button type="button" onClick={() => setReloadKey(key => key + 1)} className="water-btn-outline mt-4 rounded-xl px-4 py-2 text-sm">إعادة المحاولة</button>
       </div>
     )
   }
@@ -764,6 +858,7 @@ export default function SessionAttendancePage() {
     )
   }
 
+  const isAdmin = userRole === 'admin' || userRole === 'super_admin'
   const allStudents = data.sheikh_groups.flatMap((group) => group.students)
   const normalizedStudentSearch = studentSearch.trim().toLocaleLowerCase('ar')
   const visibleGroups = data.sheikh_groups
@@ -780,6 +875,7 @@ export default function SessionAttendancePage() {
     }))
     .filter(group => group.students.length > 0)
   const totalCount = allStudents.length
+  const presentCount = allStudents.filter((student) => student.status === presentStatus).length
   const visibleSummaryStatuses = Array.from(new Set([
     ...attendanceStatuses,
     ...allStudents.map((student) => student.status),
@@ -794,103 +890,97 @@ export default function SessionAttendancePage() {
     data,
     allSessions.filter((session) => session.date === data.date).length > 1,
   )
+  const busySaving = saveState === 'saving' || progressSaving
+  const unsavedProgressCount = dirtyProgressKeys.size
 
   return (
-    <div>
-      <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center mb-6">
-        <div className="min-w-0">
-          <div className="flex items-start md:items-center gap-2 md:gap-3">
+    <div className="pb-24">
+      <div className="mb-5">
+        <Link
+          href="/sessions"
+          onClick={(event) => { event.preventDefault(); void navigateAfterSave('/sessions') }}
+          className="inline-flex items-center gap-1 text-sm font-semibold text-blue-700 hover:underline dark:text-blue-300"
+        >
+          <Icon name="chevron-prev" className="h-4 w-4" /> الحلقات
+        </Link>
+        <div className="mt-2 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="flex min-w-0 items-center gap-2 md:gap-3">
             <button
+              type="button"
               onClick={() => prevSession && navigateAfterSave(`/sessions/${prevSession.id}`)}
               disabled={!prevSession}
-              className={`text-xl p-2 rounded-xl transition shrink-0 ${prevSession ? 'hover:bg-water-200/50 text-deep-600 cursor-pointer' : 'text-deep-300/40'}`}
+              aria-label="الحلقة السابقة"
+              title="الحلقة السابقة"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-water-200/70 text-deep-600 transition hover:bg-water-100/60 disabled:opacity-30"
             >
-              ‹
+              <Icon name="chevron-prev" />
             </button>
             <div className="min-w-0 flex-1">
-              <h1 className="text-xl md:text-2xl font-bold text-deep-800">تسجيل الحضور</h1>
-              <div className="text-deep-600/60 text-sm mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1">
-                {editingDate ? (
-                  <span className="inline-flex flex-wrap items-center gap-2">
-                    <input
-                      type="date"
-                      value={editDateVal}
-                      onChange={(e) => setEditDateVal(e.target.value)}
-                      className="px-2 py-1 text-xs bg-white/50 dark:bg-slate-800/50 border border-water-300 rounded-xl"
-                      autoFocus
-                    />
-                    <input
-                      value={editNameVal}
-                      onChange={(e) => setEditNameVal(e.target.value)}
-                      maxLength={100}
-                      placeholder="اسم الحلقة (اختياري)"
-                      className="px-2 py-1 text-xs bg-white/50 dark:bg-slate-800/50 border border-water-300 rounded-xl"
-                    />
-                    <button onClick={handleSaveDate} className="text-xs water-btn text-white px-2 py-1 rounded-lg">حفظ</button>
-                    <button onClick={() => setEditingDate(false)} className="text-xs text-deep-400 px-2 py-1">إلغاء</button>
-                  </span>
-                ) : (
-                  <button disabled={data.is_confirmed || (userRole !== 'admin' && userRole !== 'super_admin')} onClick={() => { setEditDateVal(data.date); setEditNameVal(data.name || ''); setEditingDate(true) }} className="hover:text-blue-600 transition cursor-pointer disabled:cursor-default">
-                    {getArabicDay(data.date)} — {data.date}
-                  </button>
-                )}
-                <span>{data.circle_name || 'التحفيظ'}</span>
-                {currentSessionDescriptor && <span>— {currentSessionDescriptor}</span>}
-              </div>
+              <h1 className="text-xl font-bold text-deep-800 md:text-2xl">{formatDateWithWeekday(data.date)}</h1>
+              {editingDate ? (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <label className="sr-only" htmlFor="session-date-input">تاريخ الحلقة</label>
+                  <input
+                    id="session-date-input"
+                    type="date"
+                    value={editDateVal}
+                    onChange={(e) => setEditDateVal(e.target.value)}
+                    className="surface-field rounded-xl px-2 py-1.5 text-sm"
+                    autoFocus
+                  />
+                  <label className="sr-only" htmlFor="session-name-input">اسم الحلقة</label>
+                  <input
+                    id="session-name-input"
+                    value={editNameVal}
+                    onChange={(e) => setEditNameVal(e.target.value)}
+                    maxLength={100}
+                    placeholder="اسم الحلقة (اختياري)"
+                    className="surface-field rounded-xl px-2 py-1.5 text-sm"
+                  />
+                  <button type="button" onClick={handleSaveDate} className="water-btn rounded-xl px-3 py-1.5 text-sm font-semibold text-white">حفظ</button>
+                  <button type="button" onClick={() => setEditingDate(false)} className="water-btn-outline rounded-xl px-3 py-1.5 text-sm">إلغاء</button>
+                </div>
+              ) : (
+                <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-deep-500">
+                  <span>{data.circle_name || 'التحفيظ'}</span>
+                  {currentSessionDescriptor && <span>— {currentSessionDescriptor}</span>}
+                  {data.is_confirmed && <span className="rounded-full border border-green-300 bg-green-50 px-2 py-0.5 text-xs font-bold text-green-700 dark:border-green-800 dark:bg-green-950/50 dark:text-green-300">مؤكدة</span>}
+                  {isAdmin && !data.is_confirmed && (
+                    <button
+                      type="button"
+                      onClick={() => { setEditDateVal(data.date); setEditNameVal(data.name || ''); setEditingDate(true) }}
+                      className="inline-flex items-center gap-1 rounded-xl px-1.5 py-0.5 text-xs font-semibold text-blue-700 hover:bg-water-100/60 dark:text-blue-300"
+                    >
+                      <Icon name="edit" className="h-3.5 w-3.5" /> تعديل التاريخ والاسم
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
             <button
+              type="button"
               onClick={() => nextSession && navigateAfterSave(`/sessions/${nextSession.id}`)}
               disabled={!nextSession}
-              className={`text-xl p-2 rounded-xl transition shrink-0 ${nextSession ? 'hover:bg-water-200/50 text-deep-600 cursor-pointer' : 'text-deep-300/40'}`}
+              aria-label="الحلقة التالية"
+              title="الحلقة التالية"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-water-200/70 text-deep-600 transition hover:bg-water-100/60 disabled:opacity-30"
             >
-              ›
+              <Icon name="chevron-next" />
             </button>
           </div>
-        </div>
-        <div className="flex gap-3 flex-wrap">
-          {!data.is_confirmed && (
+          {isAdmin && !data.is_confirmed && data.explicit_membership && (
             <button
-              type="button"
-              onClick={handleSaveAll}
-              disabled={saveState === 'saving' || progressSaving}
-              className="water-btn px-4 py-2 rounded-xl text-sm font-semibold text-white flex-1 md:flex-none disabled:opacity-50"
-            >
-              {saveState === 'saving' || progressSaving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
-            </button>
-          )}
-          <button
-            onClick={() => navigateAfterSave('/sessions')}
-            className="water-btn-outline px-4 py-2 rounded-xl text-sm flex-1 md:flex-none"
-          >
-            رجوع
-          </button>
-          {!data.is_confirmed && (userRole === 'admin' || userRole === 'super_admin') && (
-            data.explicit_membership && <button
               type="button"
               onClick={() => void openMembershipEditor()}
-              className="water-btn-outline px-4 py-2 rounded-xl text-sm flex-1 md:flex-none"
+              className="water-btn-outline flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm"
             >
-              تعديل طلاب الحلقة
-            </button>
-          )}
-          {!data.is_confirmed && (userRole === 'admin' || userRole === 'super_admin') && (
-            <button
-              onClick={handleConfirm}
-              disabled={saveState === 'saving'}
-              className="water-btn text-white px-4 py-2 rounded-xl text-sm font-medium flex-1 md:flex-none"
-            >
-              تأكيد الحلقة
-            </button>
-          )}
-          {data.is_confirmed && (userRole === 'admin' || userRole === 'super_admin') && (
-            <button type="button" onClick={handleReopen} disabled={reopening} className="water-btn-outline px-4 py-2 rounded-xl text-sm flex-1 md:flex-none">
-              {reopening ? 'جاري إعادة الفتح...' : 'إعادة فتح الحلقة'}
+              <Icon name="users" className="h-4 w-4" /> تعديل طلاب الحلقة
             </button>
           )}
         </div>
       </div>
 
-      {tahfizProgressEnabled && (userRole === 'admin' || userRole === 'super_admin') && (
+      {tahfizProgressEnabled && isAdmin && (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-water-200 bg-white/55 px-4 py-3 dark:bg-slate-800/55">
           <div>
             <p className="text-sm font-bold text-deep-800">متابعة القرآن لهذه الحلقة</p>
@@ -915,21 +1005,9 @@ export default function SessionAttendancePage() {
         </div>
       )}
 
-      <div aria-live="polite" className="mb-4 min-h-6 text-center text-sm">
-        {saveState === 'pending' && <span className="text-amber-600">تغييرات بانتظار الحفظ...</span>}
-        {saveState === 'saving' && <span className="text-blue-700">جاري حفظ التغييرات...</span>}
-        {saveState === 'saved' && <span className="text-emerald-600">تم حفظ جميع التغييرات</span>}
-        {saveState === 'error' && (
-          <span className="text-red-600">
-            {saveError}
-            <button type="button" onClick={() => flushUpdates()} className="mr-2 underline font-semibold">إعادة المحاولة</button>
-          </span>
-        )}
-      </div>
-
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-4">
         {summaryItems.map((item) => (
-          <div key={item.label} className={`rounded-lg border px-3 py-2.5 ${item.className}`}>
+          <div key={item.label} className={`rounded-xl border px-3 py-2.5 ${item.className}`}>
             <div className="flex items-baseline justify-center gap-1">
               <span className="text-xl font-bold leading-none">{item.value}</span>
               {item.suffix && <span className="text-xs opacity-70">{item.suffix}</span>}
@@ -939,22 +1017,33 @@ export default function SessionAttendancePage() {
         ))}
       </div>
 
-      <div className="flex justify-start mb-2">
-        <button
-          onClick={() => setExpandedSheikhs(allExpanded ? new Set() : new Set(data.sheikh_groups.map((g) => g.sheikh.id)))}
-          className="text-xs text-blue-700 dark:text-blue-400 hover:underline px-2 py-1 transition"
-        >
-          {allExpanded ? 'طي الكل' : 'فتح الكل'}
-        </button>
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <label className="relative block flex-1">
+          <span className="sr-only">بحث عن طالب</span>
+          <Icon name="search" className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-deep-400" />
+          <input value={studentSearch} onChange={event => setStudentSearch(event.target.value)} placeholder="ابحث باسم الطالب أو الهاتف أو الشيخ..." className="surface-field w-full rounded-xl py-2.5 pr-10 pl-10 text-sm" />
+          {studentSearch && <button type="button" onClick={() => setStudentSearch('')} aria-label="مسح البحث" className="absolute left-3 top-1/2 -translate-y-1/2 text-deep-400 hover:text-deep-700"><Icon name="close" className="h-4 w-4" /></button>}
+        </label>
+        <div className="flex gap-2">
+          {!data.is_confirmed && (
+            <button
+              type="button"
+              onClick={() => void handleMarkAllPresent()}
+              disabled={presentCount === totalCount}
+              className="water-btn-outline flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-semibold disabled:opacity-40 sm:flex-none"
+            >
+              <Icon name="check" className="h-4 w-4" /> تسجيل الجميع «{presentStatus}»
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setExpandedSheikhs(allExpanded ? new Set() : new Set(data.sheikh_groups.map((g) => g.sheikh.id)))}
+            className="water-btn-outline whitespace-nowrap rounded-xl px-3 py-2 text-sm"
+          >
+            {allExpanded ? 'طي الكل' : 'فتح الكل'}
+          </button>
+        </div>
       </div>
-      <label className="relative mb-3 block">
-        <span className="sr-only">بحث عن طالب</span>
-        <svg className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-deep-400" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
-          <circle cx="8.5" cy="8.5" r="5.5" /><path d="m12.5 12.5 4 4" strokeLinecap="round" />
-        </svg>
-        <input value={studentSearch} onChange={event => setStudentSearch(event.target.value)} placeholder="ابحث باسم الطالب أو الهاتف أو الشيخ..." className="surface-field w-full rounded-xl py-2.5 pr-10 pl-10 text-sm" />
-        {studentSearch && <button type="button" onClick={() => setStudentSearch('')} aria-label="مسح البحث" className="absolute left-3 top-1/2 -translate-y-1/2 text-deep-400 hover:text-deep-700">×</button>}
-      </label>
       <div className="space-y-3">
         {visibleGroups.map((group) => (
           <SheikhAccordion
@@ -965,7 +1054,7 @@ export default function SessionAttendancePage() {
             onUpdateNotes={handleUpdateNotes}
             onUpdateSheikh={handleUpdateSheikh}
             onZoomPic={(url) => setPreviewPic(url)}
-            onViewStudent={(studentId) => router.push(`/students/${studentId}`)}
+            onViewStudent={(studentId) => void navigateAfterSave(`/students/${studentId}`)}
             savingIds={savingIds}
             expanded={expandedSheikhs.has(group.sheikh.id)}
             onToggle={() => toggleSheikh(group.sheikh.id)}
@@ -997,37 +1086,61 @@ export default function SessionAttendancePage() {
         )}
       </div>
 
-      {data.is_confirmed && (
-        <div className="mt-6 glass-strong text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800 rounded-2xl p-4 text-center">
-          تم تأكيد هذه الحلقة
+      <div className="session-action-bar fixed inset-x-0 z-40 px-3 md:px-6">
+        <div className="glass-strong mx-auto flex max-w-6xl items-center gap-3 rounded-2xl px-4 py-3 shadow-2xl">
+          <div className="min-w-0 flex-1" aria-live="polite">
+            <p className="text-sm font-bold text-deep-900">
+              {presentStatus}: {presentCount}/{totalCount}
+            </p>
+            <p className="truncate text-xs">
+              {saveState === 'error' ? (
+                <span className="text-red-600 dark:text-red-400">
+                  {saveError || 'تعذر الحفظ'}
+                  <button type="button" onClick={() => void handleSaveAll()} className="mr-2 font-bold underline">إعادة المحاولة</button>
+                </span>
+              ) : busySaving ? (
+                <span className="text-blue-700 dark:text-blue-300">جاري الحفظ…</span>
+              ) : saveState === 'pending' || unsavedProgressCount > 0 ? (
+                <span className="text-amber-600 dark:text-amber-300">{unsavedProgressCount > 0 ? `${unsavedProgressCount} سجل متابعة غير محفوظ` : 'تغييرات بانتظار الحفظ…'}</span>
+              ) : data.is_confirmed ? (
+                <span className="text-green-700 dark:text-green-300">الحلقة مؤكدة</span>
+              ) : (
+                <span className="text-emerald-600 dark:text-emerald-400">{saveState === 'saved' ? 'تم حفظ جميع التغييرات' : 'يُحفظ تلقائياً'}</span>
+              )}
+            </p>
+          </div>
+          {!data.is_confirmed && unsavedProgressCount > 0 && (
+            <button type="button" onClick={() => void handleSaveAll()} disabled={busySaving} className="water-btn-outline shrink-0 rounded-xl px-3 py-2 text-sm font-semibold disabled:opacity-50">
+              حفظ المتابعة
+            </button>
+          )}
+          {isAdmin && !data.is_confirmed && (
+            <button
+              type="button"
+              onClick={() => void handleConfirm()}
+              disabled={confirming || busySaving}
+              className="water-btn shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
+            >
+              {confirming ? 'جاري التأكيد…' : 'تأكيد الحلقة'}
+            </button>
+          )}
+          {isAdmin && data.is_confirmed && (
+            <button type="button" onClick={() => void handleReopen()} disabled={reopening} className="water-btn-outline shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-60">
+              {reopening ? 'جاري إعادة الفتح…' : 'إعادة فتح الحلقة'}
+            </button>
+          )}
         </div>
-      )}
+      </div>
 
       {showMembership && data.explicit_membership && <SessionMembershipModal
         sessionId={data.session_id}
         expectedVersion={data.version}
         initialStudentIds={allStudents.map(student => student.id)}
         onClose={() => setShowMembership(false)}
-        onSaved={() => globalThis.location.reload()}
+        onSaved={() => { setShowMembership(false); setReloadKey(key => key + 1) }}
       />}
 
       {previewPic && <ImagePreviewModal src={previewPic} onClose={() => setPreviewPic(null)} />}
-      <div className="fixed right-4 top-4 z-[80] grid w-[min(22rem,calc(100vw-2rem))] gap-2" aria-live="polite">
-        {thresholdAlerts.map(alert => (
-          <button
-            key={`${alert.student_id}:${alert.streak}`}
-            type="button"
-            onClick={() => router.push(`/students/${alert.student_id}`)}
-            className="glass-strong flex items-start gap-3 rounded-2xl border border-amber-300 p-4 text-right shadow-2xl dark:border-amber-700"
-          >
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-200">!</span>
-            <span className="min-w-0">
-              <span className="block font-bold text-deep-900">{alert.student_name}</span>
-              <span className="mt-1 block text-xs leading-5 text-deep-500">تجاوز حد «{alert.status}» المتتالي: {alert.streak} مرات (الحد {alert.limit}). اضغط لفتح ملف الطالب.</span>
-            </span>
-          </button>
-        ))}
-      </div>
     </div>
   )
 }

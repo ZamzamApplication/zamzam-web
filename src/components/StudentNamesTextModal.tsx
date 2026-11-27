@@ -32,8 +32,8 @@ export default function StudentNamesTextModal({ names, onClose }: { names: strin
       <textarea ref={textRef} autoFocus readOnly aria-label="أسماء الطلاب" value={text} onFocus={event => event.target.select()} className="surface-field mt-4 h-72 w-full resize-y rounded-xl px-3 py-3 text-sm leading-7" />
       <p role="status" className="mt-2 text-sm text-deep-500">{error || (copied ? 'تم نسخ أسماء الطلاب ✓' : '')}</p>
       <div className="mt-4 flex justify-end gap-2">
-        <button type="button" onClick={onClose} className="water-btn-outline rounded-lg px-4 py-2 text-sm font-semibold">إغلاق</button>
-        <button type="button" onClick={copyNames} disabled={names.length === 0} className="water-btn rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{copied ? 'تم النسخ ✓' : 'نسخ الأسماء'}</button>
+        <button type="button" onClick={onClose} className="water-btn-outline rounded-xl px-4 py-2 text-sm font-semibold">إغلاق</button>
+        <button type="button" onClick={copyNames} disabled={names.length === 0} className="water-btn rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{copied ? 'تم النسخ ✓' : 'نسخ الأسماء'}</button>
       </div>
     </dialog>
   )

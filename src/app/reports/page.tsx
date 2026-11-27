@@ -40,17 +40,17 @@ export default function ReportsPage() {
 
   const studentAvatar = (name: string, profilePic?: string | null) => (
     profilePic ? (
-      <img
+      <button type="button" onClick={(e) => {
+          e.stopPropagation()
+          setPreviewPic(mediaUrl(profilePic)!)
+        }} aria-label="تكبير الصورة" className="shrink-0 rounded-full"><img
         src={mediaUrl(profilePic)!}
         alt=""
         loading="lazy"
         decoding="async"
-        className="w-8 h-8 rounded-full object-cover border border-water-300 shrink-0 cursor-pointer hover:opacity-80 transition"
-        onClick={(e) => {
-          e.stopPropagation()
-          setPreviewPic(mediaUrl(profilePic)!)
-        }}
-      />
+        className="w-8 h-8 rounded-full object-cover border border-water-300 shrink-0 hover:opacity-80 transition"
+       
+      /></button>
     ) : (
       <div className="w-8 h-8 rounded-full bg-water-200/50 flex items-center justify-center text-deep-400 text-xs border border-water-300 shrink-0">
         {name.charAt(0)}
@@ -384,9 +384,9 @@ export default function ReportsPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-center">
                       {attendanceStatuses.map((status) => (
-                        <div key={status} className={`rounded-lg border p-2 ${statusClass(status)}`}>
+                        <div key={status} className={`rounded-xl border p-2 ${statusClass(status)}`}>
                           <div className="font-bold">{s.status_counts?.[status] || 0}</div>
-                          <div className="truncate text-[11px] font-medium">{status}</div>
+                          <div className="truncate text-xs font-medium">{status}</div>
                         </div>
                       ))}
                     </div>
@@ -417,7 +417,7 @@ export default function ReportsPage() {
                           <td className="py-2 px-3 text-center text-deep-500">{s.sheikh_name}</td>
                           {attendanceStatuses.map((status) => (
                             <td key={status} className="px-3 py-2 text-center">
-                              <span className={`inline-flex min-w-8 justify-center rounded-lg border px-2 py-1 text-xs font-bold ${statusClass(status)}`}>
+                              <span className={`inline-flex min-w-8 justify-center rounded-xl border px-2 py-1 text-xs font-bold ${statusClass(status)}`}>
                                 {s.status_counts?.[status] || 0}
                               </span>
                             </td>
