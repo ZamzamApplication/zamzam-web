@@ -383,10 +383,44 @@ table {
   transition: background-color 120ms ease-out;
 }
 
-.table-top-scroll {
-  background: rgb(var(--glass-card-bg) / 0.96);
-  border: 1px solid rgb(var(--surface-border) / 0.72);
-  box-shadow: 0 4px 12px rgb(15 23 42 / 0.08);
+.table-edge-fade {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  z-index: 15;
+  width: 3rem;
+  pointer-events: none;
+  background: linear-gradient(to right, rgb(var(--glass-card-bg)) 0%, rgb(var(--glass-card-bg) / 0) 100%);
+  transition: opacity 150ms ease-out;
+}
+
+[dir='ltr'] .table-edge-fade {
+  background: linear-gradient(to left, rgb(var(--glass-card-bg)) 0%, rgb(var(--glass-card-bg) / 0) 100%);
+}
+
+/* Slim horizontal scrollbar pinned to the bottom of the viewport. */
+.table-scrollbar {
+  background: linear-gradient(to top, rgb(var(--glass-card-bg) / 0.95) 55%, rgb(var(--glass-card-bg) / 0));
+}
+
+.table-scrollbar-track {
+  background: rgb(var(--deep-200) / 0.7);
+}
+
+.table-scrollbar-track:focus-visible {
+  outline: 2px solid rgb(var(--water-500) / 0.7);
+  outline-offset: 3px;
+}
+
+.table-scrollbar-thumb {
+  background: rgb(var(--water-500) / 0.7);
+  touch-action: none;
+  transition: background-color 120ms ease-out;
+}
+
+.table-scrollbar-track:hover .table-scrollbar-thumb,
+.table-scrollbar-thumb-active {
+  background: rgb(var(--water-600) / 0.95);
 }
 
 .glass {
@@ -775,11 +809,23 @@ select optgroup {
 }
 
 .data-table-header {
-  background: rgb(var(--outline-bg) / 0.96);
+  background: rgb(var(--outline-bg));
 }
 
+/* Pinned first column: opaque so scrolled columns never show through, with a
+   soft shadow on its inner edge to separate it from the moving columns. */
 .data-table-sticky {
-  background: rgb(var(--outline-bg) / 0.94);
+  background: rgb(var(--outline-bg));
+}
+
+.data-table-sticky,
+.data-table-header.sticky {
+  box-shadow: -10px 0 12px -12px rgb(15 23 42 / 0.45);
+}
+
+[dir='ltr'] .data-table-sticky,
+[dir='ltr'] .data-table-header.sticky {
+  box-shadow: 10px 0 12px -12px rgb(15 23 42 / 0.45);
 }
 
 .dark .nav-brand,

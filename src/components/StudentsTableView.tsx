@@ -334,7 +334,7 @@ export default function StudentsTableView({ students, onViewStudent, onEditStude
         <span className="hidden md:inline">اضغط على عنوان العمود للترتيب، و Shift + ضغط لإضافة ترتيب ثانوي</span>
       </p>
 
-      <div className="glass-card overflow-hidden rounded-2xl">
+      <div className="glass-card overflow-clip rounded-2xl">
         <ScrollableTable>
           <table className="w-full border-collapse text-sm">
             <thead>
