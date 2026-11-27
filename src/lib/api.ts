@@ -375,6 +375,9 @@ export const api = {
   updateSessionSchedule(id: number, input: ScheduleInput & { expected_version: number }) {
     return request<SessionSchedule>(`/session-schedules/${id}`, { method: 'PUT', body: JSON.stringify(input) })
   },
+  deleteSessionSchedule(id: number) {
+    return request<{ ok: boolean }>(`/session-schedules/${id}`, { method: 'DELETE' })
+  },
   skipSessionOccurrence(id: number, date: string, expected_version: number) {
     return request<SessionSchedule>(`/session-schedules/${id}/skip`, { method: 'POST', body: JSON.stringify({ date, expected_version }) })
   },
