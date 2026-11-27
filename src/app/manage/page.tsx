@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import StudentRegistrationManagement from '@/components/StudentRegistrationManagement'
+import StudentsTableView from '@/components/StudentsTableView'
 import Link from 'next/link'
 import { api } from '@/lib/api'
 import { mediaUrl } from '@/lib/format'
@@ -2028,6 +2029,15 @@ function ManageContent() {
   const [loadError, setLoadError] = useState('')
   const [expandedSheikhs, setExpandedSheikhs] = useState<Set<number>>(new Set())
   const [studentSearch, setStudentSearch] = useState('')
+  const [allStudents, setAllStudents] = useState<StudentInfo[]>([])
+  const [studentsView, setStudentsView] = useState<'sheikh' | 'table'>('sheikh')
+  useEffect(() => {
+    try { if (localStorage.getItem('manage-students-view') === 'table') setStudentsView('table') } catch { /* storage unavailable */ }
+  }, [])
+  const changeStudentsView = (next: 'sheikh' | 'table') => {
+    setStudentsView(next)
+    try { localStorage.setItem('manage-students-view', next) } catch { /* storage unavailable */ }
+  }
 
   useEffect(() => {
     const u = JSON.parse(localStorage.getItem('user') || '{}')
@@ -2088,6 +2098,7 @@ function ManageContent() {
         students: orderStudents(studentsBySheikh.get(s.id) || []),
       }))
       setSheikhs(withStudents)
+      setAllStudents(studentsData as StudentInfo[])
       setCircles([tahfizSettings])
       setUsers(usersData)
     } catch (err: any) {
@@ -2212,6 +2223,33 @@ function ManageContent() {
       {/* ─── Sheikhs & Students Tab ─────────────────────────────────────── */}
       {activeTab === 'sheikhs' && (
         <div>
+          <div role="tablist" aria-label="طريقة عرض الطلاب" className="mb-4 inline-flex rounded-xl border border-water-200/60 bg-water-100/30 p-1">
+            {([['sheikh', 'حسب الشيخ'], ['table', 'جدول']] as const).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={studentsView === key}
+                onClick={() => changeStudentsView(key)}
+                className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${studentsView === key ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-700 dark:text-blue-300' : 'text-deep-500 hover:text-deep-700'}`}
+              >
+                {key === 'sheikh' ? '▤ ' : '▦ '}{label}
+              </button>
+            ))}
+          </div>
+
+          {studentsView === 'table' && (
+            <StudentsTableView
+              students={allStudents}
+              onViewStudent={(s) => router.push(`/students/${s.id}`)}
+              onEditStudent={(s) => setEditStudent({ student: s, sheikhName: s.sheikh?.name || '' })}
+              onMoveStudent={(s) => { setMoveStudentId(s.id); setShowMoveStudent(true) }}
+              onDeleteStudent={handleDeleteStudent}
+              onZoomPic={(url) => setPreviewPic(url)}
+            />
+          )}
+
+          {studentsView === 'sheikh' && <>
           <label className="relative mb-4 block">
             <span className="sr-only">بحث عن طالب</span>
             <input value={studentSearch} onChange={event => setStudentSearch(event.target.value)} placeholder="ابحث باسم الطالب أو رقمه أو هاتفه أو الشيخ..." className="surface-field w-full rounded-xl py-2.5 pr-4 pl-10 text-sm" />
@@ -2270,6 +2308,7 @@ function ManageContent() {
               })}
             </div>
           )}
+          </>}
         </div>
       )}
 
