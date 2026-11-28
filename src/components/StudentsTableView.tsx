@@ -13,26 +13,6 @@ import {
 import type { StudentCustomField, StudentInfo } from '@/lib/types'
 
 const STORAGE_KEY = 'manage-students-table-view'
-const PHONE_QUERY = '(max-width: 767px)'
-
-/** Phones get a card list instead of the wide table. */
-function useIsPhone() {
-  const [phone, setPhone] = useState(() => typeof window !== 'undefined' && window.matchMedia(PHONE_QUERY).matches)
-  useEffect(() => {
-    const media = window.matchMedia(PHONE_QUERY)
-    const onChange = () => setPhone(media.matches)
-    onChange()
-    media.addEventListener('change', onChange)
-    return () => media.removeEventListener('change', onChange)
-  }, [])
-  return phone
-}
-
-function hasCellValue(column: TableColumn, student: StudentInfo) {
-  if (column.key === 'warnings') return (student.warnings?.length || 0) > 0
-  return formatCell(column, student) !== ''
-}
-
 const STATUS_STYLES: Record<string, string> = {
   'مقيد': 'bg-emerald-100/70 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300',
   'ضيف': 'bg-sky-100/70 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300',
@@ -160,9 +140,9 @@ function Cell({ column, student, onZoomPic }: { column: TableColumn; student: St
     return (
       <span className="flex min-w-0 items-center gap-2">
         {pic ? (
-          <button type="button" onClick={(event) => { event.stopPropagation(); onZoomPic?.(pic) }} aria-label="تكبير الصورة" className="shrink-0 rounded-full"><img src={pic} alt="" className="h-7 w-7 shrink-0 rounded-full border border-water-300 object-cover hover:opacity-80" /></button>
+          <button type="button" onClick={(event) => { event.stopPropagation(); onZoomPic?.(pic) }} aria-label="تكبير الصورة" className="hidden shrink-0 rounded-full md:block"><img src={pic} alt="" className="h-7 w-7 shrink-0 rounded-full border border-water-300 object-cover hover:opacity-80" /></button>
         ) : (
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-water-300 bg-water-200/50 text-xs text-deep-400">{student.name.charAt(0)}</span>
+          <span className="hidden h-7 w-7 shrink-0 items-center justify-center rounded-full border border-water-300 bg-water-200/50 text-xs text-deep-400 md:flex">{student.name.charAt(0)}</span>
         )}
         <span className="line-clamp-2 font-semibold leading-5 text-deep-900">{student.name}</span>
       </span>
@@ -200,7 +180,6 @@ export default function StudentsTableView({ students, onViewStudent, onEditStude
   const [view, setView] = useState<TableViewState>(defaultTableView)
   const [hydrated, setHydrated] = useState(false)
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
-  const isPhone = useIsPhone()
 
   useEffect(() => {
     setView(loadView())
@@ -274,7 +253,7 @@ export default function StudentsTableView({ students, onViewStudent, onEditStude
       {visibleColumns.map((column, index) => (
         <td
           key={column.key}
-          className={`px-3 py-2 align-middle text-deep-700 ${index === 0 ? 'data-table-sticky sticky right-0 z-10 min-w-[200px]' : 'whitespace-nowrap'}`}
+          className={`px-3 py-2 align-middle text-deep-700 ${index === 0 ? 'data-table-sticky sticky right-0 z-10 w-[7.5rem] min-w-[7.5rem] max-w-[7.5rem] md:w-auto md:min-w-[200px] md:max-w-none' : 'whitespace-nowrap'}`}
         >
           <Cell column={column} student={student} onZoomPic={onZoomPic} />
         </td>
@@ -288,44 +267,6 @@ export default function StudentsTableView({ students, onViewStudent, onEditStude
       </td>
     </tr>
   )
-
-  const renderCard = (student: StudentInfo, keyPrefix = '') => {
-    const nameColumn = columns.find(column => column.key === 'name')
-    const statusColumn = visibleColumns.find(column => column.key === 'status')
-    const details = visibleColumns.filter(column => column.key !== 'name' && column.key !== 'status' && hasCellValue(column, student))
-    return (
-      <li key={`${keyPrefix}${student.id}`} className="border-t border-water-200/40 first:border-t-0">
-        <div
-          role="button"
-          tabIndex={0}
-          aria-label={`فتح ملف ${student.name}`}
-          onClick={() => onViewStudent(student)}
-          onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); onViewStudent(student) } }}
-          className="block cursor-pointer px-4 py-3 active:bg-water-100/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-500"
-        >
-          <div className="flex items-center gap-2">
-            <div className="min-w-0 flex-1">{nameColumn && <Cell column={nameColumn} student={student} onZoomPic={onZoomPic} />}</div>
-            {statusColumn && student.status && <Cell column={statusColumn} student={student} />}
-          </div>
-          {details.length > 0 && (
-            <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
-              {details.map(column => (
-                <div key={column.key} className={`min-w-0 ${column.type === 'multi' || column.key === 'parent_phones' ? 'col-span-2' : ''}`}>
-                  <dt className="truncate text-xs text-deep-400">{column.label}</dt>
-                  <dd className="break-words text-deep-700"><Cell column={column} student={student} onZoomPic={onZoomPic} /></dd>
-                </div>
-              ))}
-            </dl>
-          )}
-        </div>
-        <div className="flex gap-1 px-2 pb-2" onClick={event => event.stopPropagation()}>
-          <button type="button" onClick={() => onEditStudent(student)} className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-blue-600 active:bg-water-100/60 dark:text-blue-400">تعديل</button>
-          <button type="button" onClick={() => onMoveStudent(student)} className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-blue-600 active:bg-water-100/60 dark:text-blue-400">نقل</button>
-          <button type="button" onClick={() => onDeleteStudent(student.id)} className="ms-auto rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-500 active:bg-red-50 dark:active:bg-red-950/40">حذف</button>
-        </div>
-      </li>
-    )
-  }
 
   return (
     <div>
@@ -396,25 +337,6 @@ export default function StudentsTableView({ students, onViewStudent, onEditStude
         <span className="hidden md:inline">اضغط على عنوان العمود للترتيب، و Shift + ضغط لإضافة ترتيب ثانوي</span>
       </p>
 
-      {isPhone ? (
-        <div className="glass-card overflow-hidden rounded-2xl">
-          {rows.length === 0 ? (
-            <p className="px-5 py-8 text-center text-sm text-deep-400">لا يوجد طلاب مطابقون</p>
-          ) : groupColumn ? groups.map(group => {
-            const collapsed = collapsedGroups.has(group.key)
-            return (
-              <section key={`group-${group.key}`} className="border-t border-water-200/40 first:border-t-0">
-                <button type="button" onClick={() => toggleGroup(group.key)} aria-expanded={!collapsed} className="flex w-full items-center gap-2 bg-water-100/40 px-4 py-2.5 text-sm font-bold text-deep-800">
-                  <Icon name="chevron-down" className={`h-4 w-4 text-deep-400 transition-transform ${collapsed ? 'rotate-90' : ''}`} />
-                  <span className="min-w-0 flex-1 truncate text-right">{groupColumn.label}: {group.key}</span>
-                  <span className="rounded-full bg-water-200/60 px-2 py-0.5 text-xs font-medium text-deep-600">{group.students.length}</span>
-                </button>
-                {!collapsed && <ul>{group.students.map(student => renderCard(student, `${group.key}:`))}</ul>}
-              </section>
-            )
-          }) : <ul>{rows.map(student => renderCard(student))}</ul>}
-        </div>
-      ) : (
       <div className="glass-card overflow-clip rounded-2xl">
         <ScrollableTable>
           <table className="w-full border-collapse text-sm">
@@ -427,7 +349,7 @@ export default function StudentsTableView({ students, onViewStudent, onEditStude
                     <th
                       key={column.key}
                       aria-sort={sort ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
-                      className={`data-table-header whitespace-nowrap px-3 py-2.5 text-right text-xs font-semibold text-deep-700 ${index === 0 ? 'sticky right-0 z-20' : ''}`}
+                      className={`data-table-header whitespace-nowrap px-3 py-2.5 text-right text-xs font-semibold text-deep-700 ${index === 0 ? 'sticky right-0 z-20 w-[7.5rem] md:w-auto' : ''}`}
                     >
                       <button type="button" onClick={event => onHeaderClick(column.key, event.shiftKey)} className="inline-flex items-center gap-1 hover:text-blue-700">
                         {column.label}
@@ -464,7 +386,6 @@ export default function StudentsTableView({ students, onViewStudent, onEditStude
           </table>
         </ScrollableTable>
       </div>
-      )}
     </div>
   )
 }
