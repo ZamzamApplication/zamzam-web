@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import type { ExcelExportTemplates, ExcelTemplateColumn, ExcelTemplateKey, ExcelTemplateSubcolumn } from '@/lib/excel-templates'
 import { api } from '@/lib/api'
+import Icon from '@/components/Icon'
 import type { StudentCustomField } from '@/lib/types'
 
 const TEMPLATE_LABELS: Record<ExcelTemplateKey, { title: string; description: string }> = {
@@ -68,6 +69,18 @@ function NumberSettingInput({
   )
 }
 
+function ColorField({ label, value, onChange }: { label: string; value: string; onChange(value: string): void }) {
+  return (
+    <label className="flex min-h-9 items-center justify-between gap-2 text-xs text-deep-600">
+      <span>{label}</span>
+      <span className="inline-flex items-center gap-2 rounded-xl border border-water-200 bg-white/60 py-1 pe-1 ps-2.5 dark:border-slate-700 dark:bg-slate-800/60">
+        <span dir="ltr" className="font-mono text-xs text-deep-500">{value}</span>
+        <input type="color" value={value} onChange={(event) => onChange(event.target.value.toUpperCase())} aria-label={label} className="h-7 w-9 cursor-pointer rounded-lg border-0 bg-transparent p-0" />
+      </span>
+    </label>
+  )
+}
+
 export default function ExcelTemplateSettings({
   value,
   onChange,
@@ -77,6 +90,14 @@ export default function ExcelTemplateSettings({
 }) {
   const [openTemplate, setOpenTemplate] = useState<ExcelTemplateKey | null>('attendance')
   const [studentFields, setStudentFields] = useState<StudentCustomField[]>([])
+  // Phones show a column's sizes only on request to keep each row on one line.
+  const [expandedColumns, setExpandedColumns] = useState<Set<string>>(new Set())
+  const toggleExpanded = (id: string) => setExpandedColumns(current => {
+    const next = new Set(current)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    return next
+  })
 
   useEffect(() => {
     api.getStudentCustomFields().then(result => setStudentFields(result.fields)).catch(() => {})
@@ -164,14 +185,15 @@ export default function ExcelTemplateSettings({
   }
 
   return (
-    <div className="mt-4 grid gap-4">
+    <div className="mt-4 grid min-w-0 grid-cols-1 gap-4">
       {(Object.keys(TEMPLATE_LABELS) as ExcelTemplateKey[]).map((key) => {
         const template = value[key]
         const enabledCount = template.columns.filter((column) => column.enabled).length
         return (
-          <section key={key} className="overflow-hidden rounded-2xl border border-water-200 bg-white/40 dark:bg-slate-800/40">
+          <section key={key} className="min-w-0 overflow-hidden rounded-2xl border border-water-200 bg-white/40 dark:bg-slate-800/40">
             <button
               type="button"
+              data-immediate-action
               onClick={() => setOpenTemplate((current) => current === key ? null : key)}
               aria-expanded={openTemplate === key}
               aria-controls={`excel-template-${key}`}
@@ -181,28 +203,12 @@ export default function ExcelTemplateSettings({
                 <span className="block text-sm font-bold text-deep-800">{TEMPLATE_LABELS[key].title}</span>
                 <span className="mt-1 block text-xs text-deep-500">{TEMPLATE_LABELS[key].description}</span>
               </span>
-              <span className={`shrink-0 text-lg text-blue-700 transition-transform ${openTemplate === key ? 'rotate-180' : ''}`} aria-hidden="true">⌄</span>
+              <span className={`shrink-0 text-blue-700 transition-transform ${openTemplate === key ? 'rotate-180' : ''}`} aria-hidden="true"><Icon name="chevron-down" className="h-5 w-5" /></span>
             </button>
-            {openTemplate === key && <div id={`excel-template-${key}`} className="border-t border-water-200/70 p-4">
+            {openTemplate === key && <div id={`excel-template-${key}`} className="min-w-0 border-t border-water-200/70 p-3 sm:p-4">
             <div className="mt-3 grid gap-3 rounded-xl border border-water-200/70 bg-white/45 p-3 sm:grid-cols-2 lg:grid-cols-3 dark:bg-slate-900/30">
-              <label className="grid gap-1 text-xs text-deep-600">
-                لون الخلفية
-                <input
-                  type="color"
-                  value={template.header_background_color}
-                  onChange={(event) => updateTemplate(key, { header_background_color: event.target.value.toUpperCase() })}
-                  className="surface-field h-9 w-full cursor-pointer rounded-xl p-1"
-                />
-              </label>
-              <label className="grid gap-1 text-xs text-deep-600">
-                لون الخط
-                <input
-                  type="color"
-                  value={template.header_font_color}
-                  onChange={(event) => updateTemplate(key, { header_font_color: event.target.value.toUpperCase() })}
-                  className="surface-field h-9 w-full cursor-pointer rounded-xl p-1"
-                />
-              </label>
+              <ColorField label="لون الخلفية" value={template.header_background_color} onChange={(header_background_color) => updateTemplate(key, { header_background_color })} />
+              <ColorField label="لون الخط" value={template.header_font_color} onChange={(header_font_color) => updateTemplate(key, { header_font_color })} />
               <label className="flex min-h-9 items-center gap-2 text-xs font-semibold text-deep-700">
                 <input
                   type="checkbox"
@@ -243,15 +249,7 @@ export default function ExcelTemplateSettings({
                   className="surface-field rounded-xl px-2 py-1.5 text-center text-sm"
                 />
               </label>
-              <label className="grid gap-1 text-xs text-deep-600">
-                لون خط الخلايا
-                <input
-                  type="color"
-                  value={template.cell_font_color}
-                  onChange={(event) => updateTemplate(key, { cell_font_color: event.target.value.toUpperCase() })}
-                  className="surface-field h-9 w-full cursor-pointer rounded-xl p-1"
-                />
-              </label>
+              <ColorField label="لون خط الخلايا" value={template.cell_font_color} onChange={(cell_font_color) => updateTemplate(key, { cell_font_color })} />
               <label className="flex min-h-9 items-center gap-2 text-xs font-semibold text-deep-700">
                 <input
                   type="checkbox"
@@ -293,15 +291,7 @@ export default function ExcelTemplateSettings({
                     className="surface-field rounded-xl px-2 py-1.5 text-center text-sm"
                   />
                 </label>
-                <label className="grid gap-1 text-xs text-deep-600">
-                  لون خط التاريخ
-                  <input
-                    type="color"
-                    value={template.date_font_color}
-                    onChange={(event) => updateTemplate(key, { date_font_color: event.target.value.toUpperCase() })}
-                    className="surface-field h-9 w-full cursor-pointer rounded-xl p-1"
-                  />
-                </label>
+                <ColorField label="لون خط التاريخ" value={template.date_font_color} onChange={(date_font_color) => updateTemplate(key, { date_font_color })} />
                 <label className="flex min-h-9 items-center gap-2 text-xs font-semibold text-deep-700">
                   <input
                     type="checkbox"
@@ -313,61 +303,73 @@ export default function ExcelTemplateSettings({
                 </label>
               </div>
             )}
-            <div className="mt-3 grid gap-2">
+            <div className="mt-3 grid min-w-0 grid-cols-1 gap-2 [&>*]:min-w-0">
               {template.columns.map((column, index) => (
-                <div key={column.id} className="grid grid-cols-1 gap-3 rounded-xl border border-water-200/80 bg-white/55 p-3 dark:bg-slate-900/35 sm:grid-cols-[auto_minmax(12rem,1fr)_7rem_6rem_auto] sm:items-end">
-                  <label className="flex min-h-9 items-center gap-2 text-xs font-semibold text-deep-700 sm:self-end">
+                <div key={column.id} className={`rounded-xl border p-2.5 ${column.enabled ? 'border-water-200/80 bg-white/55 dark:bg-slate-900/35' : 'border-dashed border-water-200/80 bg-transparent opacity-75'}`}>
+                  <div className="flex flex-wrap items-center gap-2">
                     <input
                       type="checkbox"
                       checked={column.enabled}
                       disabled={column.enabled && enabledCount === 1}
                       onChange={(event) => updateColumn(key, column.id, { enabled: event.target.checked })}
-                      className="h-4 w-4 accent-cyan-600"
+                      aria-label={`تضمين عمود ${column.label}`}
+                      title="تضمين في الملف"
+                      className="h-5 w-5 shrink-0 accent-cyan-600"
                     />
-                    تضمين
-                  </label>
-                  <label className="grid min-w-0 gap-1 text-xs text-deep-500">
-                    اسم العمود
                     <input
                       value={column.label}
                       onChange={(event) => updateColumn(key, column.id, { label: event.target.value })}
                       maxLength={80}
                       required
                       aria-label={`اسم عمود ${column.label}`}
-                      className="surface-field w-full min-w-0 rounded-xl px-3 py-1.5 text-sm"
+                      className="surface-field min-w-0 flex-1 rounded-xl px-3 py-1.5 text-sm"
                     />
-                  </label>
-                  <label className="grid gap-1 text-xs text-deep-500">
-                    حجم العنوان
-                    <NumberSettingInput
-                      min={6}
-                      max={72}
-                      value={column.header_font_size}
-                      onChange={(header_font_size) => updateColumn(key, column.id, { header_font_size })}
-                      className="surface-field w-full rounded-xl px-2 py-1.5 text-center text-xs"
-                    />
-                  </label>
-                  <label className="grid gap-1 text-xs text-deep-500">
-                    العرض
-                    <input
-                      type="number"
-                      min={1}
-                      max={60}
-                      value={column.width}
-                      onChange={(event) => updateColumn(key, column.id, {
-                        width: Math.min(60, Math.max(1, Number(event.target.value) || 1)),
-                      })}
-                      className="surface-field w-full rounded-xl px-2 py-1.5 text-center text-xs"
-                      aria-label={`عرض عمود ${column.label}`}
-                    />
-                  </label>
-                  <div className="flex min-h-9 items-center justify-end gap-1 sm:justify-center">
-                    <button type="button" disabled={index === 0} onClick={() => moveColumn(key, index, -1)} aria-label={`تحريك ${column.label} لأعلى`} className="rounded-xl border border-water-200 px-2 py-1 text-xs disabled:opacity-30">↑</button>
-                    <button type="button" disabled={index === template.columns.length - 1} onClick={() => moveColumn(key, index, 1)} aria-label={`تحريك ${column.label} لأسفل`} className="rounded-xl border border-water-200 px-2 py-1 text-xs disabled:opacity-30">↓</button>
+                    <div className={`order-last basis-full items-center gap-3 pt-1 sm:order-none sm:basis-auto sm:pt-0 ${expandedColumns.has(column.id) ? 'flex' : 'hidden'} sm:flex`}>
+                      <label className="flex items-center gap-1.5 text-xs text-deep-500">
+                        حجم العنوان
+                        <NumberSettingInput
+                          min={6}
+                          max={72}
+                          value={column.header_font_size}
+                          onChange={(header_font_size) => updateColumn(key, column.id, { header_font_size })}
+                          className="surface-field w-14 rounded-xl px-1 py-1.5 text-center text-xs"
+                          ariaLabel={`حجم عنوان ${column.label}`}
+                        />
+                      </label>
+                      <label className="flex items-center gap-1.5 text-xs text-deep-500">
+                        العرض
+                        <input
+                          type="number"
+                          min={1}
+                          max={60}
+                          inputMode="numeric"
+                          value={column.width}
+                          onChange={(event) => updateColumn(key, column.id, {
+                            width: Math.min(60, Math.max(1, Number(event.target.value) || 1)),
+                          })}
+                          className="surface-field w-14 rounded-xl px-1 py-1.5 text-center text-xs"
+                          aria-label={`عرض عمود ${column.label}`}
+                        />
+                      </label>
+                    </div>
+                    <button
+                      type="button"
+                      data-immediate-action
+                      onClick={() => toggleExpanded(column.id)}
+                      aria-expanded={expandedColumns.has(column.id)}
+                      aria-label={`مقاسات عمود ${column.label}`}
+                      className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl border sm:hidden ${expandedColumns.has(column.id) ? 'border-cyan-400 text-cyan-700 dark:text-cyan-300' : 'border-water-200 text-deep-500'}`}
+                    >
+                      <Icon name="settings" className="h-4 w-4" />
+                    </button>
+                    <div className="inline-flex shrink-0 overflow-hidden rounded-xl border border-water-200 dark:border-slate-700">
+                      <button type="button" disabled={index === 0} onClick={() => moveColumn(key, index, -1)} aria-label={`تحريك ${column.label} لأعلى`} className="grid h-9 w-9 place-items-center disabled:opacity-30"><Icon name="chevron-down" className="h-4 w-4 rotate-180" /></button>
+                      <button type="button" disabled={index === template.columns.length - 1} onClick={() => moveColumn(key, index, 1)} aria-label={`تحريك ${column.label} لأسفل`} className="grid h-9 w-9 place-items-center border-r border-water-200 disabled:opacity-30 dark:border-slate-700"><Icon name="chevron-down" className="h-4 w-4" /></button>
+                    </div>
                   </div>
-                  {column.id === 'attendance' && <span className="text-xs text-deep-500 sm:col-start-2 sm:col-span-3">يتوسع إلى تواريخ الحلقات</span>}
+                  {column.id === 'attendance' && <p className="mt-1.5 text-xs text-deep-500">يتوسع إلى تواريخ الحلقات</p>}
                   {column.custom && (
-                    <div className="flex flex-wrap items-center gap-3 sm:col-start-2 sm:col-span-4">
+                    <div className="mt-2 flex flex-wrap items-center gap-3">
                       <button type="button" onClick={() => addSubcolumns(key, column)} disabled={column.subcolumns.length >= 10} className="text-xs font-semibold text-blue-700 disabled:opacity-40 dark:text-blue-300">
                         {column.subcolumns.length >= 2 ? '+ فرع' : 'تقسيم لفرعين'}
                       </button>
@@ -382,7 +384,7 @@ export default function ExcelTemplateSettings({
                     </div>
                   )}
                   {column.id === 'attendance' && (
-                    <div className="flex flex-wrap items-center gap-3 border-t border-water-200/60 pt-2 sm:col-span-5">
+                    <div className="mt-2 flex flex-wrap items-center gap-3 border-t border-water-200/60 pt-2">
                       <label className="flex items-center gap-2 text-xs text-deep-600">
                         <input
                           type="checkbox"
@@ -393,14 +395,14 @@ export default function ExcelTemplateSettings({
                         إظهار تاريخ كل حلقة في رأس العمود
                       </label>
                       {column.show_header && (
-                        <label className="flex items-center gap-2 text-xs text-deep-600">
+                        <label className="flex min-w-0 max-w-full flex-wrap items-center gap-2 text-xs text-deep-600">
                           تنسيق التاريخ
                           <select
                             value={template.attendance_date_format}
                             onChange={(event) => updateTemplate(key, {
                               attendance_date_format: event.target.value as ExcelExportTemplates[ExcelTemplateKey]['attendance_date_format'],
                             })}
-                            className="surface-field rounded-xl px-2 py-1.5 text-xs"
+                            className="surface-field min-w-0 max-w-full rounded-xl px-2 py-1.5 text-xs"
                           >
                             <option value="day">رقم اليوم فقط — 28</option>
                             <option value="day_month">اليوم والشهر — 28/07</option>
@@ -415,7 +417,7 @@ export default function ExcelTemplateSettings({
                     </div>
                   )}
                   {column.subcolumns.length >= 2 && (
-                    <div className="grid gap-2 border-t border-water-200/60 pt-2 sm:col-span-5 sm:grid-cols-2">
+                    <div className="mt-2 grid gap-2 border-t border-water-200/60 pt-2 sm:grid-cols-2">
                       {column.subcolumns.map((child) => (
                         <div key={child.id} className="flex items-center gap-2 rounded-xl bg-water-50/60 p-2 dark:bg-slate-800/60">
                           <input

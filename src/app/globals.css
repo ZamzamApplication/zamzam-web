@@ -658,6 +658,19 @@ table {
   bottom: calc(4.5rem + env(safe-area-inset-bottom));
 }
 
+/* Section tabs on phones scroll sideways: hide the bar and fade the far edge as a hint. */
+.settings-section-nav {
+  scrollbar-width: none;
+}
+
+.settings-section-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.settings-nav-fade {
+  background: linear-gradient(to right, rgb(var(--bg)) 10%, rgb(var(--bg) / 0));
+}
+
 .mobile-nav-item {
   width: 100%;
   min-width: 0;

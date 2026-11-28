@@ -5,6 +5,7 @@ import { api } from '@/lib/api'
 import { mediaUrl } from '@/lib/format'
 import ScrollableTable from '@/components/ScrollableTable'
 import Icon from '@/components/Icon'
+import { studentStatusClass } from '@/lib/student-status'
 import {
   OPERATOR_LABELS, applyTableView, buildStudentColumns, defaultTableView, formatCell, groupStudents,
   isColumnVisible, operatorNeedsValue, operatorsFor, toCsv,
@@ -13,13 +14,6 @@ import {
 import type { StudentCustomField, StudentInfo } from '@/lib/types'
 
 const STORAGE_KEY = 'manage-students-table-view'
-const STATUS_STYLES: Record<string, string> = {
-  'مقيد': 'bg-emerald-100/70 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300',
-  'ضيف': 'bg-sky-100/70 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300',
-  'منقطع': 'bg-amber-100/70 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
-  'مستبعد': 'bg-red-100/70 text-red-800 dark:bg-red-900/40 dark:text-red-300',
-  'غير مقيد': 'bg-slate-100/70 text-slate-700 dark:bg-slate-800/60 dark:text-slate-300',
-}
 
 function loadView(): TableViewState {
   try {
@@ -149,7 +143,7 @@ function Cell({ column, student, onZoomPic }: { column: TableColumn; student: St
     )
   }
   if (column.key === 'status') {
-    return <span className={`inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[student.status] || STATUS_STYLES['غير مقيد']}`}>{student.status}</span>
+    return <span className={`inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${studentStatusClass(student.status)}`}>{student.status}</span>
   }
   if (column.type === 'multi') {
     const values = column.value(student) as string[]

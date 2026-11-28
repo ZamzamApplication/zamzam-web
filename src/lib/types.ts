@@ -450,6 +450,8 @@ export interface StudentProfile extends StudentInfo {
   parent_phones: ParentPhone[]
   excused_weekdays: ExcusedWeekdayInfo[]
   excused_periods: ExcusedPeriodInfo[]
+  /** Latest sessions first; older API versions omit it. */
+  recent_attendance?: { session_id: number; date: string; session_name: string | null; status: string }[]
   attendance: {
     total: number
     present: number

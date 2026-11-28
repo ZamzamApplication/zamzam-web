@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 import type { StudentCustomField, StudentCustomFieldType } from '@/lib/types'
 import { confirmAction } from '@/lib/ui-feedback'
+import Icon from '@/components/Icon'
 
 const FIELD_TYPES: { value: StudentCustomFieldType; label: string }[] = [
   { value: 'text', label: 'نص' },
@@ -86,11 +87,15 @@ export default function StudentCustomFieldsEditor({ values, onChange }: {
   return <section className="rounded-xl border border-water-200 bg-white/35 p-4 dark:bg-slate-800/35">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div><h3 className="text-sm font-bold text-deep-800">الحقول المخصصة</h3><p className="mt-1 text-xs text-deep-500">بيانات إضافية للطالب ويمكن إظهارها في Excel.</p></div>
-      {canCreate && <button type="button" onClick={() => setShowCreate(current => !current)} className="water-btn-outline rounded-xl px-3 py-1.5 text-xs font-semibold">+ حقل جديد</button>}
+      {canCreate && <button type="button" onClick={() => setShowCreate(current => !current)} aria-expanded={showCreate} title="إضافة حقل جديد لجميع طلاب التحفيظ" className="water-btn-outline rounded-xl px-3 py-1.5 text-xs font-semibold">+ حقل جديد</button>}
     </div>
     {error && <p role="alert" className="mt-2 text-xs text-red-600">{error}</p>}
     {fields.some(field => field.can_edit) && <div className="mt-3 flex flex-wrap gap-2">{fields.filter(field => field.can_edit).map(field => <span key={field.id} className="inline-flex items-center gap-2 rounded-full border border-water-200 px-3 py-1.5 text-xs text-deep-700"><span>{field.name}</span><button type="button" disabled={busy} onClick={() => void renameField(field)} aria-label={`تعديل ${field.name}`} className="font-bold text-blue-700">✎</button><button type="button" disabled={busy} onClick={() => void archiveField(field)} aria-label={`أرشفة ${field.name}`} className="font-bold text-red-500">×</button></span>)}</div>}
     {showCreate && <div className="mt-3 grid gap-2 rounded-xl border border-cyan-200 p-3 sm:grid-cols-2">
+      <p className="flex gap-2 rounded-lg bg-cyan-50 px-3 py-2 text-xs leading-5 text-cyan-900 sm:col-span-2 dark:bg-cyan-950/50 dark:text-cyan-100">
+        <Icon name="info" className="mt-0.5 h-4 w-4 shrink-0" />
+        <span>الحقل الجديد يُضاف إلى ملفات <strong>جميع الطلاب</strong> في هذا التحفيظ، وليس لهذا الطالب فقط. بعد إضافته تُعبّأ قيمته لكل طالب على حدة، ويمكن إظهاره كعمود في جدول الطلاب وملفات Excel.</span>
+      </p>
       <input value={name} onChange={event => setName(event.target.value)} maxLength={80} placeholder="اسم الحقل" className="surface-field rounded-xl px-3 py-2 text-sm" />
       <select value={fieldType} onChange={event => setFieldType(event.target.value as StudentCustomFieldType)} className="surface-field rounded-xl px-3 py-2 text-sm">{FIELD_TYPES.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
       {fieldType === 'select' && <textarea value={optionsText} onChange={event => setOptionsText(event.target.value)} rows={3} placeholder={'كل اختيار في سطر\nمثال: المستوى الأول'} className="surface-field rounded-xl px-3 py-2 text-sm sm:col-span-2" />}

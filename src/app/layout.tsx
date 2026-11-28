@@ -114,6 +114,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const isLandingPage = pathname === '/'
   const isDedicatedPlatform = pathname === '/platform'
   const isSessionDetail = pathname.startsWith('/sessions/')
+  // Pages with their own sticky save bar would have it covered by the floating button.
+  const hideFeedbackButton = isSessionDetail || pathname === '/settings'
   const needsUser = !isPublicAuthPage && !isLandingPage
   const title = pageTitle(pathname)
   const homeHref = isDedicatedPlatform ? '/platform' : user?.role === 'auditor' ? '/finance' : '/dashboard'
@@ -332,7 +334,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               {showSectionTabs && <SectionTabs items={SESSION_SECTION_TABS} pathname={pathname} />}
               {children}
             </main>
-            {user.role !== 'super_admin' && user.role !== 'auditor' && !isSessionDetail && <FeedbackButton />}
+            {user.role !== 'super_admin' && user.role !== 'auditor' && !hideFeedbackButton && <FeedbackButton />}
           </CurrentUserContext.Provider>
         )}
       </body>
