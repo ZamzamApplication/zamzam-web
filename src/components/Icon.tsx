@@ -4,7 +4,7 @@ export type IconName =
   | 'home' | 'sessions' | 'attendance' | 'reports' | 'finance' | 'manage' | 'settings' | 'trips' | 'competitions'
   | 'more' | 'logout' | 'audit' | 'link' | 'list' | 'table' | 'chevron-down' | 'chevron-next' | 'chevron-prev'
   | 'check' | 'alert' | 'info' | 'close' | 'edit' | 'drop' | 'plus' | 'search' | 'dots' | 'users' | 'inbox'
-  | 'book' | 'lock' | 'bell' | 'palette'
+  | 'book' | 'lock' | 'bell' | 'palette' | 'filter' | 'sort' | 'download' | 'columns' | 'note'
 
 const PATHS: Record<IconName, ReactNode> = {
   home: <><path d="M3 11.5 12 4l9 7.5" /><path d="M5.5 10v10h13V10M9.5 20v-6h5v6" /></>,
@@ -40,6 +40,11 @@ const PATHS: Record<IconName, ReactNode> = {
   lock: <><rect x="4.5" y="10.5" width="15" height="10" rx="2" /><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5" /></>,
   bell: <><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15L6 16Z" /><path d="M10 20.5a2 2 0 0 0 4 0" /></>,
   palette: <><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.7-.8 1.7-1.6 0-.9-.7-1.4-.7-2.3 0-.9.8-1.6 1.7-1.6H17a4 4 0 0 0 4-4C21 6.8 17 3 12 3Z" /><circle cx="7.5" cy="11" r="1" /><circle cx="10" cy="7.5" r="1" /><circle cx="14.5" cy="7.5" r="1" /></>,
+  filter: <path d="M4 5h16l-6 7.5V19l-4-2v-4.5L4 5Z" />,
+  sort: <path d="M8 4v16M8 4 4.5 7.5M8 4l3.5 3.5M16 20V4M16 20l-3.5-3.5M16 20l3.5-3.5" />,
+  download: <path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19.5h14" />,
+  columns: <><rect x="3.5" y="4" width="17" height="16" rx="2" /><path d="M9.5 4v16M14.5 4v16" /></>,
+  note: <><path d="M5 4h14v11l-5 5H5V4Z" /><path d="M14 20v-5h5M8.5 9h7M8.5 12.5h4" /></>,
   inbox: <><path d="M4 13h4l1.5 3h5L16 13h4" /><path d="M5.5 5h13L21 13v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5l2.5-8Z" /></>,
 }
 

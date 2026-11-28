@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { api } from '@/lib/api'
 import { mediaUrl } from '@/lib/format'
 import ScrollableTable from '@/components/ScrollableTable'
+import Icon from '@/components/Icon'
 import {
   OPERATOR_LABELS, applyTableView, buildStudentColumns, defaultTableView, formatCell, groupStudents,
   isColumnVisible, operatorNeedsValue, operatorsFor, toCsv,
@@ -12,6 +13,25 @@ import {
 import type { StudentCustomField, StudentInfo } from '@/lib/types'
 
 const STORAGE_KEY = 'manage-students-table-view'
+const PHONE_QUERY = '(max-width: 767px)'
+
+/** Phones get a card list instead of the wide table. */
+function useIsPhone() {
+  const [phone, setPhone] = useState(() => typeof window !== 'undefined' && window.matchMedia(PHONE_QUERY).matches)
+  useEffect(() => {
+    const media = window.matchMedia(PHONE_QUERY)
+    const onChange = () => setPhone(media.matches)
+    onChange()
+    media.addEventListener('change', onChange)
+    return () => media.removeEventListener('change', onChange)
+  }, [])
+  return phone
+}
+
+function hasCellValue(column: TableColumn, student: StudentInfo) {
+  if (column.key === 'warnings') return (student.warnings?.length || 0) > 0
+  return formatCell(column, student) !== ''
+}
 
 const STATUS_STYLES: Record<string, string> = {
   'مقيد': 'bg-emerald-100/70 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300',
@@ -138,13 +158,13 @@ function Cell({ column, student, onZoomPic }: { column: TableColumn; student: St
   if (column.key === 'name') {
     const pic = mediaUrl(student.profile_pic)
     return (
-      <span className="flex items-center gap-2">
+      <span className="flex min-w-0 items-center gap-2">
         {pic ? (
           <button type="button" onClick={(event) => { event.stopPropagation(); onZoomPic?.(pic) }} aria-label="تكبير الصورة" className="shrink-0 rounded-full"><img src={pic} alt="" className="h-7 w-7 shrink-0 rounded-full border border-water-300 object-cover hover:opacity-80" /></button>
         ) : (
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-water-300 bg-water-200/50 text-xs text-deep-400">{student.name.charAt(0)}</span>
         )}
-        <span className="font-semibold text-deep-900">{student.name}</span>
+        <span className="line-clamp-2 font-semibold leading-5 text-deep-900">{student.name}</span>
       </span>
     )
   }
@@ -180,6 +200,7 @@ export default function StudentsTableView({ students, onViewStudent, onEditStude
   const [view, setView] = useState<TableViewState>(defaultTableView)
   const [hydrated, setHydrated] = useState(false)
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
+  const isPhone = useIsPhone()
 
   useEffect(() => {
     setView(loadView())
@@ -268,30 +289,56 @@ export default function StudentsTableView({ students, onViewStudent, onEditStude
     </tr>
   )
 
+  const renderCard = (student: StudentInfo, keyPrefix = '') => {
+    const nameColumn = columns.find(column => column.key === 'name')
+    const statusColumn = visibleColumns.find(column => column.key === 'status')
+    const details = visibleColumns.filter(column => column.key !== 'name' && column.key !== 'status' && hasCellValue(column, student))
+    return (
+      <li key={`${keyPrefix}${student.id}`} className="border-t border-water-200/40 first:border-t-0">
+        <div
+          role="button"
+          tabIndex={0}
+          aria-label={`فتح ملف ${student.name}`}
+          onClick={() => onViewStudent(student)}
+          onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); onViewStudent(student) } }}
+          className="block cursor-pointer px-4 py-3 active:bg-water-100/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-500"
+        >
+          <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">{nameColumn && <Cell column={nameColumn} student={student} onZoomPic={onZoomPic} />}</div>
+            {statusColumn && student.status && <Cell column={statusColumn} student={student} />}
+          </div>
+          {details.length > 0 && (
+            <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
+              {details.map(column => (
+                <div key={column.key} className={`min-w-0 ${column.type === 'multi' || column.key === 'parent_phones' ? 'col-span-2' : ''}`}>
+                  <dt className="truncate text-xs text-deep-400">{column.label}</dt>
+                  <dd className="break-words text-deep-700"><Cell column={column} student={student} onZoomPic={onZoomPic} /></dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </div>
+        <div className="flex gap-1 px-2 pb-2" onClick={event => event.stopPropagation()}>
+          <button type="button" onClick={() => onEditStudent(student)} className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-blue-600 active:bg-water-100/60 dark:text-blue-400">تعديل</button>
+          <button type="button" onClick={() => onMoveStudent(student)} className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-blue-600 active:bg-water-100/60 dark:text-blue-400">نقل</button>
+          <button type="button" onClick={() => onDeleteStudent(student.id)} className="ms-auto rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-500 active:bg-red-50 dark:active:bg-red-950/40">حذف</button>
+        </div>
+      </li>
+    )
+  }
+
   return (
     <div>
-      {/* Toolbar */}
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <label className="relative min-w-[200px] flex-1">
+      {/* Toolbar: two rows on phones (search + view actions, then filter/sort/group), one row on desktop. */}
+      <div className="mb-3 grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 md:flex md:flex-wrap">
+        <label className="relative min-w-0 md:min-w-[200px] md:flex-1">
           <span className="sr-only">بحث في الجدول</span>
-          <input value={view.search} onChange={event => update({ search: event.target.value })} placeholder="بحث..." className="surface-field w-full rounded-xl py-2 pr-3 pl-8 text-sm" />
+          <Icon name="search" className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-deep-400" />
+          <input value={view.search} onChange={event => update({ search: event.target.value })} placeholder="بحث بالاسم أو أي حقل..." className="surface-field w-full rounded-xl py-2 pr-9 pl-8 text-sm" />
           {view.search && <button type="button" onClick={() => update({ search: '' })} aria-label="مسح البحث" className="absolute left-2.5 top-1/2 -translate-y-1/2 text-deep-400">×</button>}
         </label>
-        <button type="button" onClick={addFilter} className={`rounded-xl px-3 py-2 text-sm ${activeFilterCount ? 'water-btn text-white' : 'water-btn-outline'}`}>
-          ⏷ تصفية{activeFilterCount ? ` (${activeFilterCount})` : ''}
-        </button>
-        <button type="button" onClick={addSort} className={`rounded-xl px-3 py-2 text-sm ${view.sorts.length ? 'water-btn text-white' : 'water-btn-outline'}`}>
-          ⇅ ترتيب{view.sorts.length ? ` (${view.sorts.length})` : ''}
-        </button>
-        <label className="flex items-center gap-1.5 text-sm text-deep-600">
-          <span>تجميع:</span>
-          <select value={view.groupBy} onChange={event => { update({ groupBy: event.target.value }); setCollapsedGroups(new Set()) }} className="surface-field rounded-xl px-2 py-2 text-sm">
-            <option value="">بدون</option>
-            {columns.filter(c => c.type === 'select' || c.type === 'multi' || c.type === 'checkbox').map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
-          </select>
-        </label>
         <details className="relative">
-          <summary className="water-btn-outline cursor-pointer list-none rounded-xl px-3 py-2 text-sm">▦ الأعمدة</summary>
+          <summary aria-label="الأعمدة" className="water-btn-outline inline-flex cursor-pointer list-none items-center gap-1.5 rounded-xl px-3 py-2 text-sm"><Icon name="columns" className="h-4 w-4" /><span className="hidden sm:inline">الأعمدة</span></summary>
           <div className="glass-card absolute left-0 z-30 mt-1 max-h-80 w-60 overflow-y-auto rounded-xl p-2 shadow-lg">
             {columns.map(column => (
               <label key={column.key} className="flex cursor-pointer items-center gap-2 rounded-xl px-2 py-1.5 text-sm text-deep-800 hover:bg-water-100/40">
@@ -301,8 +348,23 @@ export default function StudentsTableView({ students, onViewStudent, onEditStude
             ))}
           </div>
         </details>
-        <button type="button" onClick={exportCsv} disabled={rows.length === 0} className="water-btn-outline rounded-xl px-3 py-2 text-sm disabled:opacity-50">⬇ CSV</button>
-        {hasCustomView && <button type="button" onClick={() => { setView(defaultTableView()); setCollapsedGroups(new Set()) }} className="rounded-xl px-3 py-2 text-sm text-deep-500 hover:text-red-500">إعادة الضبط</button>}
+        <button type="button" onClick={exportCsv} disabled={rows.length === 0} aria-label="تصدير CSV" className="water-btn-outline inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm disabled:opacity-50"><Icon name="download" className="h-4 w-4" /><span className="hidden sm:inline">CSV</span></button>
+        <div className="col-span-3 flex flex-wrap items-center gap-2 md:contents">
+          <button type="button" onClick={addFilter} className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm ${activeFilterCount ? 'water-btn text-white' : 'water-btn-outline'}`}>
+            <Icon name="filter" className="h-4 w-4" /> تصفية{activeFilterCount ? ` (${activeFilterCount})` : ''}
+          </button>
+          <button type="button" onClick={addSort} className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm ${view.sorts.length ? 'water-btn text-white' : 'water-btn-outline'}`}>
+            <Icon name="sort" className="h-4 w-4" /> ترتيب{view.sorts.length ? ` (${view.sorts.length})` : ''}
+          </button>
+          <label className="flex items-center gap-1.5 text-sm text-deep-600">
+            <span className="sr-only md:not-sr-only">تجميع:</span>
+            <select value={view.groupBy} onChange={event => { update({ groupBy: event.target.value }); setCollapsedGroups(new Set()) }} aria-label="تجميع حسب" className="surface-field max-w-[8.5rem] rounded-xl px-2 py-2 text-sm md:max-w-none">
+              <option value="">بلا تجميع</option>
+              {columns.filter(c => c.type === 'select' || c.type === 'multi' || c.type === 'checkbox').map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
+            </select>
+          </label>
+          {hasCustomView && <button type="button" onClick={() => { setView(defaultTableView()); setCollapsedGroups(new Set()) }} className="rounded-xl px-3 py-2 text-sm text-deep-500 hover:text-red-500">إعادة الضبط</button>}
+        </div>
       </div>
 
       {(view.filters.length > 0 || view.sorts.length > 0) && (
@@ -334,6 +396,25 @@ export default function StudentsTableView({ students, onViewStudent, onEditStude
         <span className="hidden md:inline">اضغط على عنوان العمود للترتيب، و Shift + ضغط لإضافة ترتيب ثانوي</span>
       </p>
 
+      {isPhone ? (
+        <div className="glass-card overflow-hidden rounded-2xl">
+          {rows.length === 0 ? (
+            <p className="px-5 py-8 text-center text-sm text-deep-400">لا يوجد طلاب مطابقون</p>
+          ) : groupColumn ? groups.map(group => {
+            const collapsed = collapsedGroups.has(group.key)
+            return (
+              <section key={`group-${group.key}`} className="border-t border-water-200/40 first:border-t-0">
+                <button type="button" onClick={() => toggleGroup(group.key)} aria-expanded={!collapsed} className="flex w-full items-center gap-2 bg-water-100/40 px-4 py-2.5 text-sm font-bold text-deep-800">
+                  <Icon name="chevron-down" className={`h-4 w-4 text-deep-400 transition-transform ${collapsed ? 'rotate-90' : ''}`} />
+                  <span className="min-w-0 flex-1 truncate text-right">{groupColumn.label}: {group.key}</span>
+                  <span className="rounded-full bg-water-200/60 px-2 py-0.5 text-xs font-medium text-deep-600">{group.students.length}</span>
+                </button>
+                {!collapsed && <ul>{group.students.map(student => renderCard(student, `${group.key}:`))}</ul>}
+              </section>
+            )
+          }) : <ul>{rows.map(student => renderCard(student))}</ul>}
+        </div>
+      ) : (
       <div className="glass-card overflow-clip rounded-2xl">
         <ScrollableTable>
           <table className="w-full border-collapse text-sm">
@@ -383,6 +464,7 @@ export default function StudentsTableView({ students, onViewStudent, onEditStude
           </table>
         </ScrollableTable>
       </div>
+      )}
     </div>
   )
 }

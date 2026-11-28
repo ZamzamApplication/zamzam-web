@@ -57,11 +57,11 @@ export default function FeedbackButton() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-24 left-4 z-30 inline-flex min-h-11 items-center gap-2 rounded-full bg-cyan-700 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-cyan-950/20 transition hover:bg-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 md:bottom-6 md:left-6"
+        className="fixed bottom-28 left-3 z-30 inline-flex h-11 w-11 items-center justify-center gap-2 rounded-full bg-cyan-700 text-sm opacity-90 md:h-auto md:min-h-11 md:w-auto md:px-4 md:py-2.5 md:opacity-100 font-bold text-white shadow-lg shadow-cyan-950/20 transition hover:bg-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 md:bottom-6 md:left-6"
         aria-label="إرسال ملاحظة أو الإبلاغ عن مشكلة"
       >
         <span aria-hidden="true">✦</span>
-        <span>ملاحظة</span>
+        <span className="hidden md:inline">ملاحظة</span>
       </button>
 
       {sent && (
