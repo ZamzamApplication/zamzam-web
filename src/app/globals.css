@@ -828,6 +828,18 @@ select optgroup {
   box-shadow: 10px 0 12px -12px rgb(15 23 42 / 0.45);
 }
 
+/* Same pinned look, but only from tablet width up (columns scroll freely on phones). */
+@media (min-width: 768px) {
+  .data-table-pin-md {
+    background: rgb(var(--outline-bg));
+    box-shadow: -10px 0 12px -12px rgb(15 23 42 / 0.45);
+  }
+
+  [dir='ltr'] .data-table-pin-md {
+    box-shadow: 10px 0 12px -12px rgb(15 23 42 / 0.45);
+  }
+}
+
 .dark .nav-brand,
 .dark .nav-link:hover,
 .dark .nav-link-active {

@@ -140,11 +140,11 @@ function Cell({ column, student, onZoomPic }: { column: TableColumn; student: St
     return (
       <span className="flex min-w-0 items-center gap-2">
         {pic ? (
-          <button type="button" onClick={(event) => { event.stopPropagation(); onZoomPic?.(pic) }} aria-label="تكبير الصورة" className="hidden shrink-0 rounded-full md:block"><img src={pic} alt="" className="h-7 w-7 shrink-0 rounded-full border border-water-300 object-cover hover:opacity-80" /></button>
+          <button type="button" onClick={(event) => { event.stopPropagation(); onZoomPic?.(pic) }} aria-label="تكبير الصورة" className="shrink-0 rounded-full"><img src={pic} alt="" className="h-7 w-7 shrink-0 rounded-full border border-water-300 object-cover hover:opacity-80" /></button>
         ) : (
-          <span className="hidden h-7 w-7 shrink-0 items-center justify-center rounded-full border border-water-300 bg-water-200/50 text-xs text-deep-400 md:flex">{student.name.charAt(0)}</span>
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-water-300 bg-water-200/50 text-xs text-deep-400">{student.name.charAt(0)}</span>
         )}
-        <span className="line-clamp-2 font-semibold leading-5 text-deep-900">{student.name}</span>
+        <span className="font-semibold text-deep-900">{student.name}</span>
       </span>
     )
   }
@@ -253,7 +253,7 @@ export default function StudentsTableView({ students, onViewStudent, onEditStude
       {visibleColumns.map((column, index) => (
         <td
           key={column.key}
-          className={`px-3 py-2 align-middle text-deep-700 ${index === 0 ? 'data-table-sticky sticky right-0 z-10 w-[7.5rem] min-w-[7.5rem] max-w-[7.5rem] md:w-auto md:min-w-[200px] md:max-w-none' : 'whitespace-nowrap'}`}
+          className={`px-3 py-2 align-middle text-deep-700 ${index === 0 ? 'data-table-pin-md whitespace-nowrap md:sticky md:right-0 md:z-10 md:min-w-[200px] md:whitespace-normal' : 'whitespace-nowrap'}`}
         >
           <Cell column={column} student={student} onZoomPic={onZoomPic} />
         </td>
@@ -349,7 +349,7 @@ export default function StudentsTableView({ students, onViewStudent, onEditStude
                     <th
                       key={column.key}
                       aria-sort={sort ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
-                      className={`data-table-header whitespace-nowrap px-3 py-2.5 text-right text-xs font-semibold text-deep-700 ${index === 0 ? 'sticky right-0 z-20 w-[7.5rem] md:w-auto' : ''}`}
+                      className={`data-table-header whitespace-nowrap px-3 py-2.5 text-right text-xs font-semibold text-deep-700 ${index === 0 ? 'data-table-pin-md md:sticky md:right-0 md:z-20' : ''}`}
                     >
                       <button type="button" onClick={event => onHeaderClick(column.key, event.shiftKey)} className="inline-flex items-center gap-1 hover:text-blue-700">
                         {column.label}
